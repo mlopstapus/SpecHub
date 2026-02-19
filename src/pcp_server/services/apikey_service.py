@@ -19,7 +19,7 @@ def _hash_key(raw: str) -> str:
 
 async def create_api_key(
     db: AsyncSession,
-    project_id: uuid.UUID,
+    user_id: uuid.UUID,
     name: str,
     scopes: list[str] | None = None,
     expires_at: datetime | None = None,
@@ -27,7 +27,7 @@ async def create_api_key(
     """Create an API key. Returns (model, raw_key). Raw key is shown once."""
     raw_key = _generate_raw_key()
     key = ApiKey(
-        project_id=project_id,
+        user_id=user_id,
         name=name,
         key_hash=_hash_key(raw_key),
         prefix=raw_key[:12],
@@ -41,11 +41,11 @@ async def create_api_key(
 
 
 async def list_api_keys(
-    db: AsyncSession, project_id: uuid.UUID
+    db: AsyncSession, user_id: uuid.UUID
 ) -> list[ApiKey]:
     result = await db.execute(
         select(ApiKey)
-        .where(ApiKey.project_id == project_id)
+        .where(ApiKey.user_id == user_id)
         .order_by(ApiKey.created_at.desc())
     )
     return list(result.scalars().all())

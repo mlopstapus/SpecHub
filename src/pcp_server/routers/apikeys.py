@@ -15,18 +15,18 @@ router = APIRouter(tags=["api-keys"])
 
 
 @router.post(
-    "/api/v1/projects/{project_id}/api-keys",
+    "/api/v1/users/{user_id}/api-keys",
     response_model=ApiKeyCreatedResponse,
     status_code=201,
 )
 async def create_api_key(
-    project_id: uuid.UUID,
+    user_id: uuid.UUID,
     data: ApiKeyCreate,
     db: AsyncSession = Depends(get_db),
 ):
     key, raw_key = await apikey_service.create_api_key(
         db,
-        project_id=project_id,
+        user_id=user_id,
         name=data.name,
         scopes=data.scopes,
         expires_at=data.expires_at,
@@ -38,14 +38,14 @@ async def create_api_key(
 
 
 @router.get(
-    "/api/v1/projects/{project_id}/api-keys",
+    "/api/v1/users/{user_id}/api-keys",
     response_model=list[ApiKeyResponse],
 )
 async def list_api_keys(
-    project_id: uuid.UUID,
+    user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    keys = await apikey_service.list_api_keys(db, project_id)
+    keys = await apikey_service.list_api_keys(db, user_id)
     return [ApiKeyResponse.model_validate(k) for k in keys]
 
 

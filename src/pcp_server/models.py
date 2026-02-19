@@ -1,7 +1,9 @@
+import enum
 import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Enum,
     Float,
     Integer,
     JSON,
@@ -21,10 +23,168 @@ class Base(DeclarativeBase):
     pass
 
 
+class EnforcementType(str, enum.Enum):
+    prepend = "prepend"
+    append = "append"
+    inject = "inject"
+    validate = "validate"
+
+
+# ---------------------------------------------------------------------------
+# Team (recursive hierarchy)
+# ---------------------------------------------------------------------------
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id", use_alter=True), nullable=True, index=True
+    )
+    parent_team_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    owner: Mapped["User | None"] = relationship(
+        foreign_keys=[owner_id], back_populates="owned_teams"
+    )
+    parent_team: Mapped["Team | None"] = relationship(
+        remote_side="Team.id", back_populates="sub_teams"
+    )
+    sub_teams: Mapped[list["Team"]] = relationship(back_populates="parent_team")
+    members: Mapped[list["User"]] = relationship(
+        foreign_keys="[User.team_id]", back_populates="team"
+    )
+    policies: Mapped[list["Policy"]] = relationship(back_populates="team")
+    objectives: Mapped[list["Objective"]] = relationship(
+        foreign_keys="[Objective.team_id]", back_populates="team"
+    )
+    projects: Mapped[list["Project"]] = relationship(back_populates="team")
+
+
+# ---------------------------------------------------------------------------
+# User
+# ---------------------------------------------------------------------------
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    team_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=False, index=True
+    )
+    username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(String(255), unique=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    team: Mapped["Team"] = relationship(foreign_keys=[team_id], back_populates="members")
+    owned_teams: Mapped[list["Team"]] = relationship(
+        foreign_keys="[Team.owner_id]", back_populates="owner"
+    )
+    prompts: Mapped[list["Prompt"]] = relationship(back_populates="user")
+    workflows: Mapped[list["Workflow"]] = relationship(back_populates="user")
+    api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="user")
+    objectives: Mapped[list["Objective"]] = relationship(
+        foreign_keys="[Objective.user_id]", back_populates="user"
+    )
+    project_memberships: Mapped[list["ProjectMember"]] = relationship(back_populates="user")
+
+
+# ---------------------------------------------------------------------------
+# Policy
+# ---------------------------------------------------------------------------
+
+class Policy(Base):
+    __tablename__ = "policies"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=True, index=True
+    )
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("projects.id"), nullable=True, index=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    enforcement_type: Mapped[EnforcementType] = mapped_column(
+        Enum(EnforcementType), nullable=False
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    team: Mapped["Team | None"] = relationship(back_populates="policies")
+    project: Mapped["Project | None"] = relationship(back_populates="policies")
+
+
+# ---------------------------------------------------------------------------
+# Objective
+# ---------------------------------------------------------------------------
+
+class Objective(Base):
+    __tablename__ = "objectives"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=True, index=True
+    )
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("projects.id"), nullable=True, index=True
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    parent_objective_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("objectives.id"), nullable=True, index=True
+    )
+    is_inherited: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(50), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    team: Mapped["Team | None"] = relationship(
+        foreign_keys=[team_id], back_populates="objectives"
+    )
+    project: Mapped["Project | None"] = relationship(back_populates="objectives")
+    user: Mapped["User | None"] = relationship(
+        foreign_keys=[user_id], back_populates="objectives"
+    )
+    parent_objective: Mapped["Objective | None"] = relationship(
+        remote_side="Objective.id", back_populates="child_objectives"
+    )
+    child_objectives: Mapped[list["Objective"]] = relationship(
+        back_populates="parent_objective"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Project (owned by a team, has a lead, cross-team members)
+# ---------------------------------------------------------------------------
+
 class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    team_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=False, index=True
+    )
+    lead_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -33,8 +193,35 @@ class Project(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    prompts: Mapped[list["Prompt"]] = relationship(back_populates="project")
+    team: Mapped["Team"] = relationship(back_populates="projects")
+    lead: Mapped["User | None"] = relationship(foreign_keys=[lead_user_id])
+    members: Mapped[list["ProjectMember"]] = relationship(back_populates="project")
+    policies: Mapped[list["Policy"]] = relationship(back_populates="project")
+    objectives: Mapped[list["Objective"]] = relationship(back_populates="project")
+    workflows: Mapped[list["Workflow"]] = relationship(back_populates="project")
 
+
+class ProjectMember(Base):
+    __tablename__ = "project_members"
+    __table_args__ = (UniqueConstraint("project_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("projects.id"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(String(50), default="member")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    project: Mapped["Project"] = relationship(back_populates="members")
+    user: Mapped["User"] = relationship(back_populates="project_memberships")
+
+
+# ---------------------------------------------------------------------------
+# Prompt (user-scoped)
+# ---------------------------------------------------------------------------
 
 class Prompt(Base):
     __tablename__ = "prompts"
@@ -46,15 +233,15 @@ class Prompt(Base):
     active_version_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("prompt_versions.id", use_alter=True), nullable=True
     )
-    project_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("projects.id"), nullable=True, index=True
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True, index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    project: Mapped["Project | None"] = relationship(back_populates="prompts")
+    user: Mapped["User | None"] = relationship(back_populates="prompts")
     versions: Mapped[list["PromptVersion"]] = relationship(
         back_populates="prompt",
         order_by="PromptVersion.created_at.desc()",
@@ -62,12 +249,16 @@ class Prompt(Base):
     )
 
 
+# ---------------------------------------------------------------------------
+# ApiKey (user-scoped)
+# ---------------------------------------------------------------------------
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("projects.id"), nullable=False, index=True
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     key_hash: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -78,8 +269,12 @@ class ApiKey(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    project: Mapped["Project"] = relationship()
+    user: Mapped["User"] = relationship(back_populates="api_keys")
 
+
+# ---------------------------------------------------------------------------
+# PromptVersion (unchanged)
+# ---------------------------------------------------------------------------
 
 class PromptVersion(Base):
     __tablename__ = "prompt_versions"
@@ -101,12 +296,19 @@ class PromptVersion(Base):
     )
 
 
+# ---------------------------------------------------------------------------
+# Workflow (user-scoped, optionally project-associated)
+# ---------------------------------------------------------------------------
+
 class Workflow(Base):
     __tablename__ = "workflows"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("projects.id"), nullable=False, index=True
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("projects.id"), nullable=True, index=True
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -116,8 +318,13 @@ class Workflow(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    project: Mapped["Project"] = relationship()
+    user: Mapped["User"] = relationship(back_populates="workflows")
+    project: Mapped["Project | None"] = relationship(back_populates="workflows")
 
+
+# ---------------------------------------------------------------------------
+# PromptUsage (unchanged)
+# ---------------------------------------------------------------------------
 
 class PromptUsage(Base):
     __tablename__ = "prompt_usage"

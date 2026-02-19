@@ -7,6 +7,8 @@ from src.pcp_server.database import get_db
 from src.pcp_server.schemas import (
     ProjectCreate,
     ProjectListResponse,
+    ProjectMemberAdd,
+    ProjectMemberResponse,
     ProjectResponse,
     ProjectUpdate,
 )
@@ -24,8 +26,11 @@ async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db)
 
 
 @router.get("", response_model=ProjectListResponse)
-async def list_projects(db: AsyncSession = Depends(get_db)):
-    return await project_service.list_projects(db)
+async def list_projects(
+    team_id: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await project_service.list_projects(db, team_id=team_id)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -51,3 +56,45 @@ async def delete_project(project_id: uuid.UUID, db: AsyncSession = Depends(get_d
     deleted = await project_service.delete_project(db, project_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Project not found")
+
+
+# --- Project Members ---
+
+@router.post(
+    "/{project_id}/members",
+    response_model=ProjectMemberResponse,
+    status_code=201,
+)
+async def add_project_member(
+    project_id: uuid.UUID,
+    data: ProjectMemberAdd,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await project_service.add_member(db, project_id, data)
+    except Exception as e:
+        if "unique" in str(e).lower():
+            raise HTTPException(status_code=409, detail="User is already a project member")
+        raise
+
+
+@router.get(
+    "/{project_id}/members",
+    response_model=list[ProjectMemberResponse],
+)
+async def list_project_members(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    return await project_service.list_members(db, project_id)
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=204)
+async def remove_project_member(
+    project_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    removed = await project_service.remove_member(db, project_id, user_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Project member not found")

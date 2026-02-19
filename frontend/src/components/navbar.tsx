@@ -10,6 +10,7 @@ import { ProjectSwitcher } from "@/components/project-switcher";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
+  { href: "/teams", label: "Teams" },
   { href: "/prompts", label: "Prompts" },
   { href: "/workflows", label: "Workflows" },
   { href: "/metrics", label: "Metrics" },

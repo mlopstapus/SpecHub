@@ -8,17 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Key, Plus, Copy, Check, Trash2, AlertCircle } from "lucide-react";
 import {
-  listProjects,
+  listUsers,
   listApiKeys,
   createApiKey,
   revokeApiKey,
-  type Project_t,
+  type User_t,
   type ApiKey_t,
 } from "@/lib/api";
 
 export default function SettingsPage() {
-  const [projects, setProjects] = useState<Project_t[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project_t | null>(null);
+  const [users, setUsers] = useState<User_t[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User_t | null>(null);
   const [keys, setKeys] = useState<ApiKey_t[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,26 +28,26 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    listProjects()
+    listUsers()
       .then((res) => {
-        setProjects(res.items);
-        if (res.items.length > 0) setSelectedProject(res.items[0]);
+        setUsers(res.items);
+        if (res.items.length > 0) setSelectedUser(res.items[0]);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    if (!selectedProject) return;
-    listApiKeys(selectedProject.id)
+    if (!selectedUser) return;
+    listApiKeys(selectedUser.id)
       .then(setKeys)
       .catch(() => setKeys([]));
-  }, [selectedProject]);
+  }, [selectedUser]);
 
   const handleCreate = async () => {
-    if (!selectedProject || !newKeyName.trim()) return;
+    if (!selectedUser || !newKeyName.trim()) return;
     try {
-      const res = await createApiKey(selectedProject.id, {
+      const res = await createApiKey(selectedUser.id, {
         name: newKeyName.trim(),
         scopes: ["read", "expand", "write"],
       });
@@ -92,34 +92,34 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage API keys and project configuration.
+          Manage user API keys and configuration.
         </p>
       </div>
 
-      {projects.length === 0 ? (
+      {users.length === 0 ? (
         <Card className="py-12">
           <CardContent className="text-center">
             <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
-              Create a project first using the project switcher in the navbar.
+              Create a team and user first on the Teams page.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <label className="text-sm text-muted-foreground">Project:</label>
+            <label className="text-sm text-muted-foreground">User:</label>
             <select
               className="rounded-md border border-input bg-[#0d0d0d] px-3 py-1.5 text-sm"
-              value={selectedProject?.id ?? ""}
+              value={selectedUser?.id ?? ""}
               onChange={(e) => {
-                const p = projects.find((p) => p.id === e.target.value);
-                setSelectedProject(p ?? null);
+                const u = users.find((u) => u.id === e.target.value);
+                setSelectedUser(u ?? null);
               }}
             >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.display_name || u.username}
                 </option>
               ))}
             </select>

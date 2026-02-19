@@ -13,8 +13,10 @@ import { Input } from "@/components/ui/input";
 import { ChevronDown, FolderOpen, Plus, Check } from "lucide-react";
 import {
   listProjects,
+  listTeams,
   createProject,
   type Project_t,
+  type Team_t,
 } from "@/lib/api";
 
 const STORAGE_KEY = "spechub-project-id";
@@ -40,15 +42,23 @@ export function useActiveProject() {
 
 export function ProjectSwitcher() {
   const [projects, setProjects] = useState<Project_t[]>([]);
+  const [teams, setTeams] = useState<Team_t[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setActiveId(localStorage.getItem(STORAGE_KEY));
     listProjects()
       .then((res) => setProjects(res.items))
+      .catch(() => {});
+    listTeams()
+      .then((res) => {
+        setTeams(res.items);
+        if (res.items.length > 0) setSelectedTeamId(res.items[0].id);
+      })
       .catch(() => {});
   }, []);
 
@@ -65,14 +75,18 @@ export function ProjectSwitcher() {
   };
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !selectedTeamId) return;
     const slug = newName
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
     try {
-      const project = await createProject({ name: newName.trim(), slug });
+      const project = await createProject({
+        team_id: selectedTeamId,
+        name: newName.trim(),
+        slug,
+      });
       setProjects([...projects, project]);
       handleSelect(project.id);
       setNewName("");
@@ -113,6 +127,19 @@ export function ProjectSwitcher() {
         <DropdownMenuSeparator />
         {creating ? (
           <div className="p-2 space-y-2">
+            {teams.length > 0 && (
+              <select
+                className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                value={selectedTeamId}
+                onChange={(e) => setSelectedTeamId(e.target.value)}
+              >
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <Input
               placeholder="Project name"
               value={newName}
@@ -125,7 +152,12 @@ export function ProjectSwitcher() {
               className="h-7 text-xs"
             />
             <div className="flex gap-1.5">
-              <Button size="sm" className="h-6 text-xs flex-1" onClick={handleCreate}>
+              <Button
+                size="sm"
+                className="h-6 text-xs flex-1"
+                onClick={handleCreate}
+                disabled={teams.length === 0}
+              >
                 Create
               </Button>
               <Button
@@ -137,6 +169,11 @@ export function ProjectSwitcher() {
                 Cancel
               </Button>
             </div>
+            {teams.length === 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                Create a team first on the Teams page.
+              </p>
+            )}
           </div>
         ) : (
           <DropdownMenuItem onClick={() => setCreating(true)}>

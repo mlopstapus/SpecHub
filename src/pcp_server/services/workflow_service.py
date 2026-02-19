@@ -19,6 +19,7 @@ from src.pcp_server.services import prompt_service
 
 async def create_workflow(db: AsyncSession, data: WorkflowCreate) -> WorkflowResponse:
     workflow = Workflow(
+        user_id=data.user_id,
         project_id=data.project_id,
         name=data.name,
         description=data.description,
@@ -30,12 +31,17 @@ async def create_workflow(db: AsyncSession, data: WorkflowCreate) -> WorkflowRes
     return WorkflowResponse.model_validate(workflow)
 
 
-async def list_workflows(db: AsyncSession, project_id: uuid.UUID) -> list[WorkflowResponse]:
-    result = await db.execute(
-        select(Workflow)
-        .where(Workflow.project_id == project_id)
-        .order_by(Workflow.updated_at.desc())
-    )
+async def list_workflows(
+    db: AsyncSession,
+    user_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
+) -> list[WorkflowResponse]:
+    query = select(Workflow)
+    if user_id is not None:
+        query = query.where(Workflow.user_id == user_id)
+    if project_id is not None:
+        query = query.where(Workflow.project_id == project_id)
+    result = await db.execute(query.order_by(Workflow.updated_at.desc()))
     return [WorkflowResponse.model_validate(w) for w in result.scalars().all()]
 
 

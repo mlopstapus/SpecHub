@@ -11,7 +11,9 @@ import Link from "next/link";
 import {
   createWorkflow,
   listPrompts,
+  listUsers,
   type Prompt,
+  type User_t,
   type WorkflowStep_t,
 } from "@/lib/api";
 
@@ -24,12 +26,20 @@ function NewWorkflowPageInner() {
   const [description, setDescription] = useState("");
   const [steps, setSteps] = useState<WorkflowStep_t[]>([]);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [users, setUsers] = useState<User_t[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     listPrompts(1, 100)
       .then((res) => setPrompts(res.items))
+      .catch(() => {});
+    listUsers()
+      .then((res) => {
+        setUsers(res.items);
+        if (res.items.length > 0) setSelectedUserId(res.items[0].id);
+      })
       .catch(() => {});
   }, []);
 
@@ -87,12 +97,13 @@ function NewWorkflowPageInner() {
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !projectId) return;
+    if (!name.trim() || !selectedUserId) return;
     setSaving(true);
     setError(null);
     try {
       const wf = await createWorkflow({
-        project_id: projectId,
+        user_id: selectedUserId,
+        project_id: projectId || undefined,
         name: name.trim(),
         description: description.trim() || undefined,
         steps,
@@ -136,6 +147,20 @@ function NewWorkflowPageInner() {
               <CardTitle className="text-base">Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Owner</label>
+                <select
+                  className="w-full mt-1 rounded-md border border-input bg-[#0d0d0d] px-3 py-1.5 text-sm"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.display_name || u.username}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="text-xs text-muted-foreground">Name</label>
                 <Input
@@ -333,7 +358,7 @@ function NewWorkflowPageInner() {
               <Button
                 className="w-full"
                 onClick={handleSave}
-                disabled={!name.trim() || saving}
+                disabled={!name.trim() || !selectedUserId || saving}
               >
                 <Save className="h-4 w-4 mr-1" />
                 {saving ? "Saving..." : "Create Workflow"}

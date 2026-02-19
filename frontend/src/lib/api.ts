@@ -27,7 +27,260 @@ export class APIError extends Error {
   }
 }
 
-// --- Types ---
+// =====================================================================
+// Team types & endpoints
+// =====================================================================
+
+export interface Team_t {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner_id: string | null;
+  parent_team_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamListResponse {
+  items: Team_t[];
+  total: number;
+}
+
+export async function listTeams(parentTeamId?: string): Promise<TeamListResponse> {
+  const params = new URLSearchParams();
+  if (parentTeamId) params.set("parent_team_id", parentTeamId);
+  const qs = params.toString();
+  return fetchAPI<TeamListResponse>(`/teams${qs ? `?${qs}` : ""}`);
+}
+
+export async function getTeam(id: string): Promise<Team_t> {
+  return fetchAPI<Team_t>(`/teams/${id}`);
+}
+
+export async function createTeam(data: {
+  name: string;
+  slug: string;
+  description?: string;
+  parent_team_id?: string;
+}): Promise<Team_t> {
+  return fetchAPI<Team_t>("/teams", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTeam(
+  id: string,
+  data: { name?: string; description?: string; owner_id?: string }
+): Promise<Team_t> {
+  return fetchAPI<Team_t>(`/teams/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTeam(id: string): Promise<void> {
+  await fetchAPI(`/teams/${id}`, { method: "DELETE" });
+}
+
+// =====================================================================
+// User types & endpoints
+// =====================================================================
+
+export interface User_t {
+  id: string;
+  team_id: string;
+  username: string;
+  display_name: string | null;
+  email: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserListResponse {
+  items: User_t[];
+  total: number;
+}
+
+export async function listUsers(teamId?: string): Promise<UserListResponse> {
+  const params = new URLSearchParams();
+  if (teamId) params.set("team_id", teamId);
+  const qs = params.toString();
+  return fetchAPI<UserListResponse>(`/users${qs ? `?${qs}` : ""}`);
+}
+
+export async function getUser(id: string): Promise<User_t> {
+  return fetchAPI<User_t>(`/users/${id}`);
+}
+
+export async function createUser(data: {
+  username: string;
+  display_name?: string;
+  email?: string;
+  team_id: string;
+}): Promise<User_t> {
+  return fetchAPI<User_t>("/users", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateUser(
+  id: string,
+  data: { display_name?: string; email?: string; is_active?: boolean }
+): Promise<User_t> {
+  return fetchAPI<User_t>(`/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await fetchAPI(`/users/${id}`, { method: "DELETE" });
+}
+
+// =====================================================================
+// Policy types & endpoints
+// =====================================================================
+
+export type EnforcementType = "prepend" | "append" | "inject" | "validate";
+
+export interface Policy_t {
+  id: string;
+  team_id: string | null;
+  project_id: string | null;
+  name: string;
+  description: string | null;
+  enforcement_type: EnforcementType;
+  content: string;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  is_inherited: boolean;
+}
+
+export interface EffectivePoliciesResponse {
+  inherited: Policy_t[];
+  local: Policy_t[];
+}
+
+export async function createPolicy(data: {
+  team_id?: string;
+  project_id?: string;
+  name: string;
+  description?: string;
+  enforcement_type: EnforcementType;
+  content: string;
+  priority?: number;
+}): Promise<Policy_t> {
+  return fetchAPI<Policy_t>("/policies", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getPolicy(id: string): Promise<Policy_t> {
+  return fetchAPI<Policy_t>(`/policies/${id}`);
+}
+
+export async function updatePolicy(
+  id: string,
+  data: {
+    name?: string;
+    description?: string;
+    enforcement_type?: EnforcementType;
+    content?: string;
+    priority?: number;
+    is_active?: boolean;
+  }
+): Promise<Policy_t> {
+  return fetchAPI<Policy_t>(`/policies/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deletePolicy(id: string): Promise<void> {
+  await fetchAPI(`/policies/${id}`, { method: "DELETE" });
+}
+
+export async function getEffectivePolicies(
+  userId: string,
+  projectId?: string
+): Promise<EffectivePoliciesResponse> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (projectId) params.set("project_id", projectId);
+  return fetchAPI<EffectivePoliciesResponse>(`/policies/effective?${params}`);
+}
+
+// =====================================================================
+// Objective types & endpoints
+// =====================================================================
+
+export interface Objective_t {
+  id: string;
+  team_id: string | null;
+  project_id: string | null;
+  user_id: string | null;
+  title: string;
+  description: string | null;
+  parent_objective_id: string | null;
+  is_inherited: boolean;
+  status: string;
+  created_at: string;
+}
+
+export interface EffectiveObjectivesResponse {
+  inherited: Objective_t[];
+  local: Objective_t[];
+}
+
+export async function createObjective(data: {
+  team_id?: string;
+  project_id?: string;
+  user_id?: string;
+  title: string;
+  description?: string;
+  parent_objective_id?: string;
+}): Promise<Objective_t> {
+  return fetchAPI<Objective_t>("/objectives", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getObjective(id: string): Promise<Objective_t> {
+  return fetchAPI<Objective_t>(`/objectives/${id}`);
+}
+
+export async function updateObjective(
+  id: string,
+  data: { title?: string; description?: string; status?: string }
+): Promise<Objective_t> {
+  return fetchAPI<Objective_t>(`/objectives/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteObjective(id: string): Promise<void> {
+  await fetchAPI(`/objectives/${id}`, { method: "DELETE" });
+}
+
+export async function getEffectiveObjectives(
+  userId: string,
+  projectId?: string
+): Promise<EffectiveObjectivesResponse> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (projectId) params.set("project_id", projectId);
+  return fetchAPI<EffectiveObjectivesResponse>(`/objectives/effective?${params}`);
+}
+
+// =====================================================================
+// Prompt types & endpoints
+// =====================================================================
 
 export interface PromptVersion {
   id: string;
@@ -44,6 +297,7 @@ export interface Prompt {
   name: string;
   description: string | null;
   is_deprecated: boolean;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
   latest_version: PromptVersion | null;
@@ -61,9 +315,9 @@ export interface ExpandResponse {
   prompt_version: string;
   system_message: string | null;
   user_message: string;
+  applied_policies: string[];
+  objectives: string[];
 }
-
-// --- Prompt endpoints ---
 
 export async function listPrompts(
   page = 1,
@@ -85,6 +339,7 @@ export async function getPrompt(name: string): Promise<Prompt> {
 export async function createPrompt(data: {
   name: string;
   description?: string;
+  user_id?: string;
   version: {
     version: string;
     system_template?: string;
@@ -130,14 +385,17 @@ export async function getVersions(name: string): Promise<PromptVersion[]> {
 export async function expandPrompt(
   name: string,
   input: Record<string, unknown>,
-  version?: string
+  version?: string,
+  projectId?: string
 ): Promise<ExpandResponse> {
   const path = version
     ? `/expand/${encodeURIComponent(name)}/versions/${encodeURIComponent(version)}`
     : `/expand/${encodeURIComponent(name)}`;
+  const body: Record<string, unknown> = { input };
+  if (projectId) body.project_id = projectId;
   return fetchAPI<ExpandResponse>(path, {
     method: "POST",
-    body: JSON.stringify({ input }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -151,10 +409,14 @@ export async function pinVersion(
   );
 }
 
-// --- Project types ---
+// =====================================================================
+// Project types & endpoints (team-owned, with lead & members)
+// =====================================================================
 
 export interface Project_t {
   id: string;
+  team_id: string;
+  lead_user_id: string | null;
   name: string;
   slug: string;
   description: string | null;
@@ -167,10 +429,19 @@ export interface ProjectListResponse {
   total: number;
 }
 
-// --- Project endpoints ---
+export interface ProjectMember_t {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
 
-export async function listProjects(): Promise<ProjectListResponse> {
-  return fetchAPI<ProjectListResponse>("/projects");
+export async function listProjects(teamId?: string): Promise<ProjectListResponse> {
+  const params = new URLSearchParams();
+  if (teamId) params.set("team_id", teamId);
+  const qs = params.toString();
+  return fetchAPI<ProjectListResponse>(`/projects${qs ? `?${qs}` : ""}`);
 }
 
 export async function getProject(id: string): Promise<Project_t> {
@@ -178,9 +449,11 @@ export async function getProject(id: string): Promise<Project_t> {
 }
 
 export async function createProject(data: {
+  team_id: string;
   name: string;
   slug: string;
   description?: string;
+  lead_user_id?: string;
 }): Promise<Project_t> {
   return fetchAPI<Project_t>("/projects", {
     method: "POST",
@@ -190,7 +463,7 @@ export async function createProject(data: {
 
 export async function updateProject(
   id: string,
-  data: { name?: string; description?: string }
+  data: { name?: string; description?: string; lead_user_id?: string }
 ): Promise<Project_t> {
   return fetchAPI<Project_t>(`/projects/${id}`, {
     method: "PUT",
@@ -202,11 +475,38 @@ export async function deleteProject(id: string): Promise<void> {
   await fetchAPI(`/projects/${id}`, { method: "DELETE" });
 }
 
-// --- API Key types ---
+export async function addProjectMember(
+  projectId: string,
+  data: { user_id: string; role?: string }
+): Promise<ProjectMember_t> {
+  return fetchAPI<ProjectMember_t>(`/projects/${projectId}/members`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listProjectMembers(
+  projectId: string
+): Promise<ProjectMember_t[]> {
+  return fetchAPI<ProjectMember_t[]>(`/projects/${projectId}/members`);
+}
+
+export async function removeProjectMember(
+  projectId: string,
+  userId: string
+): Promise<void> {
+  await fetchAPI(`/projects/${projectId}/members/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+// =====================================================================
+// API Key types & endpoints (user-scoped)
+// =====================================================================
 
 export interface ApiKey_t {
   id: string;
-  project_id: string;
+  user_id: string;
   name: string;
   prefix: string;
   scopes: string[];
@@ -221,17 +521,15 @@ export interface ApiKeyCreatedResponse {
   raw_key: string;
 }
 
-// --- API Key endpoints ---
-
-export async function listApiKeys(projectId: string): Promise<ApiKey_t[]> {
-  return fetchAPI<ApiKey_t[]>(`/projects/${projectId}/api-keys`);
+export async function listApiKeys(userId: string): Promise<ApiKey_t[]> {
+  return fetchAPI<ApiKey_t[]>(`/users/${userId}/api-keys`);
 }
 
 export async function createApiKey(
-  projectId: string,
+  userId: string,
   data: { name: string; scopes?: string[] }
 ): Promise<ApiKeyCreatedResponse> {
-  return fetchAPI<ApiKeyCreatedResponse>(`/projects/${projectId}/api-keys`, {
+  return fetchAPI<ApiKeyCreatedResponse>(`/users/${userId}/api-keys`, {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -241,7 +539,9 @@ export async function revokeApiKey(keyId: string): Promise<void> {
   await fetchAPI(`/api-keys/${keyId}`, { method: "DELETE" });
 }
 
-// --- Workflow types ---
+// =====================================================================
+// Workflow types & endpoints (user-scoped, optionally project-associated)
+// =====================================================================
 
 export interface WorkflowStep_t {
   id: string;
@@ -254,7 +554,8 @@ export interface WorkflowStep_t {
 
 export interface Workflow_t {
   id: string;
-  project_id: string;
+  user_id: string;
+  project_id: string | null;
   name: string;
   description: string | null;
   steps: WorkflowStep_t[];
@@ -279,8 +580,15 @@ export interface WorkflowRunResponse {
   outputs: Record<string, string>;
 }
 
-export async function listWorkflows(projectId: string): Promise<Workflow_t[]> {
-  return fetchAPI<Workflow_t[]>(`/projects/${projectId}/workflows`);
+export async function listWorkflows(
+  userId?: string,
+  projectId?: string
+): Promise<Workflow_t[]> {
+  const params = new URLSearchParams();
+  if (userId) params.set("user_id", userId);
+  if (projectId) params.set("project_id", projectId);
+  const qs = params.toString();
+  return fetchAPI<Workflow_t[]>(`/workflows${qs ? `?${qs}` : ""}`);
 }
 
 export async function getWorkflow(id: string): Promise<Workflow_t> {
@@ -288,7 +596,8 @@ export async function getWorkflow(id: string): Promise<Workflow_t> {
 }
 
 export async function createWorkflow(data: {
-  project_id: string;
+  user_id: string;
+  project_id?: string;
   name: string;
   description?: string;
   steps: WorkflowStep_t[];
@@ -323,7 +632,9 @@ export async function runWorkflow(
   });
 }
 
-// --- Metrics types ---
+// =====================================================================
+// Metrics types & endpoints
+// =====================================================================
 
 export interface TopPrompt {
   name: string;
@@ -351,7 +662,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>("/metrics/dashboard");
 }
 
-// --- Health ---
+// =====================================================================
+// Health
+// =====================================================================
 
 export async function healthCheck(): Promise<{ status: string }> {
   const res = await fetch("/health");

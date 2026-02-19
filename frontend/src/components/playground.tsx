@@ -276,6 +276,34 @@ function ExpandOutput({
           {result.user_message}
         </pre>
       </div>
+      {result.applied_policies && result.applied_policies.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground font-medium mb-1">
+            Applied Policies
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {result.applied_policies.map((p) => (
+              <Badge key={p} variant="secondary" className="text-[10px]">
+                {p}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+      {result.objectives && result.objectives.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground font-medium mb-1">
+            Objectives
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {result.objectives.map((o) => (
+              <Badge key={o} variant="outline" className="text-[10px]">
+                {o}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

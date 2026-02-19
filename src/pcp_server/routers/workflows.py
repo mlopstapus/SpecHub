@@ -21,9 +21,13 @@ async def create_workflow(data: WorkflowCreate, db: AsyncSession = Depends(get_d
     return await workflow_service.create_workflow(db, data)
 
 
-@router.get("/projects/{project_id}/workflows", response_model=list[WorkflowResponse])
-async def list_workflows(project_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    return await workflow_service.list_workflows(db, project_id)
+@router.get("/workflows", response_model=list[WorkflowResponse])
+async def list_workflows(
+    user_id: uuid.UUID | None = None,
+    project_id: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await workflow_service.list_workflows(db, user_id=user_id, project_id=project_id)
 
 
 @router.get("/workflows/{workflow_id}", response_model=WorkflowResponse)

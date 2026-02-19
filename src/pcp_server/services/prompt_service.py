@@ -1,4 +1,5 @@
 import re
+import uuid
 
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
@@ -11,6 +12,7 @@ from src.pcp_server.schemas import (
     ExpandRequest,
     ExpandResponse,
     NewVersionCreate,
+    PolicyResponse,
     PromptCreate,
     PromptListResponse,
     PromptResponse,
@@ -25,6 +27,7 @@ def _prompt_response(prompt: Prompt) -> PromptResponse:
         name=prompt.name,
         description=prompt.description,
         is_deprecated=prompt.is_deprecated,
+        user_id=prompt.user_id,
         created_at=prompt.created_at,
         updated_at=prompt.updated_at,
         latest_version=PromptVersionResponse.model_validate(latest) if latest else None,
@@ -32,7 +35,7 @@ def _prompt_response(prompt: Prompt) -> PromptResponse:
 
 
 async def create_prompt(db: AsyncSession, data: PromptCreate) -> PromptResponse:
-    prompt = Prompt(name=data.name, description=data.description)
+    prompt = Prompt(name=data.name, description=data.description, user_id=data.user_id)
     db.add(prompt)
     await db.flush()
 
@@ -216,16 +219,83 @@ async def _prefetch_included_prompts(
     return set(re.findall(r"include_prompt\(['\"]([a-z0-9-]+)['\"]\)", template_str))
 
 
+def _apply_policies(
+    system_template: str | None,
+    user_template: str,
+    policies: list[PolicyResponse],
+    template_vars: dict,
+) -> tuple[str | None, str, list[str]]:
+    """Apply policy enforcement to templates. Returns (system, user, applied_names)."""
+    applied: list[str] = []
+    inject_parts: list[str] = []
+
+    for p in policies:
+        if not p.is_active:
+            continue
+        applied.append(p.name)
+        if p.enforcement_type.value == "prepend" and system_template is not None:
+            system_template = p.content + "\n\n" + system_template
+        elif p.enforcement_type.value == "prepend" and system_template is None:
+            system_template = p.content
+        elif p.enforcement_type.value == "append":
+            user_template = user_template + "\n\n" + p.content
+        elif p.enforcement_type.value == "inject":
+            inject_parts.append(p.content)
+        # validate is handled post-render (not modifying templates)
+
+    if inject_parts:
+        template_vars["policies"] = "\n".join(inject_parts)
+
+    return system_template, user_template, applied
+
+
 async def expand_prompt(
-    db: AsyncSession, name: str, data: ExpandRequest, version: str | None = None
+    db: AsyncSession,
+    name: str,
+    data: ExpandRequest,
+    version: str | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> ExpandResponse | None:
     pv = await _fetch_prompt_version(db, name, version)
     if not pv:
         return None
 
+    # Resolve policies and objectives if user context is available
+    applied_policy_names: list[str] = []
+    objective_titles: list[str] = []
+    effective_user_id = user_id
+
+    # If no explicit user_id, try to get it from the prompt's owner
+    if not effective_user_id:
+        prompt_result = await db.execute(
+            select(Prompt).where(Prompt.name == name)
+        )
+        prompt_obj = prompt_result.scalar_one_or_none()
+        if prompt_obj:
+            effective_user_id = prompt_obj.user_id
+
+    system_tpl = pv.system_template
+    user_tpl = pv.user_template
+    template_vars = dict(data.input)
+
+    if effective_user_id:
+        from src.pcp_server.services import objective_service, policy_service
+
+        all_policies = await policy_service.resolve_all_policies(
+            db, effective_user_id, data.project_id
+        )
+        system_tpl, user_tpl, applied_policy_names = _apply_policies(
+            system_tpl, user_tpl, all_policies, template_vars
+        )
+        objective_titles = await objective_service.resolve_all_objectives(
+            db, effective_user_id, data.project_id
+        )
+        if objective_titles:
+            template_vars["objectives"] = "\n".join(objective_titles)
+
     referenced_names: set[str] = set()
-    referenced_names |= await _prefetch_included_prompts(db, pv.system_template)
-    referenced_names |= await _prefetch_included_prompts(db, pv.user_template)
+    referenced_names |= await _prefetch_included_prompts(db, system_tpl)
+    referenced_names |= await _prefetch_included_prompts(db, user_tpl)
 
     prompt_cache: dict[str, PromptVersion] = {}
     fetch_queue = list(referenced_names)
@@ -248,20 +318,22 @@ async def expand_prompt(
             break
 
     env = SandboxedEnvironment(undefined=StrictUndefined)
-    include_fn = _build_include_prompt(prompt_cache, env, data.input, depth=0)
+    include_fn = _build_include_prompt(prompt_cache, env, template_vars, depth=0)
     env.globals["include_prompt"] = include_fn
 
     system_message = None
-    if pv.system_template:
-        system_message = _render_template(env, pv.system_template, data.input)
+    if system_tpl:
+        system_message = _render_template(env, system_tpl, template_vars)
 
-    user_message = _render_template(env, pv.user_template, data.input)
+    user_message = _render_template(env, user_tpl, template_vars)
 
     return ExpandResponse(
         prompt_name=name,
         prompt_version=pv.version,
         system_message=system_message,
         user_message=user_message,
+        applied_policies=applied_policy_names,
+        objectives=objective_titles,
     )
 
 
