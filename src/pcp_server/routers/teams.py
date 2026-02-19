@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.pcp_server.auth import require_admin
 from src.pcp_server.database import get_db
+from src.pcp_server.models import User
 from src.pcp_server.schemas import (
     TeamCreate,
     TeamListResponse,
@@ -16,7 +18,11 @@ router = APIRouter(prefix="/api/v1/teams", tags=["teams"])
 
 
 @router.post("", response_model=TeamResponse, status_code=201)
-async def create_team(data: TeamCreate, db: AsyncSession = Depends(get_db)):
+async def create_team(
+    data: TeamCreate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
     try:
         return await team_service.create_team(db, data)
     except Exception as e:
@@ -43,7 +49,10 @@ async def get_team(team_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 
 @router.put("/{team_id}", response_model=TeamResponse)
 async def update_team(
-    team_id: uuid.UUID, data: TeamUpdate, db: AsyncSession = Depends(get_db)
+    team_id: uuid.UUID,
+    data: TeamUpdate,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
 ):
     result = await team_service.update_team(db, team_id, data)
     if not result:
@@ -52,7 +61,11 @@ async def update_team(
 
 
 @router.delete("/{team_id}", status_code=204)
-async def delete_team(team_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_team(
+    team_id: uuid.UUID,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
     deleted = await team_service.delete_team(db, team_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Team not found")

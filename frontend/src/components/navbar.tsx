@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { Plus } from "lucide-react";
+import { Plus, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ProjectSwitcher } from "@/components/project-switcher";
+import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "/", label: "Dashboard" },
@@ -19,6 +21,12 @@ const navItems = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, isAdmin, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
+  };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-sm">
@@ -60,6 +68,32 @@ export function Navbar() {
                 New Prompt
               </Link>
             </Button>
+            {user && (
+              <div className="flex items-center gap-2 pl-2 border-l border-border">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-medium leading-none">
+                    {user.display_name || user.username}
+                  </p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isAdmin && (
+                      <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5">
+                        <Shield className="h-2 w-2 mr-0.5" />
+                        admin
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={handleLogout}
+                  title="Sign out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

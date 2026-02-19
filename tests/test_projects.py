@@ -1,13 +1,20 @@
-"""Tests for the Project CRUD API."""
+"""Tests for the Project CRUD API (team-owned)."""
 
 import pytest
 
 
+async def _make_team(client, slug="proj-team"):
+    """Helper: create a team and return its id."""
+    resp = await client.post("/api/v1/teams", json={"name": "Proj Team", "slug": slug})
+    return resp.json()["id"]
+
+
 @pytest.mark.asyncio
 async def test_create_project(client):
+    team_id = await _make_team(client)
     resp = await client.post(
         "/api/v1/projects",
-        json={"name": "My Project", "slug": "my-project", "description": "Test project"},
+        json={"name": "My Project", "slug": "my-project", "description": "Test project", "team_id": team_id},
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -19,21 +26,23 @@ async def test_create_project(client):
 
 @pytest.mark.asyncio
 async def test_create_project_duplicate_slug(client):
+    team_id = await _make_team(client, slug="dup-team")
     await client.post(
         "/api/v1/projects",
-        json={"name": "First", "slug": "dup-slug"},
+        json={"name": "First", "slug": "dup-slug", "team_id": team_id},
     )
     resp = await client.post(
         "/api/v1/projects",
-        json={"name": "Second", "slug": "dup-slug"},
+        json={"name": "Second", "slug": "dup-slug", "team_id": team_id},
     )
     assert resp.status_code == 409
 
 
 @pytest.mark.asyncio
 async def test_list_projects(client):
-    await client.post("/api/v1/projects", json={"name": "Alpha", "slug": "alpha"})
-    await client.post("/api/v1/projects", json={"name": "Beta", "slug": "beta"})
+    team_id = await _make_team(client, slug="list-team")
+    await client.post("/api/v1/projects", json={"name": "Alpha", "slug": "alpha", "team_id": team_id})
+    await client.post("/api/v1/projects", json={"name": "Beta", "slug": "beta", "team_id": team_id})
     resp = await client.get("/api/v1/projects")
     assert resp.status_code == 200
     data = resp.json()
@@ -45,8 +54,9 @@ async def test_list_projects(client):
 
 @pytest.mark.asyncio
 async def test_get_project(client):
+    team_id = await _make_team(client, slug="get-team")
     create_resp = await client.post(
-        "/api/v1/projects", json={"name": "Get Me", "slug": "get-me"}
+        "/api/v1/projects", json={"name": "Get Me", "slug": "get-me", "team_id": team_id}
     )
     project_id = create_resp.json()["id"]
     resp = await client.get(f"/api/v1/projects/{project_id}")
@@ -62,8 +72,9 @@ async def test_get_project_not_found(client):
 
 @pytest.mark.asyncio
 async def test_update_project(client):
+    team_id = await _make_team(client, slug="upd-team")
     create_resp = await client.post(
-        "/api/v1/projects", json={"name": "Old Name", "slug": "update-me"}
+        "/api/v1/projects", json={"name": "Old Name", "slug": "update-me", "team_id": team_id}
     )
     project_id = create_resp.json()["id"]
     resp = await client.put(
@@ -86,8 +97,9 @@ async def test_update_project_not_found(client):
 
 @pytest.mark.asyncio
 async def test_delete_project(client):
+    team_id = await _make_team(client, slug="del-team")
     create_resp = await client.post(
-        "/api/v1/projects", json={"name": "Delete Me", "slug": "delete-me"}
+        "/api/v1/projects", json={"name": "Delete Me", "slug": "delete-me", "team_id": team_id}
     )
     project_id = create_resp.json()["id"]
     resp = await client.delete(f"/api/v1/projects/{project_id}")

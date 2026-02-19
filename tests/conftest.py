@@ -1,6 +1,7 @@
 """Test fixtures: in-memory SQLite DB, async session, FastAPI test client."""
 
 import asyncio
+import uuid
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -8,7 +9,19 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.pcp_server.models import Base
+from src.pcp_server.models import Base, User
+
+
+# A mock admin user for tests that hit auth-protected endpoints
+_mock_admin = User(
+    id=uuid.uuid4(),
+    team_id=uuid.uuid4(),
+    username="test-admin",
+    display_name="Test Admin",
+    email="admin@test.local",
+    role="admin",
+    is_active=True,
+)
 
 
 @pytest.fixture(scope="session")
@@ -44,10 +57,19 @@ async def client(db_engine) -> AsyncGenerator[AsyncClient, None]:
         async with session_factory() as session:
             yield session
 
+    def override_get_current_user():
+        return _mock_admin
+
+    def override_require_admin():
+        return _mock_admin
+
+    from src.pcp_server.auth import get_current_user, require_admin
     from src.pcp_server.database import get_db
     from src.pcp_server.main import app
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[require_admin] = override_require_admin
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

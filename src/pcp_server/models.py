@@ -83,6 +83,8 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String(255))
     email: Mapped[str | None] = mapped_column(String(255), unique=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    role: Mapped[str] = mapped_column(String(50), default="member")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -100,6 +102,7 @@ class User(Base):
         foreign_keys="[Objective.user_id]", back_populates="user"
     )
     project_memberships: Mapped[list["ProjectMember"]] = relationship(back_populates="user")
+    sent_invitations: Mapped[list["Invitation"]] = relationship(back_populates="invited_by_user")
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +323,33 @@ class Workflow(Base):
 
     user: Mapped["User"] = relationship(back_populates="workflows")
     project: Mapped["Project | None"] = relationship(back_populates="workflows")
+
+
+# ---------------------------------------------------------------------------
+# Invitation
+# ---------------------------------------------------------------------------
+
+class Invitation(Base):
+    __tablename__ = "invitations"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    team_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("teams.id"), nullable=False, index=True
+    )
+    role: Mapped[str] = mapped_column(String(50), default="member")
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    invited_by_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    team: Mapped["Team"] = relationship()
+    invited_by_user: Mapped["User"] = relationship(
+        foreign_keys=[invited_by_id], back_populates="sent_invitations"
+    )
 
 
 # ---------------------------------------------------------------------------

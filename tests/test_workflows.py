@@ -1,14 +1,22 @@
-"""Tests for the Workflow CRUD and execution endpoints."""
+"""Tests for the Workflow CRUD and execution endpoints (user-scoped)."""
 
 import pytest
 
 
-@pytest.fixture
-async def project_id(client):
-    resp = await client.post(
-        "/api/v1/projects", json={"name": "WF Project", "slug": "wf-project"}
+async def _make_user(client, slug="wf-team"):
+    """Helper: create team + user, return user_id."""
+    team = await client.post("/api/v1/teams", json={"name": "WF Team", "slug": slug})
+    team_id = team.json()["id"]
+    user = await client.post(
+        "/api/v1/users",
+        json={"username": f"wfuser-{slug}", "team_id": team_id, "email": f"{slug}@test.com"},
     )
-    return resp.json()["id"]
+    return user.json()["id"]
+
+
+@pytest.fixture
+async def user_id(client):
+    return await _make_user(client)
 
 
 @pytest.fixture
@@ -37,11 +45,11 @@ async def seeded_prompts(client):
 
 
 @pytest.mark.asyncio
-async def test_create_workflow(client, project_id):
+async def test_create_workflow(client, user_id):
     resp = await client.post(
         "/api/v1/workflows",
         json={
-            "project_id": project_id,
+            "user_id": user_id,
             "name": "Test Workflow",
             "description": "A test workflow",
             "steps": [
@@ -62,24 +70,16 @@ async def test_create_workflow(client, project_id):
 
 
 @pytest.mark.asyncio
-async def test_list_workflows(client, project_id):
+async def test_list_workflows(client, user_id):
     await client.post(
         "/api/v1/workflows",
-        json={
-            "project_id": project_id,
-            "name": "WF A",
-            "steps": [],
-        },
+        json={"user_id": user_id, "name": "WF A", "steps": []},
     )
     await client.post(
         "/api/v1/workflows",
-        json={
-            "project_id": project_id,
-            "name": "WF B",
-            "steps": [],
-        },
+        json={"user_id": user_id, "name": "WF B", "steps": []},
     )
-    resp = await client.get(f"/api/v1/projects/{project_id}/workflows")
+    resp = await client.get(f"/api/v1/workflows?user_id={user_id}")
     assert resp.status_code == 200
     names = [w["name"] for w in resp.json()]
     assert "WF A" in names
@@ -87,10 +87,10 @@ async def test_list_workflows(client, project_id):
 
 
 @pytest.mark.asyncio
-async def test_get_workflow(client, project_id):
+async def test_get_workflow(client, user_id):
     create = await client.post(
         "/api/v1/workflows",
-        json={"project_id": project_id, "name": "Get Me", "steps": []},
+        json={"user_id": user_id, "name": "Get Me", "steps": []},
     )
     wf_id = create.json()["id"]
     resp = await client.get(f"/api/v1/workflows/{wf_id}")
@@ -105,10 +105,10 @@ async def test_get_workflow_not_found(client):
 
 
 @pytest.mark.asyncio
-async def test_update_workflow(client, project_id):
+async def test_update_workflow(client, user_id):
     create = await client.post(
         "/api/v1/workflows",
-        json={"project_id": project_id, "name": "Old Name", "steps": []},
+        json={"user_id": user_id, "name": "Old Name", "steps": []},
     )
     wf_id = create.json()["id"]
     resp = await client.put(
@@ -120,10 +120,10 @@ async def test_update_workflow(client, project_id):
 
 
 @pytest.mark.asyncio
-async def test_delete_workflow(client, project_id):
+async def test_delete_workflow(client, user_id):
     create = await client.post(
         "/api/v1/workflows",
-        json={"project_id": project_id, "name": "Delete Me", "steps": []},
+        json={"user_id": user_id, "name": "Delete Me", "steps": []},
     )
     wf_id = create.json()["id"]
     resp = await client.delete(f"/api/v1/workflows/{wf_id}")
@@ -139,11 +139,11 @@ async def test_delete_workflow_not_found(client):
 
 
 @pytest.mark.asyncio
-async def test_run_single_step_workflow(client, project_id, seeded_prompts):
+async def test_run_single_step_workflow(client, user_id, seeded_prompts):
     create = await client.post(
         "/api/v1/workflows",
         json={
-            "project_id": project_id,
+            "user_id": user_id,
             "name": "Single Step",
             "steps": [
                 {
@@ -169,11 +169,11 @@ async def test_run_single_step_workflow(client, project_id, seeded_prompts):
 
 
 @pytest.mark.asyncio
-async def test_run_chained_workflow(client, project_id, seeded_prompts):
+async def test_run_chained_workflow(client, user_id, seeded_prompts):
     create = await client.post(
         "/api/v1/workflows",
         json={
-            "project_id": project_id,
+            "user_id": user_id,
             "name": "Chained",
             "steps": [
                 {
@@ -216,11 +216,11 @@ async def test_run_workflow_not_found(client):
 
 
 @pytest.mark.asyncio
-async def test_run_workflow_missing_prompt(client, project_id):
+async def test_run_workflow_missing_prompt(client, user_id):
     create = await client.post(
         "/api/v1/workflows",
         json={
-            "project_id": project_id,
+            "user_id": user_id,
             "name": "Bad Prompt",
             "steps": [
                 {

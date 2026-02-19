@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/toaster";
-import { Navbar } from "@/components/navbar";
+import { AuthProvider } from "@/lib/auth-context";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -50,11 +51,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
       >
-        <Navbar />
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
-        <Toaster />
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

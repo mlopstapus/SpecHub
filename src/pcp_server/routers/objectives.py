@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.pcp_server.auth import get_current_user
 from src.pcp_server.database import get_db
+from src.pcp_server.models import User
 from src.pcp_server.schemas import (
     EffectiveObjectivesResponse,
     ObjectiveCreate,
@@ -16,7 +18,11 @@ router = APIRouter(prefix="/api/v1/objectives", tags=["objectives"])
 
 
 @router.post("", response_model=ObjectiveResponse, status_code=201)
-async def create_objective(data: ObjectiveCreate, db: AsyncSession = Depends(get_db)):
+async def create_objective(
+    data: ObjectiveCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     return await objective_service.create_objective(db, data)
 
 
@@ -39,7 +45,10 @@ async def get_objective(objective_id: uuid.UUID, db: AsyncSession = Depends(get_
 
 @router.put("/{objective_id}", response_model=ObjectiveResponse)
 async def update_objective(
-    objective_id: uuid.UUID, data: ObjectiveUpdate, db: AsyncSession = Depends(get_db)
+    objective_id: uuid.UUID,
+    data: ObjectiveUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     result = await objective_service.update_objective(db, objective_id, data)
     if not result:
@@ -48,7 +57,11 @@ async def update_objective(
 
 
 @router.delete("/{objective_id}", status_code=204)
-async def delete_objective(objective_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_objective(
+    objective_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     deleted = await objective_service.delete_objective(db, objective_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Objective not found")

@@ -44,7 +44,7 @@ async def test_pcp_list_with_prompts(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
     result = await pcp_list()
-    assert "sh-my-prompt" in result
+    assert "pcp-my-prompt" in result
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_pcp_search_match(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
     result = await pcp_search("search")
-    assert "sh-search-target" in result
+    assert "pcp-search-target" in result
 
 
 @pytest.mark.asyncio
@@ -101,7 +101,7 @@ async def test_pcp_search_by_tag(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
     result = await pcp_search("unique-tag")
-    assert "sh-tag-match" in result
+    assert "pcp-tag-match" in result
 
 
 @pytest.mark.asyncio
@@ -123,7 +123,7 @@ async def test_pcp_search_by_description(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
     result = await pcp_search("distinctive")
-    assert "sh-desc-match" in result
+    assert "pcp-desc-match" in result
 
 
 def test_register_one_creates_tool():
@@ -132,7 +132,7 @@ def test_register_one_creates_tool():
     _register_one("unit-test-prompt", "A dynamically registered tool")
     new_count = len(mcp._tool_manager._tools)
     assert new_count == initial_count + 1
-    assert "sh-unit-test-prompt" in mcp._tool_manager._tools
+    assert "pcp-unit-test-prompt" in mcp._tool_manager._tools
 
 
 @pytest.mark.asyncio
@@ -156,7 +156,7 @@ async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
 
     _register_one("invoke-me", "Test invocation")
 
-    tool_fn = mcp._tool_manager._tools["sh-invoke-me"].fn
+    tool_fn = mcp._tool_manager._tools["pcp-invoke-me"].fn
     result = await tool_fn(input='{"input": "hello"}')
     assert "[System]" in result
     assert "System says: hello" in result
@@ -184,6 +184,6 @@ async def test_dynamic_tool_plain_string_input(db_session: AsyncSession, monkeyp
 
     _register_one("plain-input", "Plain string test")
 
-    tool_fn = mcp._tool_manager._tools["sh-plain-input"].fn
+    tool_fn = mcp._tool_manager._tools["pcp-plain-input"].fn
     result = await tool_fn(input="just a string")
     assert "Got: just a string" in result

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.pcp_server.config import settings
 from src.pcp_server.mcp.server import mcp
 from src.pcp_server.mcp.tools import register_prompt_tools
+from src.pcp_server.routers.auth import router as auth_router
 from src.pcp_server.routers.apikeys import router as apikeys_router
 from src.pcp_server.routers.metrics import router as metrics_router
 from src.pcp_server.routers.objectives import router as objectives_router
@@ -46,6 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(apikeys_router)
 app.include_router(metrics_router)
 app.include_router(objectives_router)

@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.pcp_server.auth import get_current_user
 from src.pcp_server.database import get_db
+from src.pcp_server.models import User
 from src.pcp_server.schemas import (
     ProjectCreate,
     ProjectListResponse,
@@ -18,7 +20,11 @@ router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
 
 @router.post("", response_model=ProjectResponse, status_code=201)
-async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db)):
+async def create_project(
+    data: ProjectCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     try:
         return await project_service.create_project(db, data)
     except Exception:
@@ -43,7 +49,10 @@ async def get_project(project_id: uuid.UUID, db: AsyncSession = Depends(get_db))
 
 @router.put("/{project_id}", response_model=ProjectResponse)
 async def update_project(
-    project_id: uuid.UUID, data: ProjectUpdate, db: AsyncSession = Depends(get_db)
+    project_id: uuid.UUID,
+    data: ProjectUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     result = await project_service.update_project(db, project_id, data)
     if not result:
@@ -52,7 +61,11 @@ async def update_project(
 
 
 @router.delete("/{project_id}", status_code=204)
-async def delete_project(project_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def delete_project(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     deleted = await project_service.delete_project(db, project_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -68,6 +81,7 @@ async def delete_project(project_id: uuid.UUID, db: AsyncSession = Depends(get_d
 async def add_project_member(
     project_id: uuid.UUID,
     data: ProjectMemberAdd,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -93,6 +107,7 @@ async def list_project_members(
 async def remove_project_member(
     project_id: uuid.UUID,
     user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     removed = await project_service.remove_member(db, project_id, user_id)

@@ -1,14 +1,32 @@
 const API_BASE = "/api/v1";
+const TOKEN_KEY = "pcp-auth-token";
+
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearStoredToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
 
 async function fetchAPI<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const token = getStoredToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+    headers: { ...headers, ...(options?.headers as Record<string, string>) },
     ...options,
   });
 
@@ -25,6 +43,105 @@ export class APIError extends Error {
     super(`API error ${status}: ${body}`);
     this.name = "APIError";
   }
+}
+
+// =====================================================================
+// Auth types & endpoints
+// =====================================================================
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  display_name: string | null;
+  email: string | null;
+  role: string;
+  team_id: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export interface Invitation_t {
+  id: string;
+  email: string;
+  team_id: string;
+  role: string;
+  token: string;
+  invited_by_id: string;
+  accepted_at: string | null;
+  expires_at: string;
+  created_at: string;
+}
+
+export async function getOrgStatus(): Promise<{ has_org: boolean }> {
+  return fetchAPI<{ has_org: boolean }>("/auth/status");
+}
+
+export async function register(data: {
+  org_name: string;
+  org_slug: string;
+  email: string;
+  username: string;
+  password: string;
+  display_name?: string;
+}): Promise<AuthResponse> {
+  return fetchAPI<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function login(data: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  return fetchAPI<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMe(): Promise<AuthUser> {
+  return fetchAPI<AuthUser>("/auth/me");
+}
+
+export async function createInvitation(data: {
+  email: string;
+  team_id: string;
+  role?: string;
+}): Promise<Invitation_t> {
+  return fetchAPI<Invitation_t>("/auth/invitations", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listInvitations(): Promise<Invitation_t[]> {
+  return fetchAPI<Invitation_t[]>("/auth/invitations");
+}
+
+export async function revokeInvitation(id: string): Promise<void> {
+  await fetchAPI(`/auth/invitations/${id}`, { method: "DELETE" });
+}
+
+export async function getInvitationInfo(
+  token: string
+): Promise<{ email: string; team_id: string; role: string }> {
+  return fetchAPI<{ email: string; team_id: string; role: string }>(
+    `/auth/invitations/token/${token}`
+  );
+}
+
+export async function acceptInvitation(
+  token: string,
+  data: { username: string; password: string; display_name?: string }
+): Promise<AuthResponse> {
+  return fetchAPI<AuthResponse>(`/auth/invitations/${token}/accept`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 // =====================================================================
