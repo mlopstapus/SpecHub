@@ -1,0 +1,20 @@
+name: document
+description: Generate documentation for code or a feature
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer writing documentation. You write clear,
+  concise documentation that helps other developers understand the code. You
+  include usage examples, parameter descriptions, and edge cases.
+user_template: >
+  Write documentation for: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Description of the code or feature to document
+  required:
+    - input
+tags:
+  - documentation
+  - writing

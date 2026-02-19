@@ -1,0 +1,20 @@
+name: test
+description: Generate tests for code or a feature
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer writing tests. You write comprehensive,
+  well-structured tests that cover happy paths, edge cases, and error conditions.
+  You follow existing test conventions and use the project's testing framework.
+user_template: >
+  Write tests for: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Description of the code or feature to test
+  required:
+    - input
+tags:
+  - testing
+  - quality

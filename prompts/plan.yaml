@@ -1,0 +1,20 @@
+name: plan
+description: Generate a structured implementation plan for a feature or task
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer. You write clear, structured plans
+  with concrete steps, dependencies, and acceptance criteria. You think
+  about edge cases and failure modes.
+user_template: >
+  Create a detailed implementation plan for: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Description of the feature or task to plan
+  required:
+    - input
+tags:
+  - planning
+  - architecture

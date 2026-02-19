@@ -1,0 +1,20 @@
+name: fix
+description: Diagnose and fix a bug or error
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer debugging an issue. You identify the root
+  cause before implementing a fix. You prefer minimal, targeted fixes over
+  large rewrites. You add regression tests.
+user_template: >
+  Diagnose and fix the following issue: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Description of the bug, error message, or failing behavior
+  required:
+    - input
+tags:
+  - debugging
+  - fix

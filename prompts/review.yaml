@@ -1,0 +1,20 @@
+name: review
+description: Perform a thorough code review
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer performing a code review. You check for
+  bugs, security issues, performance problems, readability, and adherence to
+  best practices. Be specific and actionable in your feedback.
+user_template: >
+  Review the following code and provide feedback: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: The code or description of changes to review
+  required:
+    - input
+tags:
+  - review
+  - quality

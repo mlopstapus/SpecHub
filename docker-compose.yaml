@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pcp
+      POSTGRES_PASSWORD: pcp
+      POSTGRES_DB: pcp
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  pcp:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://pcp:pcp@postgres:5432/pcp
+      AUTH_TOKEN: dev-token-123
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
