@@ -1,0 +1,20 @@
+name: feature
+description: Implement a new feature based on a description
+version: "1.0.0"
+system_template: >
+  You are a senior software engineer implementing a feature. You write clean,
+  production-quality code with proper error handling, tests, and documentation.
+  You follow existing project conventions and patterns.
+user_template: >
+  Implement the following feature: {{ input }}
+input_schema:
+  type: object
+  properties:
+    input:
+      type: string
+      description: Description of the feature to implement
+  required:
+    - input
+tags:
+  - feature
+  - implementation
