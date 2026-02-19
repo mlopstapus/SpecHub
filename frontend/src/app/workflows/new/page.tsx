@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   type WorkflowStep_t,
 } from "@/lib/api";
 
-export default function NewWorkflowPage() {
+function NewWorkflowPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project") ?? "";
@@ -368,5 +368,13 @@ export default function NewWorkflowPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewWorkflowPage() {
+  return (
+    <Suspense fallback={<div className="h-64 bg-secondary rounded animate-pulse" />}>
+      <NewWorkflowPageInner />
+    </Suspense>
   );
 }
