@@ -2,7 +2,6 @@ import contextlib
 import logging
 
 from fastapi import FastAPI
-from starlette.routing import Mount
 
 from src.pcp_server.config import settings
 from src.pcp_server.mcp.server import mcp
@@ -31,7 +30,7 @@ app = FastAPI(
 )
 
 app.include_router(prompts_router)
-app.router.routes.append(Mount("/mcp", app=mcp.streamable_http_app()))
+app.mount("/mcp", mcp.streamable_http_app())
 
 
 @app.get("/health")

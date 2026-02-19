@@ -81,6 +81,51 @@ async def test_pcp_search_no_match(db_session: AsyncSession, monkeypatch):
     assert "No prompts matching" in result
 
 
+@pytest.mark.asyncio
+async def test_pcp_search_by_tag(db_session: AsyncSession, monkeypatch):
+    """pcp-search finds prompts by tag."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    prompt = Prompt(name="tag-match", description="Has a special tag")
+    db_session.add(prompt)
+    await db_session.flush()
+    version = PromptVersion(
+        prompt_id=prompt.id,
+        version="1.0.0",
+        user_template="{{ input }}",
+        tags=["unique-tag"],
+    )
+    db_session.add(version)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_search("unique-tag")
+    assert "pcp-tag-match" in result
+
+
+@pytest.mark.asyncio
+async def test_pcp_search_by_description(db_session: AsyncSession, monkeypatch):
+    """pcp-search finds prompts by description."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    prompt = Prompt(name="desc-match", description="A very distinctive description")
+    db_session.add(prompt)
+    await db_session.flush()
+    version = PromptVersion(
+        prompt_id=prompt.id,
+        version="1.0.0",
+        user_template="{{ input }}",
+    )
+    db_session.add(version)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_search("distinctive")
+    assert "pcp-desc-match" in result
+
+
 def test_register_one_creates_tool():
     """_register_one adds a tool to the MCP server."""
     initial_count = len(mcp._tool_manager._tools)
@@ -88,3 +133,57 @@ def test_register_one_creates_tool():
     new_count = len(mcp._tool_manager._tools)
     assert new_count == initial_count + 1
     assert "pcp-unit-test-prompt" in mcp._tool_manager._tools
+
+
+@pytest.mark.asyncio
+async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
+    """A dynamically registered tool expands the prompt and returns formatted output."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    prompt = Prompt(name="invoke-me", description="Test invocation")
+    db_session.add(prompt)
+    await db_session.flush()
+    version = PromptVersion(
+        prompt_id=prompt.id,
+        version="1.0.0",
+        system_template="System says: {{ input }}",
+        user_template="User says: {{ input }}",
+    )
+    db_session.add(version)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    _register_one("invoke-me", "Test invocation")
+
+    tool_fn = mcp._tool_manager._tools["pcp-invoke-me"].fn
+    result = await tool_fn(input='{"input": "hello"}')
+    assert "[System]" in result
+    assert "System says: hello" in result
+    assert "[User]" in result
+    assert "User says: hello" in result
+
+
+@pytest.mark.asyncio
+async def test_dynamic_tool_plain_string_input(db_session: AsyncSession, monkeypatch):
+    """A dynamic tool handles plain string input (not JSON)."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    prompt = Prompt(name="plain-input", description="Plain string test")
+    db_session.add(prompt)
+    await db_session.flush()
+    version = PromptVersion(
+        prompt_id=prompt.id,
+        version="1.0.0",
+        user_template="Got: {{ input }}",
+    )
+    db_session.add(version)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    _register_one("plain-input", "Plain string test")
+
+    tool_fn = mcp._tool_manager._tools["pcp-plain-input"].fn
+    result = await tool_fn(input="just a string")
+    assert "Got: just a string" in result

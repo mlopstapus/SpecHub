@@ -101,11 +101,15 @@ Once connected, you get these tools automatically:
 | Tool | Description |
 |------|-------------|
 | `pcp-plan` | Generate a structured implementation plan |
-| `pcp-review` | Perform a thorough code review |
-| `pcp-fix` | Diagnose and fix a bug or error |
 | `pcp-feature` | Implement a new feature |
+| `pcp-iterate` | Incrementally improve existing code based on feedback |
+| `pcp-fix` | Diagnose and fix a bug or error |
+| `pcp-refactor` | Restructure code without changing behavior |
 | `pcp-test` | Generate tests for code |
+| `pcp-review` | Perform a thorough code review |
 | `pcp-document` | Generate documentation |
+| `pcp-commit` | Commit changes to the repository |
+| `pcp-ralph` | Iteratively improve PCP prompts based on session takeaways |
 | `pcp-list` | List all available prompts |
 | `pcp-search` | Search prompts by name or tag |
 
@@ -150,6 +154,24 @@ curl http://localhost:8000/api/v1/prompts
 4. Developer invokes `pcp-plan build a feature store`
 5. AI tool calls the `pcp-plan` MCP tool → PCP expands the Jinja2 template → returns `system_message` + `user_message`
 6. The IDE's own LLM uses the returned prompt to generate the response
+
+## Prompt Composition
+
+Prompts can include other prompts using `include_prompt()` in their Jinja2 templates. This lets a prompt pull in context from other prompts at expansion time.
+
+```yaml
+user_template: >
+  Plan this feature: {{ input }}
+
+  Consider the review perspective:
+  {{ include_prompt('review') }}
+```
+
+When expanded, `include_prompt('review')` fetches the `review` prompt, renders its system + user templates with the same input variables, and inlines the result.
+
+- **Nested includes** are supported (A includes B includes C)
+- **Max depth of 3** prevents infinite recursion
+- **Missing prompts** return a safe error marker instead of failing
 
 ## Running Tests
 

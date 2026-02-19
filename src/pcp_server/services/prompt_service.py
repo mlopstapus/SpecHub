@@ -1,3 +1,5 @@
+import re
+
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
 from sqlalchemy import String, func, select
@@ -136,33 +138,105 @@ async def deprecate_prompt(db: AsyncSession, name: str) -> bool:
     return True
 
 
-async def expand_prompt(
-    db: AsyncSession, name: str, data: ExpandRequest, version: str | None = None
-) -> ExpandResponse | None:
+MAX_INCLUDE_DEPTH = 3
+
+
+async def _fetch_prompt_version(
+    db: AsyncSession, name: str, version: str | None = None
+) -> PromptVersion | None:
     query = select(Prompt).where(Prompt.name == name).options(selectinload(Prompt.versions))
     result = await db.execute(query)
     prompt = result.scalar_one_or_none()
     if not prompt or not prompt.versions or prompt.is_deprecated:
         return None
-
     if version:
-        pv = next((v for v in prompt.versions if v.version == version), None)
-    else:
-        pv = prompt.versions[0]
+        return next((v for v in prompt.versions if v.version == version), None)
+    return prompt.versions[0]
 
+
+def _render_template(
+    env: SandboxedEnvironment, template_str: str, variables: dict
+) -> str:
+    return env.from_string(template_str).render(**variables)
+
+
+def _build_include_prompt(
+    prompt_cache: dict[str, PromptVersion],
+    env: SandboxedEnvironment,
+    variables: dict,
+    depth: int,
+) -> callable:
+    def include_prompt(name: str) -> str:
+        if depth >= MAX_INCLUDE_DEPTH:
+            return f"[include_prompt('{name}'): max depth ({MAX_INCLUDE_DEPTH}) exceeded]"
+        pv = prompt_cache.get(name)
+        if not pv:
+            return f"[include_prompt('{name}'): prompt not found]"
+
+        inner_env = SandboxedEnvironment(undefined=StrictUndefined)
+        inner_include = _build_include_prompt(prompt_cache, inner_env, variables, depth + 1)
+        inner_env.globals["include_prompt"] = inner_include
+
+        parts = []
+        if pv.system_template:
+            parts.append(_render_template(inner_env, pv.system_template, variables))
+        parts.append(_render_template(inner_env, pv.user_template, variables))
+        return "\n\n".join(parts)
+
+    return include_prompt
+
+
+async def _prefetch_included_prompts(
+    db: AsyncSession, template_str: str | None
+) -> set[str]:
+    if not template_str:
+        return set()
+    return set(re.findall(r"include_prompt\(['\"]([a-z0-9-]+)['\"]\)", template_str))
+
+
+async def expand_prompt(
+    db: AsyncSession, name: str, data: ExpandRequest, version: str | None = None
+) -> ExpandResponse | None:
+    pv = await _fetch_prompt_version(db, name, version)
     if not pv:
         return None
 
+    referenced_names: set[str] = set()
+    referenced_names |= await _prefetch_included_prompts(db, pv.system_template)
+    referenced_names |= await _prefetch_included_prompts(db, pv.user_template)
+
+    prompt_cache: dict[str, PromptVersion] = {}
+    fetch_queue = list(referenced_names)
+    seen = set()
+    for _ in range(MAX_INCLUDE_DEPTH):
+        next_queue: list[str] = []
+        for ref_name in fetch_queue:
+            if ref_name in seen:
+                continue
+            seen.add(ref_name)
+            ref_pv = await _fetch_prompt_version(db, ref_name)
+            if ref_pv:
+                prompt_cache[ref_name] = ref_pv
+                next_queue += list(
+                    await _prefetch_included_prompts(db, ref_pv.system_template)
+                    | await _prefetch_included_prompts(db, ref_pv.user_template)
+                )
+        fetch_queue = next_queue
+        if not fetch_queue:
+            break
+
     env = SandboxedEnvironment(undefined=StrictUndefined)
+    include_fn = _build_include_prompt(prompt_cache, env, data.input, depth=0)
+    env.globals["include_prompt"] = include_fn
 
     system_message = None
     if pv.system_template:
-        system_message = env.from_string(pv.system_template).render(**data.input)
+        system_message = _render_template(env, pv.system_template, data.input)
 
-    user_message = env.from_string(pv.user_template).render(**data.input)
+    user_message = _render_template(env, pv.user_template, data.input)
 
     return ExpandResponse(
-        prompt_name=prompt.name,
+        prompt_name=name,
         prompt_version=pv.version,
         system_message=system_message,
         user_message=user_message,
