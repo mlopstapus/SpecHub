@@ -65,9 +65,10 @@ Repeat these as needed until the implementation is solid:
 
 ## 7. Commit (`/commit`)
 
+- **Branch check:** Verify you are on a feature branch, NOT main. If on main, create `feature/<short-description>` first.
 - Pull latest, rebase off default branch, resolve conflicts.
 - Write a conventional commit message.
-- Create a merge request if none exists.
+- Push the feature branch and create a merge/pull request if none exists.
 
 ---
 
