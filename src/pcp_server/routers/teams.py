@@ -3,9 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.pcp_server.auth import require_admin
+from src.pcp_server.auth import get_current_user, require_admin
 from src.pcp_server.database import get_db
-from src.pcp_server.models import User
+from src.pcp_server.models import Team, User
 from src.pcp_server.schemas import (
     TeamCreate,
     TeamListResponse,
@@ -51,9 +51,30 @@ async def get_team(team_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
 async def update_team(
     team_id: uuid.UUID,
     data: TeamUpdate,
-    admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy import select
+
+    # Fetch the team
+    result = await db.execute(select(Team).where(Team.id == team_id))
+    team = result.scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Authorization: admin, team owner, or parent team owner
+    is_admin = current_user.role == "admin"
+    is_owner = team.owner_id == current_user.id
+    is_parent_owner = False
+    if team.parent_team_id:
+        parent = await db.execute(select(Team).where(Team.id == team.parent_team_id))
+        parent_team = parent.scalar_one_or_none()
+        if parent_team and parent_team.owner_id == current_user.id:
+            is_parent_owner = True
+
+    if not (is_admin or is_owner or is_parent_owner):
+        raise HTTPException(status_code=403, detail="Only admins, team owners, or parent team owners can update this team")
+
     result = await team_service.update_team(db, team_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Team not found")

@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+dev-credentials.csv
 *.py[codz]
 *$py.class
 *.so

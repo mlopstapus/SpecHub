@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
   Crown,
   ChevronDown,
   ChevronRight,
+  Pencil,
+  Check,
 } from "lucide-react";
 import {
   listTeams,
@@ -28,7 +30,11 @@ import {
   deleteTeam,
   deleteUser,
   createPolicy,
+  updatePolicy,
+  deletePolicy,
   createObjective,
+  updateObjective,
+  deleteObjective,
   getTeamEffectivePolicies,
   getTeamEffectiveObjectives,
   type Team_t,
@@ -89,8 +95,52 @@ export default function TeamsPage() {
   const [creatingObjective, setCreatingObjective] = useState(false);
   const [newObjectiveTitle, setNewObjectiveTitle] = useState("");
 
+  // Edit policy state
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
+  const [editPolicyName, setEditPolicyName] = useState("");
+  const [editPolicyContent, setEditPolicyContent] = useState("");
+  const [editPolicyType, setEditPolicyType] = useState<EnforcementType>("prepend");
+
+  // Edit objective state
+  const [editingObjectiveId, setEditingObjectiveId] = useState<string | null>(null);
+  const [editObjectiveTitle, setEditObjectiveTitle] = useState("");
+  const [editObjectiveDesc, setEditObjectiveDesc] = useState("");
+
   // Owner assignment
   const [assigningOwner, setAssigningOwner] = useState(false);
+
+  // Resizable detail panel
+  const [detailWidth, setDetailWidth] = useState(520);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(520);
+
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault();
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = detailWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    function onMouseMove(ev: MouseEvent) {
+      if (!isDragging.current) return;
+      const delta = startX.current - ev.clientX;
+      const newWidth = Math.min(Math.max(startWidth.current + delta, 320), 900);
+      setDetailWidth(newWidth);
+    }
+
+    function onMouseUp() {
+      isDragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    }
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }
 
   /* ---- Load full tree recursively ---- */
   const loadTree = useCallback(async () => {
@@ -234,7 +284,10 @@ export default function TeamsPage() {
       setSelectedTeam(updated);
       setAssigningOwner(false);
       await loadTree();
-    } catch {}
+    } catch (err) {
+      console.error("Failed to assign owner", err);
+      alert(`Failed to assign owner: ${err}`);
+    }
   }
 
   /* ---- Create policy ---- */
@@ -253,6 +306,80 @@ export default function TeamsPage() {
       const pol = await getTeamEffectivePolicies(selectedTeam.id);
       setDetailPolicies(pol);
     } catch {}
+  }
+
+  /* ---- Edit policy ---- */
+  function startEditPolicy(p: Policy_t) {
+    setEditingPolicyId(p.id);
+    setEditPolicyName(p.name);
+    setEditPolicyContent(p.content);
+    setEditPolicyType(p.enforcement_type);
+  }
+
+  async function handleUpdatePolicy() {
+    if (!editingPolicyId || !selectedTeam) return;
+    try {
+      await updatePolicy(editingPolicyId, {
+        name: editPolicyName.trim(),
+        content: editPolicyContent.trim(),
+        enforcement_type: editPolicyType,
+      });
+      setEditingPolicyId(null);
+      const pol = await getTeamEffectivePolicies(selectedTeam.id);
+      setDetailPolicies(pol);
+    } catch (err) {
+      console.error("Failed to update policy", err);
+      alert(`Failed to update policy: ${err}`);
+    }
+  }
+
+  /* ---- Delete policy ---- */
+  async function handleDeletePolicy(id: string) {
+    if (!confirm("Delete this policy?") || !selectedTeam) return;
+    try {
+      await deletePolicy(id);
+      const pol = await getTeamEffectivePolicies(selectedTeam.id);
+      setDetailPolicies(pol);
+    } catch (err) {
+      console.error("Failed to delete policy", err);
+      alert(`Failed to delete policy: ${err}`);
+    }
+  }
+
+  /* ---- Edit objective ---- */
+  function startEditObjective(o: Objective_t) {
+    setEditingObjectiveId(o.id);
+    setEditObjectiveTitle(o.title);
+    setEditObjectiveDesc(o.description || "");
+  }
+
+  async function handleUpdateObjective() {
+    if (!editingObjectiveId || !selectedTeam) return;
+    try {
+      await updateObjective(editingObjectiveId, {
+        title: editObjectiveTitle.trim(),
+        description: editObjectiveDesc.trim() || undefined,
+      });
+      setEditingObjectiveId(null);
+      const obj = await getTeamEffectiveObjectives(selectedTeam.id);
+      setDetailObjectives(obj);
+    } catch (err) {
+      console.error("Failed to update objective", err);
+      alert(`Failed to update objective: ${err}`);
+    }
+  }
+
+  /* ---- Delete objective ---- */
+  async function handleDeleteObjective(id: string) {
+    if (!confirm("Delete this objective?") || !selectedTeam) return;
+    try {
+      await deleteObjective(id);
+      const obj = await getTeamEffectiveObjectives(selectedTeam.id);
+      setDetailObjectives(obj);
+    } catch (err) {
+      console.error("Failed to delete objective", err);
+      alert(`Failed to delete objective: ${err}`);
+    }
   }
 
   /* ---- Create objective ---- */
@@ -348,7 +475,7 @@ export default function TeamsPage() {
         ) : parentId ? (
           <div className="group/insert relative flex items-center justify-center" style={{ height: 0 }}>
             <button
-              className="absolute -top-4 h-8 w-8 rounded-full border-2 border-dashed border-transparent group-hover/insert:border-primary/50 group-hover/insert:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/insert:opacity-100 hover:scale-110 z-10 bg-background"
+              className="absolute -top-3.5 h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/insert:border-primary/50 group-hover/insert:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/insert:opacity-100 hover:scale-110 z-10 bg-background"
               title="Insert team between"
               onClick={(e) => { e.stopPropagation(); startAdd("insert", node.team.id); }}
             >
@@ -363,13 +490,13 @@ export default function TeamsPage() {
           {addMode?.mode === "sibling" && addMode.targetId === `left-${node.team.id}` ? (
             <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2">{renderInlineForm()}</div>
           ) : (
-            <div className="group/left absolute right-full top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10">
+            <div className="group/left absolute right-full top-1/2 -translate-y-1/2 mr-1">
               <button
-                className="h-8 w-8 rounded-full border-2 border-dashed border-transparent group-hover/left:border-primary/40 group-hover/left:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/left:opacity-100 hover:scale-110"
+                className="h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/left:border-primary/40 group-hover/left:bg-primary/10 bg-background flex items-center justify-center transition-all opacity-0 group-hover/left:opacity-100 hover:scale-110"
                 title="Add sibling team"
                 onClick={(e) => { e.stopPropagation(); startAdd("sibling", `left-${node.team.id}`, parentId); }}
               >
-                <Plus className="h-4 w-4 text-primary/60" />
+                <Plus className="h-3.5 w-3.5 text-primary/60" />
               </button>
             </div>
           )}
@@ -378,13 +505,13 @@ export default function TeamsPage() {
           {addMode?.mode === "sibling" && addMode.targetId === `right-${node.team.id}` ? (
             <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2">{renderInlineForm()}</div>
           ) : (
-            <div className="group/right absolute left-full top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10">
+            <div className="group/right absolute left-full top-1/2 -translate-y-1/2 ml-1">
               <button
-                className="h-8 w-8 rounded-full border-2 border-dashed border-transparent group-hover/right:border-primary/40 group-hover/right:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/right:opacity-100 hover:scale-110"
+                className="h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/right:border-primary/40 group-hover/right:bg-primary/10 bg-background flex items-center justify-center transition-all opacity-0 group-hover/right:opacity-100 hover:scale-110"
                 title="Add sibling team"
                 onClick={(e) => { e.stopPropagation(); startAdd("sibling", `right-${node.team.id}`, parentId); }}
               >
-                <Plus className="h-4 w-4 text-primary/60" />
+                <Plus className="h-3.5 w-3.5 text-primary/60" />
               </button>
             </div>
           )}
@@ -437,8 +564,9 @@ export default function TeamsPage() {
         {/* Expand/collapse toggle + children */}
         {hasChildren && (
           <div className="flex flex-col items-center">
+            <div className="w-px h-1.5 bg-border" />
             <button
-              className="mt-1.5 h-5 w-5 rounded-full border border-border bg-background flex items-center justify-center hover:bg-secondary transition-colors"
+              className="h-5 w-5 rounded-full border border-border bg-background flex items-center justify-center hover:bg-secondary transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleExpand(node.team.id);
@@ -450,56 +578,49 @@ export default function TeamsPage() {
                 <ChevronRight className="h-3 w-3 text-muted-foreground" />
               )}
             </button>
-
-            {/* Children row */}
             {node.expanded && (
               <>
-              {/* Vertical line from chevron down to horizontal bar */}
-              <div className="w-px h-3 bg-border" />
-              <div className="flex">
-                {node.children.map((child, idx) => {
-                  const isFirst = idx === 0;
-                  const isLast = idx === node.children.length - 1;
-                  const isOnly = node.children.length === 1;
-                  return (
-                    <div
-                      key={child.team.id}
-                      className="flex flex-col items-center"
-                      style={{
-                        paddingLeft: isFirst || isOnly ? 0 : 20,
-                        paddingRight: isLast || isOnly ? 0 : 20,
-                      }}
-                    >
-                      {/* Horizontal + vertical connector */}
-                      <div className="flex w-full" style={{ height: "12px" }}>
-                        {/* Left half of horizontal line */}
-                        <div
-                          className="flex-1"
-                          style={{
-                            borderTop: isFirst || isOnly ? "none" : "1px solid hsl(var(--border))",
-                          }}
-                        />
-                        {/* Center: vertical drop */}
-                        <div
-                          style={{
-                            width: "1px",
-                            height: "100%",
-                            backgroundColor: "hsl(var(--border))",
-                          }}
-                        />
-                        {/* Right half of horizontal line */}
-                        <div
-                          className="flex-1"
-                          style={{
-                            borderTop: isLast || isOnly ? "none" : "1px solid hsl(var(--border))",
-                          }}
-                        />
+                <div className="w-px h-3 bg-border" />
+                <div className="flex">
+                  {node.children.map((child, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === node.children.length - 1;
+                    const isOnly = node.children.length === 1;
+                    return (
+                      <div
+                        key={child.team.id}
+                        className="flex flex-col items-center"
+                        style={{
+                          paddingLeft: isFirst || isOnly ? 0 : 20,
+                          paddingRight: isLast || isOnly ? 0 : 20,
+                        }}
+                      >
+                        <div className="flex w-full" style={{ height: "12px" }}>
+                          <div
+                            className="flex-1"
+                            style={{
+                              borderTop: isFirst || isOnly ? "none" : "1px solid hsl(var(--border))",
+                            }}
+                          />
+                          <div
+                            style={{
+                              width: "1px",
+                              height: "100%",
+                              backgroundColor: "hsl(var(--border))",
+                            }}
+                          />
+                          <div
+                            className="flex-1"
+                            style={{
+                              borderTop: isLast || isOnly ? "none" : "1px solid hsl(var(--border))",
+                            }}
+                          />
+                        </div>
+                        {renderNode(child, node.team.id)}
                       </div>
-                      {renderNode(child, node.team.id)}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               </>
             )}
           </div>
@@ -531,7 +652,7 @@ export default function TeamsPage() {
     if (!selectedTeam) return null;
 
     return (
-      <div className="w-full lg:w-[520px] shrink-0 space-y-5 border-l border-border pl-8">
+      <div className="shrink-0 space-y-5 pl-6 overflow-y-auto" style={{ width: `${detailWidth}px` }}>
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -739,14 +860,64 @@ export default function TeamsPage() {
                     Mutable — this team
                   </p>
                   {detailPolicies.local.length > 0 ? (
-                    detailPolicies.local.map((p) => (
-                      <div key={p.id} className="flex items-center gap-2 rounded border border-border px-3 py-2 mb-1.5">
-                        <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
-                          {p.enforcement_type}
-                        </Badge>
-                        <span className="text-sm font-medium truncate">{p.name}</span>
-                      </div>
-                    ))
+                    detailPolicies.local.map((p) =>
+                      editingPolicyId === p.id ? (
+                        <div key={p.id} className="space-y-2 mb-2 p-3 rounded border border-primary/30 bg-primary/5">
+                          <Input
+                            value={editPolicyName}
+                            onChange={(e) => setEditPolicyName(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                          <select
+                            className="w-full rounded border border-input bg-background px-3 py-1.5 text-sm"
+                            value={editPolicyType}
+                            onChange={(e) => setEditPolicyType(e.target.value as EnforcementType)}
+                          >
+                            <option value="prepend">Prepend</option>
+                            <option value="append">Append</option>
+                            <option value="inject">Inject</option>
+                            <option value="validate">Validate</option>
+                          </select>
+                          <textarea
+                            value={editPolicyContent}
+                            onChange={(e) => setEditPolicyContent(e.target.value)}
+                            className="w-full rounded border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" className="h-7 text-xs" onClick={handleUpdatePolicy}>
+                              <Check className="h-3 w-3 mr-1" /> Save
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingPolicyId(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={p.id} className="group/pol flex items-center gap-2 rounded border border-border px-3 py-2 mb-1.5">
+                          <Badge variant="secondary" className="text-[10px] shrink-0 h-5">
+                            {p.enforcement_type}
+                          </Badge>
+                          <span className="text-sm font-medium truncate flex-1">{p.name}</span>
+                          <div className="flex gap-1 opacity-0 group-hover/pol:opacity-100 transition-opacity shrink-0">
+                            <button
+                              className="h-6 w-6 rounded flex items-center justify-center hover:bg-secondary transition-colors"
+                              onClick={() => startEditPolicy(p)}
+                              title="Edit policy"
+                            >
+                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                            </button>
+                            <button
+                              className="h-6 w-6 rounded flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                              onClick={() => handleDeletePolicy(p.id)}
+                              title="Delete policy"
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )
                   ) : (
                     <p className="text-xs text-muted-foreground italic pl-5">No team policies yet</p>
                   )}
@@ -819,14 +990,60 @@ export default function TeamsPage() {
                     Mutable — this team
                   </p>
                   {detailObjectives.local.length > 0 ? (
-                    detailObjectives.local.map((o) => (
-                      <div key={o.id} className="rounded border border-border px-3 py-2 mb-1.5">
-                        <span className="text-sm font-medium">{o.title}</span>
-                        {o.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{o.description}</p>
-                        )}
-                      </div>
-                    ))
+                    detailObjectives.local.map((o) =>
+                      editingObjectiveId === o.id ? (
+                        <div key={o.id} className="space-y-2 mb-2 p-3 rounded border border-primary/30 bg-primary/5">
+                          <Input
+                            value={editObjectiveTitle}
+                            onChange={(e) => setEditObjectiveTitle(e.target.value)}
+                            className="h-8 text-sm"
+                            placeholder="Objective title"
+                            autoFocus
+                          />
+                          <textarea
+                            value={editObjectiveDesc}
+                            onChange={(e) => setEditObjectiveDesc(e.target.value)}
+                            className="w-full rounded border border-input bg-background px-3 py-2 text-sm min-h-[40px] resize-y"
+                            placeholder="Description (optional)"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" className="h-7 text-xs" onClick={handleUpdateObjective}>
+                              <Check className="h-3 w-3 mr-1" /> Save
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingObjectiveId(null)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={o.id} className="group/obj rounded border border-border px-3 py-2 mb-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium">{o.title}</span>
+                              {o.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{o.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1 opacity-0 group-hover/obj:opacity-100 transition-opacity shrink-0 mt-0.5">
+                              <button
+                                className="h-6 w-6 rounded flex items-center justify-center hover:bg-secondary transition-colors"
+                                onClick={() => startEditObjective(o)}
+                                title="Edit objective"
+                              >
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                              <button
+                                className="h-6 w-6 rounded flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                                onClick={() => handleDeleteObjective(o.id)}
+                                title="Delete objective"
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )
                   ) : (
                     <p className="text-xs text-muted-foreground italic pl-5">No team objectives yet</p>
                   )}
@@ -857,7 +1074,7 @@ export default function TeamsPage() {
 
       <div className="flex gap-6">
         {/* Org chart area */}
-        <div className="flex-1 overflow-x-auto">
+        <div className="flex-1 min-w-0 overflow-hidden">
           {loading ? (
             <div className="flex justify-center py-20">
               <div className="space-y-3 text-center">
@@ -891,8 +1108,25 @@ export default function TeamsPage() {
           )}
         </div>
 
-        {/* Detail panel */}
-        {selectedTeam && renderDetailPanel()}
+        {/* Resize handle + Detail panel */}
+        {selectedTeam && (
+          <>
+            <div
+              className="shrink-0 w-3 cursor-col-resize group flex items-center justify-center hover:bg-primary/10 active:bg-primary/20 transition-colors rounded-md"
+              onMouseDown={handleResizeStart}
+              title="Drag to resize"
+            >
+              <div className="flex flex-col gap-1 items-center">
+                <div className="w-1 h-1 rounded-full bg-muted-foreground/40 group-hover:bg-primary/70 group-active:bg-primary transition-colors" />
+                <div className="w-1 h-1 rounded-full bg-muted-foreground/40 group-hover:bg-primary/70 group-active:bg-primary transition-colors" />
+                <div className="w-1 h-1 rounded-full bg-muted-foreground/40 group-hover:bg-primary/70 group-active:bg-primary transition-colors" />
+                <div className="w-1 h-1 rounded-full bg-muted-foreground/40 group-hover:bg-primary/70 group-active:bg-primary transition-colors" />
+                <div className="w-1 h-1 rounded-full bg-muted-foreground/40 group-hover:bg-primary/70 group-active:bg-primary transition-colors" />
+              </div>
+            </div>
+            {renderDetailPanel()}
+          </>
+        )}
       </div>
     </div>
   );
