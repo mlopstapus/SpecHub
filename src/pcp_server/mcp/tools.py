@@ -198,11 +198,17 @@ async def register_prompt_tools() -> None:
         listing = await prompt_service.list_prompts(db, page=1, page_size=1000)
 
     for prompt in listing.items:
-        _register_one(prompt.name, prompt.description)
+        register_prompt_tool(prompt.name, prompt.description)
 
 
-def _register_one(prompt_name: str, description: str | None) -> None:
-    """Register a single sh-{name} tool."""
+def unregister_prompt_tool(prompt_name: str) -> None:
+    """Remove an sh-{name} tool (e.g. on deprecation)."""
+    tool_name = f"sh-{prompt_name}"
+    mcp._tool_manager._tools.pop(tool_name, None)
+
+
+def register_prompt_tool(prompt_name: str, description: str | None) -> None:
+    """Register (or re-register) a single sh-{name} tool."""
     tool_name = f"sh-{prompt_name}"
     tool_description = description or f"Expand the '{prompt_name}' prompt with your input."
 

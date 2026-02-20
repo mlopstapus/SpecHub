@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, X, ChevronDown, ChevronRight } from "lucide-react";
 import { createPrompt, APIError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 
 export default function CreatePromptPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [name, setName] = useState("");
@@ -71,6 +73,7 @@ export default function CreatePromptPage() {
       await createPrompt({
         name,
         description: description || undefined,
+        user_id: user?.id,
         version: {
           version,
           system_template: systemTemplate || undefined,

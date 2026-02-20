@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.pcp_server.mcp.server import mcp
-from src.pcp_server.mcp.tools import _register_one, pcp_list, pcp_search
+from src.pcp_server.mcp.tools import register_prompt_tool, pcp_list, pcp_search
 from src.pcp_server.models import Prompt, PromptVersion
 
 
@@ -135,10 +135,10 @@ async def test_pcp_search_by_description(db_session: AsyncSession, monkeypatch):
     assert "sh-desc-match" in result
 
 
-def test_register_one_creates_tool():
-    """_register_one adds a tool to the MCP server."""
+def test_register_prompt_tool_creates_tool():
+    """register_prompt_tool adds a tool to the MCP server."""
     initial_count = len(mcp._tool_manager._tools)
-    _register_one("unit-test-prompt", "A dynamically registered tool")
+    register_prompt_tool("unit-test-prompt", "A dynamically registered tool")
     new_count = len(mcp._tool_manager._tools)
     assert new_count == initial_count + 1
     assert "sh-unit-test-prompt" in mcp._tool_manager._tools
@@ -163,7 +163,7 @@ async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
-    _register_one("invoke-me", "Test invocation")
+    register_prompt_tool("invoke-me", "Test invocation")
 
     tool_fn = mcp._tool_manager._tools["sh-invoke-me"].fn
     result = await tool_fn(input='{"input": "hello"}', ctx=_mock_ctx())
@@ -191,7 +191,7 @@ async def test_dynamic_tool_plain_string_input(db_session: AsyncSession, monkeyp
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
-    _register_one("plain-input", "Plain string test")
+    register_prompt_tool("plain-input", "Plain string test")
 
     tool_fn = mcp._tool_manager._tools["sh-plain-input"].fn
     result = await tool_fn(input="just a string", ctx=_mock_ctx())
