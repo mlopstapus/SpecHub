@@ -396,3 +396,21 @@ class WorkflowRunResponse(BaseModel):
     workflow_name: str
     steps: list[WorkflowStepResult]
     outputs: dict
+
+
+# ---------------------------------------------------------------------------
+# Sharing schemas
+# ---------------------------------------------------------------------------
+
+class ShareRequest(BaseModel):
+    user_id: uuid.UUID
+
+
+class ShareResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    username: str
+    display_name: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

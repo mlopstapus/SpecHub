@@ -467,13 +467,15 @@ export interface ExpandResponse {
 export async function listPrompts(
   page = 1,
   pageSize = 20,
-  tag?: string
+  tag?: string,
+  userId?: string
 ): Promise<PromptListResponse> {
   const params = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
   });
   if (tag) params.set("tag", tag);
+  if (userId) params.set("user_id", userId);
   return fetchAPI<PromptListResponse>(`/prompts?${params}`);
 }
 
@@ -805,6 +807,66 @@ export interface DashboardStats {
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   return fetchAPI<DashboardStats>("/metrics/dashboard");
+}
+
+// =====================================================================
+// Sharing types & endpoints
+// =====================================================================
+
+export interface Share_t {
+  id: string;
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  created_at: string;
+}
+
+export async function sharePrompt(
+  name: string,
+  userId: string
+): Promise<Share_t> {
+  return fetchAPI<Share_t>(`/prompts/${encodeURIComponent(name)}/shares`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function listPromptShares(name: string): Promise<Share_t[]> {
+  return fetchAPI<Share_t[]>(`/prompts/${encodeURIComponent(name)}/shares`);
+}
+
+export async function unsharePrompt(
+  name: string,
+  userId: string
+): Promise<void> {
+  await fetchAPI(`/prompts/${encodeURIComponent(name)}/shares/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function shareWorkflow(
+  workflowId: string,
+  userId: string
+): Promise<Share_t> {
+  return fetchAPI<Share_t>(`/workflows/${workflowId}/shares`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+export async function listWorkflowShares(
+  workflowId: string
+): Promise<Share_t[]> {
+  return fetchAPI<Share_t[]>(`/workflows/${workflowId}/shares`);
+}
+
+export async function unshareWorkflow(
+  workflowId: string,
+  userId: string
+): Promise<void> {
+  await fetchAPI(`/workflows/${workflowId}/shares/${userId}`, {
+    method: "DELETE",
+  });
 }
 
 // =====================================================================

@@ -1,4 +1,5 @@
 import time
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from jinja2 import UndefinedError
@@ -13,6 +14,8 @@ from src.pcp_server.schemas import (
     PromptListResponse,
     PromptResponse,
     PromptVersionResponse,
+    ShareRequest,
+    ShareResponse,
 )
 from src.pcp_server.mcp.tools import register_prompt_tool, unregister_prompt_tool
 from src.pcp_server.services import metrics_service, prompt_service
@@ -37,9 +40,10 @@ async def list_prompts(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     tag: str | None = None,
+    user_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
 ):
-    return await prompt_service.list_prompts(db, page=page, page_size=page_size, tag=tag)
+    return await prompt_service.list_prompts(db, page=page, page_size=page_size, tag=tag, user_id=user_id)
 
 
 @router.get("/prompts/{name}", response_model=PromptResponse)
@@ -134,3 +138,26 @@ async def expand_prompt_version(
     finally:
         latency = (time.perf_counter() - t0) * 1000
         await metrics_service.record_usage(db, name, version, status, latency)
+
+
+@router.post("/prompts/{name}/shares", response_model=ShareResponse, status_code=201)
+async def share_prompt(name: str, data: ShareRequest, db: AsyncSession = Depends(get_db)):
+    result = await prompt_service.share_prompt(db, name, data.user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found")
+    return result
+
+
+@router.get("/prompts/{name}/shares", response_model=list[ShareResponse])
+async def list_prompt_shares(name: str, db: AsyncSession = Depends(get_db)):
+    result = await prompt_service.list_prompt_shares(db, name)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found")
+    return result
+
+
+@router.delete("/prompts/{name}/shares/{user_id}", status_code=204)
+async def unshare_prompt(name: str, user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    success = await prompt_service.unshare_prompt(db, name, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Share not found")

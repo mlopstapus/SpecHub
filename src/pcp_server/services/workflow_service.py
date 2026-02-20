@@ -1,12 +1,13 @@
 import uuid
 from collections import defaultdict
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.pcp_server.models import Workflow
+from src.pcp_server.models import User, Workflow, WorkflowShare
 from src.pcp_server.schemas import (
     ExpandRequest,
+    ShareResponse,
     WorkflowCreate,
     WorkflowResponse,
     WorkflowRunResponse,
@@ -38,7 +39,8 @@ async def list_workflows(
 ) -> list[WorkflowResponse]:
     query = select(Workflow)
     if user_id is not None:
-        query = query.where(Workflow.user_id == user_id)
+        shared_ids = select(WorkflowShare.workflow_id).where(WorkflowShare.user_id == user_id)
+        query = query.where(or_(Workflow.user_id == user_id, Workflow.id.in_(shared_ids)))
     if project_id is not None:
         query = query.where(Workflow.project_id == project_id)
     result = await db.execute(query.order_by(Workflow.updated_at.desc()))
@@ -212,3 +214,78 @@ async def run_workflow(
         steps=step_results,
         outputs=final_outputs,
     )
+
+
+async def share_workflow(
+    db: AsyncSession, workflow_id: uuid.UUID, target_user_id: uuid.UUID
+) -> ShareResponse | None:
+    workflow = (await db.execute(select(Workflow).where(Workflow.id == workflow_id))).scalar_one_or_none()
+    if not workflow:
+        return None
+    existing = (
+        await db.execute(
+            select(WorkflowShare).where(
+                WorkflowShare.workflow_id == workflow_id, WorkflowShare.user_id == target_user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        user = (await db.execute(select(User).where(User.id == target_user_id))).scalar_one()
+        return ShareResponse(
+            id=existing.id,
+            user_id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            created_at=existing.created_at,
+        )
+    share = WorkflowShare(workflow_id=workflow_id, user_id=target_user_id)
+    db.add(share)
+    await db.commit()
+    await db.refresh(share)
+    user = (await db.execute(select(User).where(User.id == target_user_id))).scalar_one()
+    return ShareResponse(
+        id=share.id,
+        user_id=user.id,
+        username=user.username,
+        display_name=user.display_name,
+        created_at=share.created_at,
+    )
+
+
+async def unshare_workflow(
+    db: AsyncSession, workflow_id: uuid.UUID, target_user_id: uuid.UUID
+) -> bool:
+    share = (
+        await db.execute(
+            select(WorkflowShare).where(
+                WorkflowShare.workflow_id == workflow_id, WorkflowShare.user_id == target_user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if not share:
+        return False
+    await db.delete(share)
+    await db.commit()
+    return True
+
+
+async def list_workflow_shares(db: AsyncSession, workflow_id: uuid.UUID) -> list[ShareResponse] | None:
+    workflow = (await db.execute(select(Workflow).where(Workflow.id == workflow_id))).scalar_one_or_none()
+    if not workflow:
+        return None
+    result = await db.execute(
+        select(WorkflowShare, User)
+        .join(User, WorkflowShare.user_id == User.id)
+        .where(WorkflowShare.workflow_id == workflow_id)
+        .order_by(WorkflowShare.created_at)
+    )
+    return [
+        ShareResponse(
+            id=share.id,
+            user_id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            created_at=share.created_at,
+        )
+        for share, user in result.all()
+    ]

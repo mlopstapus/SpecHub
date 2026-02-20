@@ -103,6 +103,8 @@ class User(Base):
     )
     project_memberships: Mapped[list["ProjectMember"]] = relationship(back_populates="user")
     sent_invitations: Mapped[list["Invitation"]] = relationship(back_populates="invited_by_user")
+    prompt_shares: Mapped[list["PromptShare"]] = relationship(back_populates="user")
+    workflow_shares: Mapped[list["WorkflowShare"]] = relationship(back_populates="user")
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +252,7 @@ class Prompt(Base):
         order_by="PromptVersion.created_at.desc()",
         foreign_keys="[PromptVersion.prompt_id]",
     )
+    shares: Mapped[list["PromptShare"]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +326,49 @@ class Workflow(Base):
 
     user: Mapped["User"] = relationship(back_populates="workflows")
     project: Mapped["Project | None"] = relationship(back_populates="workflows")
+    shares: Mapped[list["WorkflowShare"]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
+
+
+# ---------------------------------------------------------------------------
+# PromptShare (sharing prompts between users)
+# ---------------------------------------------------------------------------
+
+class PromptShare(Base):
+    __tablename__ = "prompt_shares"
+    __table_args__ = (UniqueConstraint("prompt_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    prompt_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("prompts.id"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    prompt: Mapped["Prompt"] = relationship(back_populates="shares")
+    user: Mapped["User"] = relationship(back_populates="prompt_shares")
+
+
+# ---------------------------------------------------------------------------
+# WorkflowShare (sharing workflows between users)
+# ---------------------------------------------------------------------------
+
+class WorkflowShare(Base):
+    __tablename__ = "workflow_shares"
+    __table_args__ = (UniqueConstraint("workflow_id", "user_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    workflow_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("workflows.id"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workflow: Mapped["Workflow"] = relationship(back_populates="shares")
+    user: Mapped["User"] = relationship(back_populates="workflow_shares")
 
 
 # ---------------------------------------------------------------------------

@@ -1,93 +1,106 @@
-# Session-Aware Context Injection for MCP Tools
+# User-Scoped Prompts & Workflows with Sharing
 
 ## Overview
 
-Automatically inject effective policies and objectives into the LLM context **once per MCP session**, on the first tool call. This makes governance context transparent — no extra user action, no repeated injection on every call.
+Make prompts and workflows truly user-scoped: each belongs to its creator and is only visible to them by default. Users can share prompts/workflows with other users via a share button on the tile card. Shared items appear in the recipient's list as read-only.
 
 ---
 
-## Problem
+## Current State
 
-Today, policies and objectives are injected into prompt templates during `expand_prompt()`, but MCP tool calls (e.g., `pcp-feature`, `pcp-fix`) only get this context if a `user_id` is available — which falls back to the prompt's owner. There's no session-level identity, and the LLM never sees the raw policies/objectives as standalone context. A user has to manually call `pcp-context` with their UUID.
+- **Prompts** have an optional `user_id` FK but `list_prompts` returns all prompts regardless of owner.
+- **Workflows** have a required `user_id` FK and `list_workflows` already accepts a `user_id` filter, but the frontend doesn't use it.
+- Neither has a sharing mechanism.
 
-## Solution: First-Tool-Call Injection
+## Design
 
-On the **first** MCP tool call in a session, prepend the user's effective policies and objectives to the tool response. Subsequent calls in the same session skip the injection.
+### New Tables
 
-### How It Works
+**`prompt_shares`** — tracks which users a prompt is shared with
 
-1. **User identity from API key:** MCP clients connect with `Authorization: Bearer pcp_...`. We resolve the user from the API key at the first tool call and cache it per session.
-2. **Session tracking:** Use `id(ctx.session)` as the session key. Maintain an in-memory `dict` mapping session IDs to `SessionState` (user, context_delivered flag).
-3. **First-call injection:** Every tool function checks the session state. If context hasn't been delivered yet, resolve effective policies + objectives and prepend them to the tool's response.
-4. **Cleanup:** Sessions are removed from the dict when the MCP session disconnects (or via a TTL sweep as a safety net).
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | UUID | PK |
+| `prompt_id` | UUID | FK → prompts.id, NOT NULL |
+| `user_id` | UUID | FK → users.id, NOT NULL |
+| `created_at` | TIMESTAMPTZ | server_default now() |
+| | | UNIQUE(prompt_id, user_id) |
 
-### File Changes
+**`workflow_shares`** — tracks which users a workflow is shared with
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| `id` | UUID | PK |
+| `workflow_id` | UUID | FK → workflows.id, NOT NULL |
+| `user_id` | UUID | FK → users.id, NOT NULL |
+| `created_at` | TIMESTAMPTZ | server_default now() |
+| | | UNIQUE(workflow_id, user_id) |
+
+### Backend Changes
 
 | File | Change |
 |------|--------|
-| `src/pcp_server/mcp/session.py` | **New.** `SessionState` dataclass, `SessionManager` class with `get_or_create()`, `mark_context_delivered()`, `cleanup()` |
-| `src/pcp_server/mcp/tools.py` | Add `ctx: Context` param to all tool functions. On first call, resolve user from API key, fetch policies/objectives, prepend to response. |
-| `src/pcp_server/mcp/server.py` | Update instructions to mention auto-injected context. |
-| `tests/test_mcp_session.py` | **New.** Tests for session tracking and first-call injection. |
+| `src/pcp_server/models.py` | Add `PromptShare`, `WorkflowShare` models; add `shares` relationship on `Prompt` and `Workflow` |
+| `src/pcp_server/schemas.py` | Add `ShareRequest`, `ShareResponse` schemas |
+| `alembic/versions/002_sharing.py` | **New.** Migration for `prompt_shares` and `workflow_shares` tables |
+| `src/pcp_server/routers/prompts.py` | Add `POST /prompts/{name}/shares`, `GET /prompts/{name}/shares`, `DELETE /prompts/{name}/shares/{user_id}` |
+| `src/pcp_server/routers/workflows.py` | Add `POST /workflows/{id}/shares`, `GET /workflows/{id}/shares`, `DELETE /workflows/{id}/shares/{user_id}` |
+| `src/pcp_server/services/prompt_service.py` | Update `list_prompts` to accept `user_id` filter (owned + shared). Add `share_prompt`, `unshare_prompt`, `list_shares` |
+| `src/pcp_server/services/workflow_service.py` | Update `list_workflows` to include shared. Add `share_workflow`, `unshare_workflow`, `list_shares` |
+| `frontend/src/lib/api.ts` | Add share/unshare API functions |
+| `frontend/src/app/prompts/page.tsx` | Filter by current user (owned + shared). Add share icon on card |
+| `frontend/src/app/workflows/page.tsx` | Filter by current user (owned + shared). Add share icon on card |
+| `frontend/src/components/share-dialog.tsx` | **New.** Dialog with user search, share/unshare buttons |
+| `tests/test_sharing.py` | **New.** Tests for prompt/workflow sharing |
 
-### Session State
+### Query Logic for "My Prompts"
 
-```python
-@dataclass
-class SessionState:
-    user_id: uuid.UUID | None = None
-    context_delivered: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
+```sql
+SELECT p.* FROM prompts p
+WHERE p.user_id = :current_user_id
+   OR p.id IN (SELECT ps.prompt_id FROM prompt_shares ps WHERE ps.user_id = :current_user_id)
+ORDER BY p.name
 ```
 
-### Context Format (prepended to first tool response)
+Same pattern for workflows.
+
+### Frontend UX
+
+- Prompt/workflow cards show a small **Share** icon (Lucide `Share2`) in the top-right corner, visible on hover
+- Clicking opens a `ShareDialog` with:
+  - List of users the item is currently shared with (with remove button)
+  - User search/select to add new shares
+- Shared items show a subtle "Shared with you" badge on the card
+- Owner can share/unshare; recipients get read-only access
+
+### API Endpoints
 
 ```
-═══ SESSION CONTEXT (auto-injected) ═══
+POST   /api/v1/prompts/{name}/shares       { user_id: UUID }
+GET    /api/v1/prompts/{name}/shares       → [{ user_id, username, display_name, created_at }]
+DELETE /api/v1/prompts/{name}/shares/{user_id}
 
-Policies:
-  - [prepend] require-tests: All code changes must include tests. (inherited)
-  - [append] security-review: Flag any credential handling for review. (local)
-
-Objectives:
-  - Improve platform reliability
-  - Reduce deployment time to under 5 minutes
-
-═══════════════════════════════════════
+POST   /api/v1/workflows/{id}/shares       { user_id: UUID }
+GET    /api/v1/workflows/{id}/shares       → [{ user_id, username, display_name, created_at }]
+DELETE /api/v1/workflows/{id}/shares/{user_id}
 ```
-
-### User Resolution Flow
-
-1. Tool function receives `ctx: Context`
-2. Check `session_manager.get(session_id)` — if context already delivered, skip
-3. If not, extract API key from the MCP session's HTTP headers
-4. Call `apikey_service.validate_key()` to resolve the user
-5. Call `policy_service.resolve_effective()` + `objective_service.resolve_effective()`
-6. Format and prepend to tool response
-7. Mark `context_delivered = True`
-
-### Edge Cases
-
-- **No auth header / invalid key:** Skip injection silently, log a warning. Tools still work.
-- **No policies or objectives:** Inject a minimal "No policies or objectives configured" note.
-- **Session reconnect:** New session = new injection (by design — policies may have changed).
 
 ---
 
 ## Acceptance Criteria
 
-1. First `pcp-*` tool call in a session includes policies + objectives in the response
-2. Second and subsequent calls do NOT include the context block
-3. Different sessions get independent injection
-4. Works with API key auth; gracefully degrades without auth
-5. Existing tests continue to pass
-6. New tests cover: first-call injection, no-repeat, no-auth fallback
+1. Prompts list shows only owned + shared prompts for the current user
+2. Workflows list shows only owned + shared workflows for the current user
+3. Share button on card opens dialog to add/remove shares
+4. Shared items show "Shared with you" indicator
+5. Only the owner can share/unshare
+6. Existing tests continue to pass
+7. New tests cover: share, unshare, list with sharing filter, permission checks
 
 ---
 
 ## Out of Scope
 
-- Per-tool opt-out of injection
-- Caching policies across sessions (always fresh)
-- MCP Resources-based approach (clients don't auto-read)
-- Frontend changes
+- Team-wide sharing (share with entire team)
+- Permission levels (editor vs viewer) — all shares are read-only for now
+- Sharing via link/token

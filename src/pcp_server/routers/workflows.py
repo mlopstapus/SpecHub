@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.pcp_server.database import get_db
 from src.pcp_server.schemas import (
+    ShareRequest,
+    ShareResponse,
     WorkflowCreate,
     WorkflowResponse,
     WorkflowRunRequest,
@@ -66,3 +68,30 @@ async def run_workflow(
     if not result:
         raise HTTPException(status_code=404, detail="Workflow not found")
     return result
+
+
+@router.post("/workflows/{workflow_id}/shares", response_model=ShareResponse, status_code=201)
+async def share_workflow(
+    workflow_id: uuid.UUID, data: ShareRequest, db: AsyncSession = Depends(get_db)
+):
+    result = await workflow_service.share_workflow(db, workflow_id, data.user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return result
+
+
+@router.get("/workflows/{workflow_id}/shares", response_model=list[ShareResponse])
+async def list_workflow_shares(workflow_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    result = await workflow_service.list_workflow_shares(db, workflow_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    return result
+
+
+@router.delete("/workflows/{workflow_id}/shares/{user_id}", status_code=204)
+async def unshare_workflow(
+    workflow_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+):
+    success = await workflow_service.unshare_workflow(db, workflow_id, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Share not found")
