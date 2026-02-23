@@ -111,32 +111,6 @@ def _topological_sort(steps: list[WorkflowStep]) -> list[WorkflowStep]:
     return ordered
 
 
-def _resolve_input(mapping: dict, workflow_input: dict, step_outputs: dict) -> dict:
-    """Resolve input_mapping values.
-
-    Values can be:
-    - "{{ input.key }}" -> from workflow input
-    - "{{ steps.step_id.key }}" -> from a previous step's expand output
-    - literal string
-    """
-    resolved = {}
-    for key, value in mapping.items():
-        if isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
-            ref = value.strip("{} ")
-            parts = ref.split(".")
-            if parts[0] == "input" and len(parts) == 2:
-                resolved[key] = workflow_input.get(parts[1], "")
-            elif parts[0] == "steps" and len(parts) == 3:
-                step_id, field = parts[1], parts[2]
-                step_out = step_outputs.get(step_id, {})
-                resolved[key] = step_out.get(field, "")
-            else:
-                resolved[key] = value
-        else:
-            resolved[key] = value
-    return resolved
-
-
 async def run_workflow(
     db: AsyncSession, workflow_id: uuid.UUID, workflow_input: dict
 ) -> WorkflowRunResponse | None:
@@ -147,17 +121,27 @@ async def run_workflow(
     steps = [WorkflowStep(**s) if isinstance(s, dict) else s for s in wf.steps]
     ordered = _topological_sort(steps)
 
-    step_outputs: dict[str, dict] = {}
+    step_outputs: dict[str, str] = {}
     step_results: list[WorkflowStepResult] = []
 
+    # Build the input for each step: start with workflow_input, then layer in
+    # the output of each dependency (keyed by step id).
+    # Ensure "input" key always exists so {{ input }} never crashes.
+    prev_output: str | None = None
     for step in ordered:
-        resolved_input = _resolve_input(step.input_mapping, workflow_input, step_outputs)
+        step_input = dict(workflow_input)
+        for dep_id in step.depends_on:
+            if dep_id in step_outputs:
+                step_input[dep_id] = step_outputs[dep_id]
+        if prev_output is not None:
+            step_input["input"] = prev_output
+        step_input.setdefault("input", "")
 
         try:
             expand_result = await prompt_service.expand_prompt(
                 db,
                 step.prompt_name,
-                ExpandRequest(input=resolved_input),
+                ExpandRequest(input=step_input),
                 version=step.prompt_version,
             )
             if not expand_result:
@@ -172,14 +156,10 @@ async def run_workflow(
                         error=f"Prompt '{step.prompt_name}' not found",
                     )
                 )
-                step_outputs[step.id] = {step.output_key: ""}
-                continue
+                break
 
-            step_outputs[step.id] = {
-                step.output_key: expand_result.user_message,
-                "system_message": expand_result.system_message or "",
-                "user_message": expand_result.user_message,
-            }
+            step_outputs[step.id] = expand_result.user_message
+            prev_output = expand_result.user_message
             step_results.append(
                 WorkflowStepResult(
                     step_id=step.id,
@@ -201,18 +181,13 @@ async def run_workflow(
                     error=str(e),
                 )
             )
-            step_outputs[step.id] = {step.output_key: ""}
-
-    final_outputs = {}
-    for step in ordered:
-        out = step_outputs.get(step.id, {})
-        final_outputs[step.output_key] = out.get(step.output_key, "")
+            break
 
     return WorkflowRunResponse(
         workflow_id=wf.id,
         workflow_name=wf.name,
         steps=step_results,
-        outputs=final_outputs,
+        outputs=step_outputs,
     )
 
 

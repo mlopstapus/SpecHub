@@ -499,23 +499,19 @@ async def test_api_key_user_scoped(client):
 
 @pytest.mark.asyncio
 async def test_workflow_user_scoped(client):
-    team = await _create_team(client, "WfTeam", "wf-team")
-    user = await _create_user(client, "wf-user", team["id"])
-
     resp = await client.post(
         "/api/v1/workflows",
         json={
-            "user_id": str(user["id"]),
             "name": "My Workflow",
             "steps": [],
         },
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["user_id"] == user["id"]
+    owner_id = data["user_id"]
 
-    # List by user
-    resp = await client.get(f"/api/v1/workflows?user_id={user['id']}")
+    # List by the owning user (set by auth)
+    resp = await client.get(f"/api/v1/workflows?user_id={owner_id}")
     assert resp.status_code == 200
     assert len(resp.json()) >= 1
 

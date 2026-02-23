@@ -38,7 +38,7 @@ async def seeded_prompts(client):
             "name": "summarize",
             "version": {
                 "version": "1.0.0",
-                "user_template": "Summarize: {{ text }}",
+                "user_template": "Summarize: {{ s1 }}",
             },
         },
     )
@@ -56,8 +56,6 @@ async def test_create_workflow(client, user_id):
                 {
                     "id": "s1",
                     "prompt_name": "greet",
-                    "output_key": "greeting",
-                    "input_mapping": {"name": "{{ input.name }}"},
                 }
             ],
         },
@@ -73,13 +71,13 @@ async def test_create_workflow(client, user_id):
 async def test_list_workflows(client, user_id):
     await client.post(
         "/api/v1/workflows",
-        json={"user_id": user_id, "name": "WF A", "steps": []},
+        json={"name": "WF A", "steps": []},
     )
     await client.post(
         "/api/v1/workflows",
-        json={"user_id": user_id, "name": "WF B", "steps": []},
+        json={"name": "WF B", "steps": []},
     )
-    resp = await client.get(f"/api/v1/workflows?user_id={user_id}")
+    resp = await client.get("/api/v1/workflows")
     assert resp.status_code == 200
     names = [w["name"] for w in resp.json()]
     assert "WF A" in names
@@ -149,8 +147,6 @@ async def test_run_single_step_workflow(client, user_id, seeded_prompts):
                 {
                     "id": "s1",
                     "prompt_name": "greet",
-                    "output_key": "greeting",
-                    "input_mapping": {"name": "{{ input.name }}"},
                 }
             ],
         },
@@ -164,8 +160,7 @@ async def test_run_single_step_workflow(client, user_id, seeded_prompts):
     data = resp.json()
     assert len(data["steps"]) == 1
     assert data["steps"][0]["status"] == "success"
-    assert "Alice" in data["steps"][0]["user_message"]
-    assert "greeting" in data["outputs"]
+    assert "s1" in data["outputs"]
 
 
 @pytest.mark.asyncio
@@ -179,14 +174,10 @@ async def test_run_chained_workflow(client, user_id, seeded_prompts):
                 {
                     "id": "s1",
                     "prompt_name": "greet",
-                    "output_key": "greeting",
-                    "input_mapping": {"name": "{{ input.name }}"},
                 },
                 {
                     "id": "s2",
                     "prompt_name": "summarize",
-                    "output_key": "summary",
-                    "input_mapping": {"text": "{{ steps.s1.greeting }}"},
                     "depends_on": ["s1"],
                 },
             ],
@@ -226,8 +217,6 @@ async def test_run_workflow_missing_prompt(client, user_id):
                 {
                     "id": "s1",
                     "prompt_name": "nonexistent",
-                    "output_key": "out",
-                    "input_mapping": {},
                 }
             ],
         },

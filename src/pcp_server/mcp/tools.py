@@ -23,6 +23,7 @@ from src.pcp_server.services import (
     objective_service,
     policy_service,
     prompt_service,
+    workflow_service,
 )
 
 logger = logging.getLogger("pcp.mcp.tools")
@@ -271,6 +272,94 @@ async def pcp_run(name: str, input: str, ctx: Context, project: str | None = Non
     if result.applied_policies:
         parts.append(f"[Policies Applied]\n{', '.join(result.applied_policies)}")
     tool_result = "\n\n".join(parts)
+    if context_block:
+        return context_block + "\n\n" + tool_result
+    return tool_result
+
+
+@mcp.tool(name="sh-workflow-list")
+async def pcp_workflow_list(ctx: Context) -> str:
+    """List all workflows accessible to the authenticated user."""
+    context_block = await _maybe_inject_session_context(ctx)
+    user_id = await _resolve_session_user_id(ctx)
+    async with async_session() as db:
+        workflows = await workflow_service.list_workflows(db, user_id=user_id)
+    if not workflows:
+        result = "No workflows found."
+    else:
+        lines = ["Available workflows:"]
+        for wf in workflows:
+            step_count = len(wf.steps)
+            desc = f" — {wf.description}" if wf.description else ""
+            lines.append(f"  - {wf.name} ({step_count} step{'s' if step_count != 1 else ''}){desc}")
+        result = "\n".join(lines)
+    if context_block:
+        return context_block + "\n\n" + result
+    return result
+
+
+@mcp.tool(name="sh-workflow-run")
+async def pcp_workflow_run(name: str, input: str, ctx: Context) -> str:  # noqa: A002
+    """Run a workflow by name. Each step's output is automatically passed to the next step.
+
+    Use sh-workflow-list to discover available workflows.
+
+    Args:
+        name: The workflow name (e.g. 'PRD Pipeline').
+        input: The input text or JSON object to pass to the first step.
+    """
+    context_block = await _maybe_inject_session_context(ctx)
+    user_id = await _resolve_session_user_id(ctx)
+
+    # Find the workflow by name
+    async with async_session() as db:
+        workflows = await workflow_service.list_workflows(db, user_id=user_id)
+
+    match = None
+    for wf in workflows:
+        if wf.name.lower() == name.lower():
+            match = wf
+            break
+
+    if not match:
+        result = f"Error: workflow '{name}' not found."
+        if context_block:
+            return context_block + "\n\n" + result
+        return result
+
+    # Parse input
+    try:
+        parsed = json.loads(input)
+        if not isinstance(parsed, dict):
+            parsed = {"input": input}
+    except (json.JSONDecodeError, TypeError):
+        parsed = {"input": input}
+
+    async with async_session() as db:
+        run_result = await workflow_service.run_workflow(db, match.id, parsed)
+
+    if not run_result:
+        result = f"Error: failed to run workflow '{name}'."
+        if context_block:
+            return context_block + "\n\n" + result
+        return result
+
+    # Format output
+    parts = [f"Workflow: {run_result.workflow_name} ({len(run_result.steps)} steps)"]
+    for sr in run_result.steps:
+        status_icon = "✓" if sr.status == "success" else "✗"
+        parts.append(f"\n--- {status_icon} {sr.step_id} ({sr.prompt_name} v{sr.prompt_version}) ---")
+        if sr.error:
+            parts.append(f"Error: {sr.error}")
+        else:
+            if sr.system_message:
+                parts.append(f"[System]\n{sr.system_message}")
+            parts.append(f"[User]\n{sr.user_message}")
+
+    parts.append("\n--- Final Outputs ---")
+    parts.append(json.dumps(run_result.outputs, indent=2))
+
+    tool_result = "\n".join(parts)
     if context_block:
         return context_block + "\n\n" + tool_result
     return tool_result

@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.pcp_server.mcp.server import mcp
-from src.pcp_server.mcp.tools import pcp_list, pcp_run, pcp_search
-from src.pcp_server.models import Prompt, PromptVersion
+from src.pcp_server.mcp.tools import pcp_list, pcp_run, pcp_search, pcp_workflow_list, pcp_workflow_run
+from src.pcp_server.models import Prompt, PromptVersion, Team, User, Workflow
 
 
 def _test_session_factory(db_session):
@@ -186,3 +186,105 @@ async def test_sh_run_plain_string_input(db_session: AsyncSession, monkeypatch):
 
     result = await pcp_run(name="plain-input", input="just a string", ctx=_mock_ctx())
     assert "Got: just a string" in result
+
+
+# ---------------------------------------------------------------------------
+# Workflow MCP tools
+# ---------------------------------------------------------------------------
+
+async def _create_test_user(db_session: AsyncSession) -> User:
+    """Create a team + user for workflow foreign key."""
+    team = Team(name="Test Team", slug="test-team")
+    db_session.add(team)
+    await db_session.flush()
+    user = User(
+        team_id=team.id,
+        username="mcp-test-user",
+        display_name="MCP Test",
+        email="mcp@test.local",
+        role="admin",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest.mark.asyncio
+async def test_workflow_list_empty(db_session: AsyncSession, monkeypatch):
+    """sh-workflow-list returns a message when no workflows exist."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_workflow_list(ctx=_mock_ctx())
+    assert "No workflows" in result
+
+
+@pytest.mark.asyncio
+async def test_workflow_list_with_workflows(db_session: AsyncSession, monkeypatch):
+    """sh-workflow-list returns workflow names."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    user = await _create_test_user(db_session)
+    wf = Workflow(
+        user_id=user.id,
+        name="My Pipeline",
+        description="A test pipeline",
+        steps=[{"id": "s1", "prompt_name": "greet", "depends_on": []}],
+    )
+    db_session.add(wf)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_workflow_list(ctx=_mock_ctx())
+    assert "My Pipeline" in result
+    assert "1 step" in result
+
+
+@pytest.mark.asyncio
+async def test_workflow_run_not_found(db_session: AsyncSession, monkeypatch):
+    """sh-workflow-run returns error for unknown workflow."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_workflow_run(name="nonexistent", input="hello", ctx=_mock_ctx())
+    assert "not found" in result
+
+
+@pytest.mark.asyncio
+async def test_workflow_run_success(db_session: AsyncSession, monkeypatch):
+    """sh-workflow-run executes a workflow and returns step results."""
+    from src.pcp_server.mcp import tools as tools_module
+
+    user = await _create_test_user(db_session)
+
+    # Create a prompt for the workflow step
+    prompt = Prompt(name="wf-greet", description="Greeting prompt", user_id=user.id)
+    db_session.add(prompt)
+    await db_session.flush()
+    version = PromptVersion(
+        prompt_id=prompt.id,
+        version="1.0.0",
+        user_template="Hello {{ input }}",
+    )
+    db_session.add(version)
+    await db_session.flush()
+
+    wf = Workflow(
+        user_id=user.id,
+        name="Greet Flow",
+        steps=[{"id": "s1", "prompt_name": "wf-greet", "depends_on": []}],
+    )
+    db_session.add(wf)
+    await db_session.commit()
+
+    monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
+
+    result = await pcp_workflow_run(name="Greet Flow", input="World", ctx=_mock_ctx())
+    assert "Greet Flow" in result
+    assert "Hello World" in result
+    assert "s1" in result

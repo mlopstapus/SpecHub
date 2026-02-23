@@ -694,9 +694,7 @@ export interface WorkflowStep_t {
   id: string;
   prompt_name: string;
   prompt_version: string | null;
-  input_mapping: Record<string, string>;
   depends_on: string[];
-  output_key: string;
 }
 
 export interface Workflow_t {
@@ -743,7 +741,6 @@ export async function getWorkflow(id: string): Promise<Workflow_t> {
 }
 
 export async function createWorkflow(data: {
-  user_id: string;
   project_id?: string;
   name: string;
   description?: string;

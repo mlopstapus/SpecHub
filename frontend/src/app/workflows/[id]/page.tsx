@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Play,
@@ -93,9 +92,7 @@ export default function WorkflowDetailPage() {
         id: `step-${idx}`,
         prompt_name: prompts[0]?.name ?? "",
         prompt_version: null,
-        input_mapping: {},
         depends_on: steps.length > 0 ? [steps[steps.length - 1].id] : [],
-        output_key: `output_${idx}`,
       },
     ];
     setSteps(newSteps);
@@ -117,14 +114,6 @@ export default function WorkflowDetailPage() {
   const updateStep = (idx: number, partial: Partial<WorkflowStep_t>) => {
     setSteps(steps.map((s, i) => (i === idx ? { ...s, ...partial } : s)));
     setDirty(true);
-  };
-
-  const addInputMapping = (stepIdx: number) => {
-    const step = steps[stepIdx];
-    const newKey = `var_${Object.keys(step.input_mapping).length + 1}`;
-    updateStep(stepIdx, {
-      input_mapping: { ...step.input_mapping, [newKey]: "" },
-    });
   };
 
   if (loading) {
@@ -238,107 +227,24 @@ export default function WorkflowDetailPage() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground">
-                      Prompt
-                    </label>
-                    <select
-                      className="w-full mt-1 rounded-md border border-input bg-[#0d0d0d] px-3 py-1.5 text-sm"
-                      value={step.prompt_name}
-                      onChange={(e) =>
-                        updateStep(idx, { prompt_name: e.target.value })
-                      }
-                    >
-                      <option value="">Select prompt...</option>
-                      {prompts.map((p) => (
-                        <option key={p.name} value={p.name}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground">
-                      Output Key
-                    </label>
-                    <Input
-                      value={step.output_key}
-                      onChange={(e) =>
-                        updateStep(idx, { output_key: e.target.value })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <Separator />
-
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-muted-foreground">
-                      Input Mapping
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => addInputMapping(idx)}
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                  {Object.entries(step.input_mapping).length === 0 ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      No input mappings.
-                    </p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {Object.entries(step.input_mapping).map(([key, val]) => (
-                        <div key={key} className="flex items-center gap-2">
-                          <Input
-                            value={key}
-                            className="h-7 text-xs flex-1"
-                            onChange={(e) => {
-                              const m = { ...step.input_mapping };
-                              delete m[key];
-                              m[e.target.value] = val;
-                              updateStep(idx, { input_mapping: m });
-                            }}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            =
-                          </span>
-                          <Input
-                            value={val}
-                            className="h-7 text-xs flex-1 font-mono"
-                            placeholder='{{ input.key }}'
-                            onChange={(e) => {
-                              updateStep(idx, {
-                                input_mapping: {
-                                  ...step.input_mapping,
-                                  [key]: e.target.value,
-                                },
-                              });
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => {
-                              const m = { ...step.input_mapping };
-                              delete m[key];
-                              updateStep(idx, { input_mapping: m });
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <label className="text-xs text-muted-foreground">
+                    Prompt
+                  </label>
+                  <select
+                    className="w-full mt-1 rounded-md border border-input bg-[#0d0d0d] px-3 py-1.5 text-sm"
+                    value={step.prompt_name}
+                    onChange={(e) =>
+                      updateStep(idx, { prompt_name: e.target.value })
+                    }
+                  >
+                    <option value="">Select prompt...</option>
+                    {prompts.map((p) => (
+                      <option key={p.name} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </CardContent>
             </Card>
@@ -470,7 +376,7 @@ export default function WorkflowDetailPage() {
                   </div>
                 ))}
 
-                <Separator />
+                <hr className="border-border" />
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">
                     Final Outputs:

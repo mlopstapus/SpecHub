@@ -345,13 +345,11 @@ class WorkflowStep(BaseModel):
     id: str = Field(..., examples=["step-1"])
     prompt_name: str = Field(..., examples=["feature-prd"])
     prompt_version: str | None = None
-    input_mapping: dict = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
-    output_key: str = Field(..., examples=["prd_output"])
 
 
 class WorkflowCreate(BaseModel):
-    user_id: uuid.UUID
+    user_id: uuid.UUID | None = None
     project_id: uuid.UUID | None = None
     name: str = Field(..., examples=["PRD Pipeline"])
     description: str | None = None

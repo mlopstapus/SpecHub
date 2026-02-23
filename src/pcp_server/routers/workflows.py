@@ -3,7 +3,9 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.pcp_server.auth import get_current_user
 from src.pcp_server.database import get_db
+from src.pcp_server.models import User
 from src.pcp_server.schemas import (
     ShareRequest,
     ShareResponse,
@@ -19,7 +21,12 @@ router = APIRouter(prefix="/api/v1", tags=["workflows"])
 
 
 @router.post("/workflows", response_model=WorkflowResponse, status_code=201)
-async def create_workflow(data: WorkflowCreate, db: AsyncSession = Depends(get_db)):
+async def create_workflow(
+    data: WorkflowCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    data.user_id = current_user.id
     return await workflow_service.create_workflow(db, data)
 
 
