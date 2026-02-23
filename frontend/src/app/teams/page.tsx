@@ -24,7 +24,6 @@ import {
   listTeams,
   listUsers,
   createTeam,
-  insertTeamBetween,
   createUser,
   updateTeam,
   deleteTeam,
@@ -72,14 +71,17 @@ export default function TeamsPage() {
   } | null>(null);
 
   // Create team form — unified state
-  // mode: "child" (add child to parentId), "sibling" (add sibling next to targetId),
-  //        "insert" (insert layer above targetId), "root" (add root team)
+  // mode: "child" (add child to parentId), "root" (add root team)
   const [addMode, setAddMode] = useState<{
-    mode: "child" | "sibling" | "insert" | "root";
+    mode: "child" | "root";
     targetId?: string;   // the node id relevant to the action
     parentId?: string;   // parent to create under
   } | null>(null);
   const [newTeamName, setNewTeamName] = useState("");
+
+  // Drag-to-reorder state (visual only — does not change parent relationships)
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
 
   // Create user form (in detail panel)
   const [creatingUser, setCreatingUser] = useState(false);
@@ -208,27 +210,18 @@ export default function TeamsPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
     try {
-      if (addMode.mode === "insert" && addMode.targetId) {
-        // Insert a layer above the target (between target and its parent)
-        await insertTeamBetween(addMode.targetId, {
-          name: newTeamName.trim(),
-          slug,
-        });
-      } else {
-        // child, sibling, root — all use createTeam with a parentId
-        await createTeam({
-          name: newTeamName.trim(),
-          slug,
-          parent_team_id: addMode.parentId,
-        });
-      }
+      await createTeam({
+        name: newTeamName.trim(),
+        slug,
+        parent_team_id: addMode.parentId,
+      });
       setNewTeamName("");
       setAddMode(null);
       await loadTree();
     } catch {}
   }
 
-  function startAdd(mode: "child" | "sibling" | "insert" | "root", targetId?: string, parentId?: string) {
+  function startAdd(mode: "child" | "root", targetId?: string, parentId?: string) {
     setAddMode({ mode, targetId, parentId });
     setNewTeamName("");
   }
@@ -400,10 +393,7 @@ export default function TeamsPage() {
   /* ---- Helper: inline team name form ---- */
   function renderInlineForm() {
     if (!addMode) return null;
-    const label =
-      addMode.mode === "insert" ? "Insert team above" :
-      addMode.mode === "child" ? "New sub-team" :
-      addMode.mode === "sibling" ? "New team" : "New root team";
+    const label = addMode.mode === "child" ? "New sub-team" : "New root team";
     return (
       <div className="flex flex-col items-center gap-1 animate-in fade-in zoom-in-95 duration-200">
         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
@@ -454,6 +444,81 @@ export default function TeamsPage() {
     );
   }
 
+  /* ---- Drag-to-reorder helpers (visual only) ---- */
+  function reorderChildren(nodes: TreeNode[], parentId: string | undefined, fromId: string, toId: string): TreeNode[] {
+    return nodes.map((n) => {
+      const isParent = parentId === undefined
+        ? nodes.some((c) => c.team.id === fromId) && nodes.some((c) => c.team.id === toId)
+        : n.team.id === parentId;
+
+      if (isParent && parentId === undefined) {
+        // Reorder root-level nodes
+        const reordered = [...nodes];
+        const fromIdx = reordered.findIndex((c) => c.team.id === fromId);
+        const toIdx = reordered.findIndex((c) => c.team.id === toId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = reordered.splice(fromIdx, 1);
+          reordered.splice(toIdx, 0, moved);
+        }
+        return reordered as unknown as TreeNode;
+      }
+
+      if (n.team.id === parentId) {
+        const reordered = [...n.children];
+        const fromIdx = reordered.findIndex((c) => c.team.id === fromId);
+        const toIdx = reordered.findIndex((c) => c.team.id === toId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = reordered.splice(fromIdx, 1);
+          reordered.splice(toIdx, 0, moved);
+        }
+        return { ...n, children: reordered };
+      }
+
+      return { ...n, children: reorderChildren(n.children, parentId, fromId, toId) };
+    });
+  }
+
+  function handleDragStart(e: React.DragEvent, nodeId: string) {
+    setDraggedNodeId(nodeId);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOver(e: React.DragEvent, nodeId: string) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (nodeId !== draggedNodeId) {
+      setDragOverNodeId(nodeId);
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggedNodeId(null);
+    setDragOverNodeId(null);
+  }
+
+  function handleDrop(e: React.DragEvent, targetNodeId: string, parentId: string | undefined) {
+    e.preventDefault();
+    if (draggedNodeId && draggedNodeId !== targetNodeId) {
+      if (parentId === undefined) {
+        // Root-level reorder
+        setTree((prev) => {
+          const reordered = [...prev];
+          const fromIdx = reordered.findIndex((c) => c.team.id === draggedNodeId);
+          const toIdx = reordered.findIndex((c) => c.team.id === targetNodeId);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = reordered.splice(fromIdx, 1);
+            reordered.splice(toIdx, 0, moved);
+          }
+          return reordered;
+        });
+      } else {
+        setTree((prev) => reorderChildren(prev, parentId, draggedNodeId, targetNodeId));
+      }
+    }
+    setDraggedNodeId(null);
+    setDragOverNodeId(null);
+  }
+
   /* ================================================================ */
   /*  Render: Org-chart tree node                                      */
   /* ================================================================ */
@@ -463,102 +528,63 @@ export default function TeamsPage() {
     const isLeaf = !hasChildren;
     const owner = node.members.find((m) => m.id === node.team.owner_id);
     const isAddingChild = addMode?.mode === "child" && addMode.parentId === node.team.id;
-    const isInsertingAbove = addMode?.mode === "insert" && addMode.targetId === node.team.id;
+    const isDragged = draggedNodeId === node.team.id;
+    const isDragOver = dragOverNodeId === node.team.id && draggedNodeId !== node.team.id;
 
     return (
       <div key={node.team.id} className="flex flex-col items-center">
-        {/* Insert-between zone: appears ABOVE this node when active, or as a hover target */}
-        {isInsertingAbove ? (
-          <div className="my-2">
-            {renderInlineForm()}
-          </div>
-        ) : parentId ? (
-          <div className="group/insert relative flex items-center justify-center" style={{ height: 0 }}>
-            <button
-              className="absolute -top-3.5 h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/insert:border-primary/50 group-hover/insert:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/insert:opacity-100 hover:scale-110 z-10 bg-background"
-              title="Insert team between"
-              onClick={(e) => { e.stopPropagation(); startAdd("insert", node.team.id); }}
-            >
-              <Plus className="h-4 w-4 text-primary/70" />
-            </button>
-          </div>
-        ) : null}
-
-        {/* The node card with side hover zones (absolutely positioned so they don't affect centering) */}
-        <div className="relative">
-          {/* Left side hover zone — add sibling */}
-          {addMode?.mode === "sibling" && addMode.targetId === `left-${node.team.id}` ? (
-            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2">{renderInlineForm()}</div>
-          ) : (
-            <div className="group/left absolute right-full top-1/2 -translate-y-1/2 mr-1">
-              <button
-                className="h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/left:border-primary/40 group-hover/left:bg-primary/10 bg-background flex items-center justify-center transition-all opacity-0 group-hover/left:opacity-100 hover:scale-110"
-                title="Add sibling team"
-                onClick={(e) => { e.stopPropagation(); startAdd("sibling", `left-${node.team.id}`, parentId); }}
-              >
-                <Plus className="h-3.5 w-3.5 text-primary/60" />
-              </button>
-            </div>
-          )}
-
-          {/* Right side hover zone — add sibling */}
-          {addMode?.mode === "sibling" && addMode.targetId === `right-${node.team.id}` ? (
-            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2">{renderInlineForm()}</div>
-          ) : (
-            <div className="group/right absolute left-full top-1/2 -translate-y-1/2 ml-1">
-              <button
-                className="h-7 w-7 rounded-full border-2 border-dashed border-transparent group-hover/right:border-primary/40 group-hover/right:bg-primary/10 bg-background flex items-center justify-center transition-all opacity-0 group-hover/right:opacity-100 hover:scale-110"
-                title="Add sibling team"
-                onClick={(e) => { e.stopPropagation(); startAdd("sibling", `right-${node.team.id}`, parentId); }}
-              >
-                <Plus className="h-3.5 w-3.5 text-primary/60" />
-              </button>
-            </div>
-          )}
-
-          {/* The actual card */}
-          <div
-            className={`
-              relative group cursor-pointer rounded-lg border-2 px-5 py-3.5 min-w-[180px] max-w-[260px]
-              transition-all duration-150 hover:shadow-md
-              ${isSelected
-                ? "border-primary bg-primary/5 shadow-md"
+        {/* The node card */}
+        <div
+          className={`
+            relative group rounded-lg border-2 px-5 py-3.5 min-w-[180px] max-w-[260px]
+            transition-all duration-150 hover:shadow-md
+            ${isSelected
+              ? "border-primary bg-primary/5 shadow-md"
+              : isDragOver
+                ? "border-primary/60 bg-primary/10 shadow-lg scale-[1.02]"
                 : "border-border bg-card hover:border-primary/50"
-              }
-            `}
-            onClick={() => selectTeam(node.team, node.members)}
-          >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold truncate">{node.team.name}</span>
-            </div>
-            {owner && (
-              <div className="flex items-center gap-1 mt-1">
-                <Crown className="h-3 w-3 text-amber-500" />
-                <span className="text-xs text-muted-foreground truncate">
-                  {owner.display_name || owner.username}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-              <span>{node.members.length} member{node.members.length !== 1 ? "s" : ""}</span>
-              {hasChildren && (
-                <span>{node.children.length} sub-team{node.children.length !== 1 ? "s" : ""}</span>
-              )}
-            </div>
-
-            {/* Delete button on hover */}
-            <button
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/80"
-              title="Delete team"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteTeam(node.team.id);
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            }
+            ${isDragged ? "opacity-40 scale-95" : ""}
+          `}
+          draggable
+          onDragStart={(e) => handleDragStart(e, node.team.id)}
+          onDragOver={(e) => handleDragOver(e, node.team.id)}
+          onDragLeave={() => { if (dragOverNodeId === node.team.id) setDragOverNodeId(null); }}
+          onDrop={(e) => handleDrop(e, node.team.id, parentId)}
+          onDragEnd={handleDragEnd}
+          onClick={() => selectTeam(node.team, node.members)}
+          style={{ cursor: isDragged ? "grabbing" : "grab" }}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm font-semibold truncate">{node.team.name}</span>
           </div>
+          {owner && (
+            <div className="flex items-center gap-1 mt-1">
+              <Crown className="h-3 w-3 text-amber-500" />
+              <span className="text-xs text-muted-foreground truncate">
+                {owner.display_name || owner.username}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+            <span>{node.members.length} member{node.members.length !== 1 ? "s" : ""}</span>
+            {hasChildren && (
+              <span>{node.children.length} sub-team{node.children.length !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+
+          {/* Delete button on hover */}
+          <button
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/80"
+            title="Delete team"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteTeam(node.team.id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
         </div>
 
         {/* Expand/collapse toggle + children */}
@@ -1068,13 +1094,13 @@ export default function TeamsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Organization</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Team hierarchy — click a node to view details. Hover near nodes to add teams.
+          Team hierarchy — click a node to view details. Drag nodes to reorder.
         </p>
       </div>
 
       <div className="flex gap-6">
         {/* Org chart area */}
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-x-auto">
           {loading ? (
             <div className="flex justify-center py-20">
               <div className="space-y-3 text-center">
@@ -1098,7 +1124,7 @@ export default function TeamsPage() {
               )}
             </div>
           ) : (
-            <div className="flex items-start justify-center py-8 min-w-fit gap-8">
+            <div className="flex items-start justify-center py-8 px-8 min-w-fit gap-8">
               {tree.map((node) => (
                 <div key={node.team.id} className="flex flex-col items-center">
                   {renderNode(node)}

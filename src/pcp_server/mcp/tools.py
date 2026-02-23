@@ -25,6 +25,25 @@ from src.pcp_server.services import (
 logger = logging.getLogger("pcp.mcp.tools")
 
 
+async def _resolve_session_user_id(ctx: Context) -> "uuid_mod.UUID | None":
+    """Return the user_id for the current MCP session, resolving from API key if needed."""
+    session_key = id(ctx.session)
+    state = session_manager.get_or_create(session_key)
+    if state.user_id:
+        return state.user_id
+
+    api_key_raw = get_current_api_key()
+    if not api_key_raw:
+        return None
+
+    async with async_session() as db:
+        api_key = await apikey_service.validate_key(db, api_key_raw)
+        if api_key:
+            state.user_id = api_key.user_id
+            return api_key.user_id
+    return None
+
+
 async def _maybe_inject_session_context(ctx: Context) -> str | None:
     """Resolve user from API key and return context block on first call per session.
 
@@ -91,14 +110,15 @@ async def _maybe_inject_session_context(ctx: Context) -> str | None:
 async def pcp_list(ctx: Context) -> str:
     """List all available prompts in the PCP registry."""
     context_block = await _maybe_inject_session_context(ctx)
+    user_id = await _resolve_session_user_id(ctx)
     async with async_session() as db:
-        names = await prompt_service.get_all_prompt_names(db)
-    if not names:
+        listing = await prompt_service.list_prompts(db, page=1, page_size=1000, user_id=user_id)
+    if not listing.items:
         result = "No prompts registered yet."
     else:
         lines = ["Available prompts:"]
-        for name in names:
-            lines.append(f"  - sh-{name}")
+        for p in listing.items:
+            lines.append(f"  - sh-{p.name}")
         result = "\n".join(lines)
     if context_block:
         return context_block + "\n\n" + result
@@ -113,8 +133,9 @@ async def pcp_search(query: str, ctx: Context) -> str:
         query: Search term to match against prompt names, descriptions, and tags.
     """
     context_block = await _maybe_inject_session_context(ctx)
+    user_id = await _resolve_session_user_id(ctx)
     async with async_session() as db:
-        listing = await prompt_service.list_prompts(db, page=1, page_size=100)
+        listing = await prompt_service.list_prompts(db, page=1, page_size=100, user_id=user_id)
 
     matches = []
     q = query.lower()
@@ -200,6 +221,34 @@ async def register_prompt_tools() -> None:
     for prompt in listing.items:
         register_prompt_tool(prompt.name, prompt.description)
 
+    # Override list_tools to filter by the session user's accessible prompts
+    _original_list_tools = mcp.list_tools
+
+    async def _filtered_list_tools():
+        all_tools = await _original_list_tools()
+
+        api_key_raw = get_current_api_key()
+        if not api_key_raw:
+            return all_tools
+
+        async with async_session() as db:
+            api_key = await apikey_service.validate_key(db, api_key_raw)
+            if not api_key:
+                return all_tools
+            listing = await prompt_service.list_prompts(
+                db, page=1, page_size=1000, user_id=api_key.user_id
+            )
+
+        accessible_tool_names = {f"sh-{p.name}" for p in listing.items}
+        static_tools = {"sh-list", "sh-search", "sh-context"}
+
+        return [
+            t for t in all_tools
+            if t.name in static_tools or t.name in accessible_tool_names
+        ]
+
+    mcp.list_tools = _filtered_list_tools
+
 
 def unregister_prompt_tool(prompt_name: str) -> None:
     """Remove an sh-{name} tool (e.g. on deprecation)."""
@@ -226,6 +275,17 @@ def register_prompt_tool(prompt_name: str, description: str | None) -> None:
                 project_id = uuid_mod.UUID(project)
             except ValueError:
                 pass
+
+        # Check user access (owned or shared)
+        user_id = await _resolve_session_user_id(ctx)
+        if user_id:
+            async with async_session() as db:
+                user_prompts = await prompt_service.list_prompts(
+                    db, page=1, page_size=1000, user_id=user_id,
+                )
+            accessible_names = {p.name for p in user_prompts.items}
+            if prompt_name not in accessible_names:
+                return f"Error: prompt '{prompt_name}' not found or not shared with you."
 
         async with async_session() as db:
             result = await prompt_service.expand_prompt(
