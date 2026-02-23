@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.pcp_server.config import settings
 from src.pcp_server.mcp.server import mcp
 from src.pcp_server.mcp.session import ApiKeyMiddleware
-from src.pcp_server.mcp.tools import register_prompt_tools
+import src.pcp_server.mcp.tools as _mcp_tools  # noqa: F401 — registers @mcp.tool() decorators
 from src.pcp_server.routers.auth import router as auth_router
 from src.pcp_server.routers.apikeys import router as apikeys_router
 from src.pcp_server.routers.metrics import router as metrics_router
@@ -26,8 +26,6 @@ logger = logging.getLogger("pcp")
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("PCP server starting up")
-    await register_prompt_tools()
-    logger.info("MCP tools registered")
     async with mcp.session_manager.run():
         yield
     logger.info("PCP server shutting down")

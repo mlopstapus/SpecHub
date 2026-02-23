@@ -17,7 +17,6 @@ from src.pcp_server.schemas import (
     ShareRequest,
     ShareResponse,
 )
-from src.pcp_server.mcp.tools import register_prompt_tool, unregister_prompt_tool
 from src.pcp_server.services import metrics_service, prompt_service
 
 router = APIRouter(prefix="/api/v1", tags=["prompts"])
@@ -31,7 +30,6 @@ async def create_prompt(data: PromptCreate, db: AsyncSession = Depends(get_db)):
         if "unique" in str(e).lower():
             raise HTTPException(status_code=409, detail=f"Prompt '{data.name}' already exists")
         raise
-    register_prompt_tool(result.name, result.description)
     return result
 
 
@@ -85,7 +83,6 @@ async def deprecate_prompt(name: str, db: AsyncSession = Depends(get_db)):
     success = await prompt_service.deprecate_prompt(db, name)
     if not success:
         raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found")
-    unregister_prompt_tool(name)
 
 
 @router.post("/prompts/{name}/rollback/{version}", response_model=PromptResponse)

@@ -1,8 +1,11 @@
 """
-Dynamic MCP tool registration for PCP prompts.
+MCP tool definitions for PCP prompts.
 
-Each prompt in the registry becomes a `sh-{name}` MCP tool.
-Static utility tools: `sh-list`, `sh-search`, `sh-context`.
+All tools are statically registered:
+  - `sh-list`    — list available prompts
+  - `sh-search`  — search prompts by name/tag
+  - `sh-context` — show effective policies & objectives
+  - `sh-run`     — expand any prompt by name
 """
 
 import json
@@ -30,17 +33,22 @@ async def _resolve_session_user_id(ctx: Context) -> "uuid_mod.UUID | None":
     session_key = id(ctx.session)
     state = session_manager.get_or_create(session_key)
     if state.user_id:
+        logger.debug("Resolved user_id from session cache: %s", state.user_id)
         return state.user_id
 
     api_key_raw = get_current_api_key()
     if not api_key_raw:
+        logger.debug("No API key in context — returning None user_id")
         return None
 
+    logger.debug("Resolving user_id from API key prefix: %s", api_key_raw[:12])
     async with async_session() as db:
         api_key = await apikey_service.validate_key(db, api_key_raw)
         if api_key:
             state.user_id = api_key.user_id
+            logger.debug("Resolved user_id: %s", api_key.user_id)
             return api_key.user_id
+    logger.warning("API key validation failed for prefix: %s", api_key_raw[:12])
     return None
 
 
@@ -118,7 +126,7 @@ async def pcp_list(ctx: Context) -> str:
     else:
         lines = ["Available prompts:"]
         for p in listing.items:
-            lines.append(f"  - sh-{p.name}")
+            lines.append(f"  - {p.name}")
         result = "\n".join(lines)
     if context_block:
         return context_block + "\n\n" + result
@@ -159,19 +167,17 @@ async def pcp_search(query: str, ctx: Context) -> str:
 
 
 @mcp.tool(name="sh-context")
-async def pcp_context(user_id: str, ctx: Context, project_id: str | None = None) -> str:
-    """Show effective policies and objectives for a user, optionally within a project context.
+async def pcp_context(ctx: Context, project_id: str | None = None) -> str:
+    """Show effective policies and objectives for the authenticated user, optionally within a project context.
 
     Args:
-        user_id: UUID of the user to resolve context for.
         project_id: Optional UUID of the project to layer on top.
     """
-    # sh-context is an explicit call — still inject session context if first call
     context_block = await _maybe_inject_session_context(ctx)
-    try:
-        uid = uuid_mod.UUID(user_id)
-    except ValueError:
-        return "Error: invalid user_id UUID."
+    uid = await _resolve_session_user_id(ctx)
+    if not uid:
+        return "Error: could not resolve user from API key. Ensure a valid Bearer token is set."
+
     pid = None
     if project_id:
         try:
@@ -213,104 +219,58 @@ async def pcp_context(user_id: str, ctx: Context, project_id: str | None = None)
     return result
 
 
-async def register_prompt_tools() -> None:
-    """Dynamically register an MCP tool for each prompt in the DB."""
-    async with async_session() as db:
-        listing = await prompt_service.list_prompts(db, page=1, page_size=1000)
+@mcp.tool(name="sh-run")
+async def pcp_run(name: str, input: str, ctx: Context, project: str | None = None) -> str:  # noqa: A002
+    """Run a prompt by name. Use sh-list or sh-search to discover available prompts.
 
-    for prompt in listing.items:
-        register_prompt_tool(prompt.name, prompt.description)
+    Args:
+        name: The prompt name to run (e.g. 'commit', 'plan', 'code-review').
+        input: The input text or JSON object to pass to the prompt template.
+        project: Optional project UUID to scope policy/objective resolution.
+    """
+    context_block = await _maybe_inject_session_context(ctx)
 
-    # Override list_tools to filter by the session user's accessible prompts
-    _original_list_tools = mcp.list_tools
-
-    async def _filtered_list_tools():
-        all_tools = await _original_list_tools()
-
-        api_key_raw = get_current_api_key()
-        if not api_key_raw:
-            return all_tools
-
-        async with async_session() as db:
-            api_key = await apikey_service.validate_key(db, api_key_raw)
-            if not api_key:
-                return all_tools
-            listing = await prompt_service.list_prompts(
-                db, page=1, page_size=1000, user_id=api_key.user_id
-            )
-
-        accessible_tool_names = {f"sh-{p.name}" for p in listing.items}
-        static_tools = {"sh-list", "sh-search", "sh-context"}
-
-        return [
-            t for t in all_tools
-            if t.name in static_tools or t.name in accessible_tool_names
-        ]
-
-    mcp.list_tools = _filtered_list_tools
-
-
-def unregister_prompt_tool(prompt_name: str) -> None:
-    """Remove an sh-{name} tool (e.g. on deprecation)."""
-    tool_name = f"sh-{prompt_name}"
-    mcp._tool_manager._tools.pop(tool_name, None)
-
-
-def register_prompt_tool(prompt_name: str, description: str | None) -> None:
-    """Register (or re-register) a single sh-{name} tool."""
-    tool_name = f"sh-{prompt_name}"
-    tool_description = description or f"Expand the '{prompt_name}' prompt with your input."
-
-    async def _tool_fn(input: str, ctx: Context, project: str | None = None) -> str:  # noqa: A002
-        try:
-            parsed = json.loads(input)
-            if not isinstance(parsed, dict):
-                parsed = {"input": input}
-        except (json.JSONDecodeError, TypeError):
+    try:
+        parsed = json.loads(input)
+        if not isinstance(parsed, dict):
             parsed = {"input": input}
+    except (json.JSONDecodeError, TypeError):
+        parsed = {"input": input}
 
-        project_id = None
-        if project:
-            try:
-                project_id = uuid_mod.UUID(project)
-            except ValueError:
-                pass
+    project_id = None
+    if project:
+        try:
+            project_id = uuid_mod.UUID(project)
+        except ValueError:
+            pass
 
-        # Check user access (owned or shared)
-        user_id = await _resolve_session_user_id(ctx)
-        if user_id:
-            async with async_session() as db:
-                user_prompts = await prompt_service.list_prompts(
-                    db, page=1, page_size=1000, user_id=user_id,
-                )
-            accessible_names = {p.name for p in user_prompts.items}
-            if prompt_name not in accessible_names:
-                return f"Error: prompt '{prompt_name}' not found or not shared with you."
-
+    # Check user access (owned or shared)
+    user_id = await _resolve_session_user_id(ctx)
+    if user_id:
         async with async_session() as db:
-            result = await prompt_service.expand_prompt(
-                db,
-                prompt_name,
-                ExpandRequest(input=parsed, project_id=project_id),
+            user_prompts = await prompt_service.list_prompts(
+                db, page=1, page_size=1000, user_id=user_id,
             )
-        if not result:
-            return f"Error: prompt '{prompt_name}' not found."
+        accessible_names = {p.name for p in user_prompts.items}
+        if name not in accessible_names:
+            return f"Error: prompt '{name}' not found or not shared with you."
 
-        context_block = await _maybe_inject_session_context(ctx)
+    async with async_session() as db:
+        result = await prompt_service.expand_prompt(
+            db,
+            name,
+            ExpandRequest(input=parsed, project_id=project_id),
+        )
+    if not result:
+        return f"Error: prompt '{name}' not found."
 
-        parts = []
-        if result.system_message:
-            parts.append(f"[System]\n{result.system_message}")
-        parts.append(f"[User]\n{result.user_message}")
-        if result.applied_policies:
-            parts.append(f"[Policies Applied]\n{', '.join(result.applied_policies)}")
-        tool_result = "\n\n".join(parts)
-        if context_block:
-            return context_block + "\n\n" + tool_result
-        return tool_result
-
-    _tool_fn.__name__ = tool_name
-    _tool_fn.__qualname__ = tool_name
-    _tool_fn.__doc__ = tool_description
-
-    mcp.tool(name=tool_name)(_tool_fn)
+    parts = []
+    if result.system_message:
+        parts.append(f"[System]\n{result.system_message}")
+    parts.append(f"[User]\n{result.user_message}")
+    if result.applied_policies:
+        parts.append(f"[Policies Applied]\n{', '.join(result.applied_policies)}")
+    tool_result = "\n\n".join(parts)
+    if context_block:
+        return context_block + "\n\n" + tool_result
+    return tool_result

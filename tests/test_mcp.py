@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.pcp_server.mcp.server import mcp
-from src.pcp_server.mcp.tools import register_prompt_tool, pcp_list, pcp_search
+from src.pcp_server.mcp.tools import pcp_list, pcp_run, pcp_search
 from src.pcp_server.models import Prompt, PromptVersion
 
 
@@ -53,7 +53,7 @@ async def test_pcp_list_with_prompts(db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
     result = await pcp_list(ctx=_mock_ctx())
-    assert "sh-my-prompt" in result
+    assert "my-prompt" in result
 
 
 @pytest.mark.asyncio
@@ -135,18 +135,14 @@ async def test_pcp_search_by_description(db_session: AsyncSession, monkeypatch):
     assert "sh-desc-match" in result
 
 
-def test_register_prompt_tool_creates_tool():
-    """register_prompt_tool adds a tool to the MCP server."""
-    initial_count = len(mcp._tool_manager._tools)
-    register_prompt_tool("unit-test-prompt", "A dynamically registered tool")
-    new_count = len(mcp._tool_manager._tools)
-    assert new_count == initial_count + 1
-    assert "sh-unit-test-prompt" in mcp._tool_manager._tools
+def test_sh_run_tool_registered():
+    """sh-run is registered as a static MCP tool."""
+    assert "sh-run" in mcp._tool_manager._tools
 
 
 @pytest.mark.asyncio
-async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
-    """A dynamically registered tool expands the prompt and returns formatted output."""
+async def test_sh_run_invocation(db_session: AsyncSession, monkeypatch):
+    """sh-run expands a prompt by name and returns formatted output."""
     from src.pcp_server.mcp import tools as tools_module
 
     prompt = Prompt(name="invoke-me", description="Test invocation")
@@ -163,10 +159,7 @@ async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
-    register_prompt_tool("invoke-me", "Test invocation")
-
-    tool_fn = mcp._tool_manager._tools["sh-invoke-me"].fn
-    result = await tool_fn(input='{"input": "hello"}', ctx=_mock_ctx())
+    result = await pcp_run(name="invoke-me", input='{"input": "hello"}', ctx=_mock_ctx())
     assert "[System]" in result
     assert "System says: hello" in result
     assert "[User]" in result
@@ -174,8 +167,8 @@ async def test_dynamic_tool_invocation(db_session: AsyncSession, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_dynamic_tool_plain_string_input(db_session: AsyncSession, monkeypatch):
-    """A dynamic tool handles plain string input (not JSON)."""
+async def test_sh_run_plain_string_input(db_session: AsyncSession, monkeypatch):
+    """sh-run handles plain string input (not JSON)."""
     from src.pcp_server.mcp import tools as tools_module
 
     prompt = Prompt(name="plain-input", description="Plain string test")
@@ -191,8 +184,5 @@ async def test_dynamic_tool_plain_string_input(db_session: AsyncSession, monkeyp
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
-    register_prompt_tool("plain-input", "Plain string test")
-
-    tool_fn = mcp._tool_manager._tools["sh-plain-input"].fn
-    result = await tool_fn(input="just a string", ctx=_mock_ctx())
+    result = await pcp_run(name="plain-input", input="just a string", ctx=_mock_ctx())
     assert "Got: just a string" in result
