@@ -7,7 +7,9 @@ from sqlalchemy import String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.pcp_server.models import Prompt, PromptVersion
+from sqlalchemy import or_
+
+from src.pcp_server.models import Prompt, PromptShare, PromptVersion, User
 from src.pcp_server.schemas import (
     ExpandRequest,
     ExpandResponse,
@@ -17,6 +19,7 @@ from src.pcp_server.schemas import (
     PromptListResponse,
     PromptResponse,
     PromptVersionResponse,
+    ShareResponse,
 )
 
 
@@ -58,10 +61,20 @@ async def create_prompt(db: AsyncSession, data: PromptCreate) -> PromptResponse:
 
 
 async def list_prompts(
-    db: AsyncSession, page: int = 1, page_size: int = 20, tag: str | None = None
+    db: AsyncSession,
+    page: int = 1,
+    page_size: int = 20,
+    tag: str | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> PromptListResponse:
     query = select(Prompt).options(selectinload(Prompt.versions))
     count_query = select(func.count()).select_from(Prompt)
+
+    if user_id:
+        shared_ids = select(PromptShare.prompt_id).where(PromptShare.user_id == user_id)
+        ownership_filter = or_(Prompt.user_id == user_id, Prompt.id.in_(shared_ids))
+        query = query.where(ownership_filter)
+        count_query = count_query.where(ownership_filter)
 
     if tag:
         query = query.join(Prompt.versions).where(
@@ -73,6 +86,10 @@ async def list_prompts(
             .join(Prompt.versions)
             .where(PromptVersion.tags.cast(String).contains(tag))
         )
+        if user_id:
+            shared_ids = select(PromptShare.prompt_id).where(PromptShare.user_id == user_id)
+            ownership_filter = or_(Prompt.user_id == user_id, Prompt.id.in_(shared_ids))
+            count_query = count_query.where(ownership_filter)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
@@ -205,7 +222,8 @@ def _build_include_prompt(
         parts = []
         if pv.system_template:
             parts.append(_render_template(inner_env, pv.system_template, variables))
-        parts.append(_render_template(inner_env, pv.user_template, variables))
+        user_tpl = pv.user_template or "{{ input }}"
+        parts.append(_render_template(inner_env, user_tpl, variables))
         return "\n\n".join(parts)
 
     return include_prompt
@@ -275,7 +293,7 @@ async def expand_prompt(
             effective_user_id = prompt_obj.user_id
 
     system_tpl = pv.system_template
-    user_tpl = pv.user_template
+    user_tpl = pv.user_template or "{{ input }}"
     template_vars = dict(data.input)
 
     if effective_user_id:
@@ -342,3 +360,81 @@ async def get_all_prompt_names(db: AsyncSession) -> list[str]:
         select(Prompt.name).where(Prompt.is_deprecated.is_(False)).order_by(Prompt.name)
     )
     return list(result.scalars().all())
+
+
+async def share_prompt(
+    db: AsyncSession, name: str, target_user_id: uuid.UUID
+) -> ShareResponse | None:
+    prompt = (await db.execute(select(Prompt).where(Prompt.name == name))).scalar_one_or_none()
+    if not prompt:
+        return None
+    existing = (
+        await db.execute(
+            select(PromptShare).where(
+                PromptShare.prompt_id == prompt.id, PromptShare.user_id == target_user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        user = (await db.execute(select(User).where(User.id == target_user_id))).scalar_one()
+        return ShareResponse(
+            id=existing.id,
+            user_id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            created_at=existing.created_at,
+        )
+    share = PromptShare(prompt_id=prompt.id, user_id=target_user_id)
+    db.add(share)
+    await db.commit()
+    await db.refresh(share)
+    user = (await db.execute(select(User).where(User.id == target_user_id))).scalar_one()
+    return ShareResponse(
+        id=share.id,
+        user_id=user.id,
+        username=user.username,
+        display_name=user.display_name,
+        created_at=share.created_at,
+    )
+
+
+async def unshare_prompt(
+    db: AsyncSession, name: str, target_user_id: uuid.UUID
+) -> bool:
+    prompt = (await db.execute(select(Prompt).where(Prompt.name == name))).scalar_one_or_none()
+    if not prompt:
+        return False
+    share = (
+        await db.execute(
+            select(PromptShare).where(
+                PromptShare.prompt_id == prompt.id, PromptShare.user_id == target_user_id
+            )
+        )
+    ).scalar_one_or_none()
+    if not share:
+        return False
+    await db.delete(share)
+    await db.commit()
+    return True
+
+
+async def list_prompt_shares(db: AsyncSession, name: str) -> list[ShareResponse] | None:
+    prompt = (await db.execute(select(Prompt).where(Prompt.name == name))).scalar_one_or_none()
+    if not prompt:
+        return None
+    result = await db.execute(
+        select(PromptShare, User)
+        .join(User, PromptShare.user_id == User.id)
+        .where(PromptShare.prompt_id == prompt.id)
+        .order_by(PromptShare.created_at)
+    )
+    return [
+        ShareResponse(
+            id=share.id,
+            user_id=user.id,
+            username=user.username,
+            display_name=user.display_name,
+            created_at=share.created_at,
+        )
+        for share, user in result.all()
+    ]

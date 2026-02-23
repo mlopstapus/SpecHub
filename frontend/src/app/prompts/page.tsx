@@ -1,28 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, AlertTriangle } from "lucide-react";
-import { listPrompts, type Prompt, type PromptListResponse } from "@/lib/api";
+import { Search, Plus, AlertTriangle, Share2 } from "lucide-react";
+import {
+  listPrompts,
+  listPromptShares,
+  sharePrompt,
+  unsharePrompt,
+  type Prompt,
+  type PromptListResponse,
+  type Share_t,
+} from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { ShareDialog } from "@/components/share-dialog";
 
 export default function PromptsPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<PromptListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [shareTarget, setShareTarget] = useState<Prompt | null>(null);
+  const [shares, setShares] = useState<Share_t[]>([]);
 
-  useEffect(() => {
+  const loadPrompts = useCallback(() => {
     setLoading(true);
-    listPrompts(page, 20, activeTag ?? undefined)
+    listPrompts(page, 20, activeTag ?? undefined, user?.id)
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page, activeTag]);
+  }, [page, activeTag, user?.id]);
+
+  useEffect(() => {
+    loadPrompts();
+  }, [loadPrompts]);
 
   const allTags = Array.from(
     new Set(
@@ -121,7 +138,21 @@ export default function PromptsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((prompt) => (
-            <PromptCard key={prompt.id} prompt={prompt} />
+            <PromptCard
+              key={prompt.id}
+              prompt={prompt}
+              isOwner={prompt.user_id === user?.id}
+              isShared={prompt.user_id !== user?.id && prompt.user_id !== null}
+              onShareClick={async () => {
+                setShareTarget(prompt);
+                try {
+                  const s = await listPromptShares(prompt.name);
+                  setShares(s);
+                } catch {
+                  setShares([]);
+                }
+              }}
+            />
           ))}
         </div>
       )}
@@ -149,22 +180,71 @@ export default function PromptsPage() {
           </Button>
         </div>
       )}
+
+      <ShareDialog
+        open={!!shareTarget}
+        onOpenChange={(open) => { if (!open) setShareTarget(null); }}
+        title={shareTarget?.name ?? ""}
+        shares={shares}
+        onShare={async (userId) => {
+          if (!shareTarget) return;
+          const s = await sharePrompt(shareTarget.name, userId);
+          setShares((prev) => [...prev, s]);
+        }}
+        onUnshare={async (userId) => {
+          if (!shareTarget) return;
+          await unsharePrompt(shareTarget.name, userId);
+          setShares((prev) => prev.filter((s) => s.user_id !== userId));
+        }}
+      />
     </div>
   );
 }
 
-function PromptCard({ prompt }: { prompt: Prompt }) {
+function PromptCard({
+  prompt,
+  isOwner,
+  isShared,
+  onShareClick,
+}: {
+  prompt: Prompt;
+  isOwner: boolean;
+  isShared: boolean;
+  onShareClick: () => void;
+}) {
   return (
-    <Link href={`/prompts/${prompt.name}`}>
-      <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full group relative">
+      {isOwner && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onShareClick();
+          }}
+          title="Share"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      <Link href={`/prompts/${prompt.name}`}>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-8">
             <CardTitle className="text-base font-medium">
               {prompt.name}
             </CardTitle>
-            {prompt.is_deprecated && (
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            )}
+            <div className="flex items-center gap-1.5">
+              {isShared && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground">
+                  Shared with you
+                </Badge>
+              )}
+              {prompt.is_deprecated && (
+                <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -188,7 +268,7 @@ function PromptCard({ prompt }: { prompt: Prompt }) {
             </div>
           </div>
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+    </Card>
   );
 }

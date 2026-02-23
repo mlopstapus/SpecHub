@@ -224,11 +224,21 @@ class ProjectMemberResponse(BaseModel):
 # Prompt schemas (user-scoped)
 # ---------------------------------------------------------------------------
 
+_DEFAULT_INPUT_SCHEMA: dict = {
+    "type": "object",
+    "properties": {"input": {"type": "string", "description": "Free-text input"}},
+    "required": ["input"],
+}
+
+
 class PromptVersionCreate(BaseModel):
     version: str = Field(..., examples=["1.0.0"])
     system_template: str | None = None
-    user_template: str = Field(..., examples=["Generate a PRD for: {{ feature_description }}"])
-    input_schema: dict = Field(default_factory=dict)
+    user_template: str | None = Field(
+        default=None,
+        examples=["Generate a PRD for: {{ feature_description }}"],
+    )
+    input_schema: dict = Field(default_factory=lambda: dict(_DEFAULT_INPUT_SCHEMA))
     tags: list[str] = Field(default_factory=list)
 
 
@@ -244,7 +254,7 @@ class PromptVersionResponse(BaseModel):
     prompt_id: uuid.UUID
     version: str
     system_template: str | None
-    user_template: str
+    user_template: str | None
     input_schema: dict
     tags: list[str]
     created_at: datetime
@@ -275,8 +285,8 @@ class PromptListResponse(BaseModel):
 class NewVersionCreate(BaseModel):
     version: str = Field(..., examples=["1.1.0"])
     system_template: str | None = None
-    user_template: str
-    input_schema: dict = Field(default_factory=dict)
+    user_template: str | None = None
+    input_schema: dict = Field(default_factory=lambda: dict(_DEFAULT_INPUT_SCHEMA))
     tags: list[str] = Field(default_factory=list)
 
 
@@ -386,3 +396,21 @@ class WorkflowRunResponse(BaseModel):
     workflow_name: str
     steps: list[WorkflowStepResult]
     outputs: dict
+
+
+# ---------------------------------------------------------------------------
+# Sharing schemas
+# ---------------------------------------------------------------------------
+
+class ShareRequest(BaseModel):
+    user_id: uuid.UUID
+
+
+class ShareResponse(BaseModel):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    username: str
+    display_name: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
