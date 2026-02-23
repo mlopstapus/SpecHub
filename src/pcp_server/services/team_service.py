@@ -27,17 +27,18 @@ async def create_team(db: AsyncSession, data: TeamCreate) -> TeamResponse:
 
 
 async def list_teams(
-    db: AsyncSession, parent_team_id: uuid.UUID | None = None
+    db: AsyncSession, parent_team_id: uuid.UUID | None = None, flat: bool = False
 ) -> TeamListResponse:
     query = select(Team)
     count_query = select(func.count()).select_from(Team)
 
-    if parent_team_id is not None:
-        query = query.where(Team.parent_team_id == parent_team_id)
-        count_query = count_query.where(Team.parent_team_id == parent_team_id)
-    else:
-        query = query.where(Team.parent_team_id.is_(None))
-        count_query = count_query.where(Team.parent_team_id.is_(None))
+    if not flat:
+        if parent_team_id is not None:
+            query = query.where(Team.parent_team_id == parent_team_id)
+            count_query = count_query.where(Team.parent_team_id == parent_team_id)
+        else:
+            query = query.where(Team.parent_team_id.is_(None))
+            count_query = count_query.where(Team.parent_team_id.is_(None))
 
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()

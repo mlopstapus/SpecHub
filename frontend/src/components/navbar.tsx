@@ -15,6 +15,7 @@ const navItems = [
   { href: "/teams", label: "Teams" },
   { href: "/prompts", label: "Prompts" },
   { href: "/workflows", label: "Workflows" },
+  { href: "/projects", label: "Projects" },
   { href: "/metrics", label: "Metrics" },
 ];
 

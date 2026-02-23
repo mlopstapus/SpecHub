@@ -168,9 +168,10 @@ export interface TeamListResponse {
   total: number;
 }
 
-export async function listTeams(parentTeamId?: string): Promise<TeamListResponse> {
+export async function listTeams(parentTeamId?: string, flat?: boolean): Promise<TeamListResponse> {
   const params = new URLSearchParams();
   if (parentTeamId) params.set("parent_team_id", parentTeamId);
+  if (flat) params.set("flat", "true");
   const qs = params.toString();
   return fetchAPI<TeamListResponse>(`/teams${qs ? `?${qs}` : ""}`);
 }
@@ -644,6 +645,22 @@ export async function removeProjectMember(
 ): Promise<void> {
   await fetchAPI(`/projects/${projectId}/members/${userId}`, {
     method: "DELETE",
+  });
+}
+
+export async function listProjectObjectives(
+  projectId: string
+): Promise<Objective_t[]> {
+  return fetchAPI<Objective_t[]>(`/projects/${projectId}/objectives`);
+}
+
+export async function createProjectObjective(
+  projectId: string,
+  data: { title: string; description?: string }
+): Promise<Objective_t> {
+  return fetchAPI<Objective_t>(`/projects/${projectId}/objectives`, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }
 

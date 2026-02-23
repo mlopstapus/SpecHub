@@ -7,6 +7,8 @@ from src.pcp_server.auth import get_current_user
 from src.pcp_server.database import get_db
 from src.pcp_server.models import User
 from src.pcp_server.schemas import (
+    ObjectiveCreate,
+    ObjectiveResponse,
     ProjectCreate,
     ProjectListResponse,
     ProjectMemberAdd,
@@ -14,7 +16,7 @@ from src.pcp_server.schemas import (
     ProjectResponse,
     ProjectUpdate,
 )
-from src.pcp_server.services import project_service
+from src.pcp_server.services import objective_service, project_service
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -113,3 +115,31 @@ async def remove_project_member(
     removed = await project_service.remove_member(db, project_id, user_id)
     if not removed:
         raise HTTPException(status_code=404, detail="Project member not found")
+
+
+# --- Project Objectives ---
+
+@router.get(
+    "/{project_id}/objectives",
+    response_model=list[ObjectiveResponse],
+)
+async def list_project_objectives(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    return await objective_service.list_project_objectives(db, project_id)
+
+
+@router.post(
+    "/{project_id}/objectives",
+    response_model=ObjectiveResponse,
+    status_code=201,
+)
+async def create_project_objective(
+    project_id: uuid.UUID,
+    data: ObjectiveCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    data.project_id = project_id
+    return await objective_service.create_objective(db, data)

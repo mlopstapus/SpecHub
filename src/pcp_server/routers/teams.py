@@ -34,9 +34,10 @@ async def create_team(
 @router.get("", response_model=TeamListResponse)
 async def list_teams(
     parent_team_id: uuid.UUID | None = None,
+    flat: bool = False,
     db: AsyncSession = Depends(get_db),
 ):
-    return await team_service.list_teams(db, parent_team_id=parent_team_id)
+    return await team_service.list_teams(db, parent_team_id=parent_team_id, flat=flat)
 
 
 @router.get("/{team_id}", response_model=TeamResponse)
