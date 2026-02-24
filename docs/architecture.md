@@ -284,46 +284,51 @@ PCP exposes an MCP server over Streamable HTTP transport. Every prompt in the re
 
 ```
 pcp/
-├── src/pcp_server/
-│   ├── main.py                # FastAPI app + MCP server entrypoint
-│   ├── config.py              # Settings (pydantic-settings)
-│   ├── database.py            # SQLAlchemy engine + session
-│   ├── models.py              # All ORM models (Team, User, Policy, etc.)
-│   ├── schemas.py             # Pydantic request/response schemas
-│   ├── routers/
-│   │   ├── teams.py           # Team CRUD
-│   │   ├── users.py           # User CRUD
-│   │   ├── policies.py        # Policy CRUD + effective resolution
-│   │   ├── objectives.py      # Objective CRUD + effective resolution
-│   │   ├── projects.py        # Project CRUD + member management
-│   │   ├── prompts.py         # Prompt CRUD + expand endpoints
-│   │   ├── workflows.py       # Workflow CRUD + run
-│   │   ├── apikeys.py         # User-scoped API key management
-│   │   └── metrics.py         # Usage analytics
-│   ├── mcp/
-│   │   ├── server.py          # MCP server setup
-│   │   └── tools.py           # Dynamic sh-* tool registration + sh-context
-│   └── services/
-│       ├── team_service.py    # Team CRUD + chain walking
-│       ├── user_service.py    # User CRUD
-│       ├── policy_service.py  # Policy CRUD + two-layer resolution
-│       ├── objective_service.py # Objective CRUD + two-layer resolution
-│       ├── project_service.py # Project CRUD + member management
-│       ├── prompt_service.py  # Prompt CRUD + policy-enforced expansion
-│       ├── workflow_service.py # Workflow CRUD + execution
-│       ├── apikey_service.py  # API key generation + validation
-│       └── metrics_service.py # Usage tracking
+├── backend/
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── alembic.ini
+│   ├── alembic/               # Database migrations
+│   ├── src/pcp_server/
+│   │   ├── main.py            # FastAPI app + MCP server entrypoint
+│   │   ├── config.py          # Settings (pydantic-settings)
+│   │   ├── database.py        # SQLAlchemy engine + session
+│   │   ├── models.py          # All ORM models (Team, User, Policy, etc.)
+│   │   ├── schemas.py         # Pydantic request/response schemas
+│   │   ├── routers/
+│   │   │   ├── teams.py       # Team CRUD
+│   │   │   ├── users.py       # User CRUD
+│   │   │   ├── policies.py    # Policy CRUD + effective resolution
+│   │   │   ├── objectives.py  # Objective CRUD + effective resolution
+│   │   │   ├── projects.py    # Project CRUD + member management
+│   │   │   ├── prompts.py     # Prompt CRUD + expand endpoints
+│   │   │   ├── workflows.py   # Workflow CRUD + run
+│   │   │   ├── apikeys.py     # User-scoped API key management
+│   │   │   └── metrics.py     # Usage analytics
+│   │   ├── mcp/
+│   │   │   ├── server.py      # MCP server setup
+│   │   │   └── tools.py       # Dynamic sh-* tool registration + sh-context
+│   │   └── services/
+│   │       ├── team_service.py    # Team CRUD + chain walking
+│   │       ├── user_service.py    # User CRUD
+│   │       ├── policy_service.py  # Policy CRUD + two-layer resolution
+│   │       ├── objective_service.py # Objective CRUD + two-layer resolution
+│   │       ├── project_service.py # Project CRUD + member management
+│   │       ├── prompt_service.py  # Prompt CRUD + policy-enforced expansion
+│   │       ├── workflow_service.py # Workflow CRUD + execution
+│   │       ├── apikey_service.py  # API key generation + validation
+│   │       └── metrics_service.py # Usage tracking
+│   ├── tests/                 # pytest test suite
+│   └── scripts/               # Entrypoint scripts
 ├── frontend/                  # Next.js 14 admin dashboard
+│   ├── Dockerfile
 │   └── src/
 │       ├── app/               # Pages: dashboard, teams, prompts, workflows, settings, metrics
 │       ├── components/        # Navbar, project-switcher, playground, UI primitives
 │       └── lib/api.ts         # Typed API client
-├── alembic/                   # Database migrations
 ├── charts/pcp/                # Helm chart for Kubernetes
-├── tests/                     # pytest test suite
-├── Dockerfile
 ├── docker-compose.yaml
-└── pyproject.toml
+└── README.md
 ```
 
 ---

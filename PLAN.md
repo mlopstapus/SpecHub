@@ -1,44 +1,91 @@
-# OpenShift-Ready Container Images
+# Move Backend Source Into `backend/`
 
 ## Overview
 
-Update both container images (backend Python API and frontend Next.js app) so they run correctly on OpenShift, which enforces running as an **arbitrary non-root UID** within GID 0 (`root` group).
+Consolidate all backend source code into `backend/` alongside its Dockerfile, mirroring the `frontend/` layout. The repo root becomes a thin shell holding only repo-wide files.
 
 ---
 
-## Current Issues
+## Current Layout
 
-### Backend `Dockerfile`
-- No non-root user created — container runs as root (PID 1 = root)
-- `/app` owned by root with default permissions — arbitrary UID can't write
+```
+PCP/
+├── backend/Dockerfile      ← already here
+├── src/pcp_server/         ← needs to move
+├── tests/                  ← needs to move
+├── alembic/                ← needs to move
+├── alembic.ini             ← needs to move
+├── pyproject.toml          ← needs to move
+├── scripts/                ← needs to move
+├── frontend/               ← stays
+├── charts/                 ← stays
+├── docker-compose.yaml     ← stays (update paths)
+├── docs/                   ← stays (update refs)
+└── README.md               ← stays (update refs)
+```
 
-### Frontend `frontend/Dockerfile`
-- Hardcoded UID/GID 1001:1001 (`nextjs:nodejs`) — OpenShift assigns arbitrary UIDs, not 1001
-- `--chown=nextjs:nodejs` uses GID 1001 — must be GID 0 for OpenShift
-- `.next/` cache directory not group-writable
+## Target Layout
+
+```
+PCP/
+├── backend/
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── alembic.ini
+│   ├── alembic/
+│   ├── src/pcp_server/
+│   ├── tests/
+│   └── scripts/
+├── frontend/
+│   ├── Dockerfile
+│   └── ...
+├── charts/
+├── docs/
+├── docker-compose.yaml
+└── README.md
+```
 
 ---
 
 ## Changes
 
-### 1. Backend `Dockerfile`
-- Create a non-root user (UID 1001, GID 0)
-- `chown` `/app` to `1001:0` with group-rwx on dirs that need writes
-- Add `USER 1001` directive
-- Ensure `scripts/start.sh` and app files are group-readable/executable
+### 1. Move files
+- `src/` → `backend/src/`
+- `tests/` → `backend/tests/`
+- `alembic/` → `backend/alembic/`
+- `alembic.ini` → `backend/alembic.ini`
+- `pyproject.toml` → `backend/pyproject.toml`
+- `scripts/` → `backend/scripts/`
+- `.env.example` → `backend/.env.example`
 
-### 2. Frontend `frontend/Dockerfile`
-- Replace `addgroup nodejs` + `adduser nextjs` with a single user in GID 0
-- Change all `--chown` to `1001:0`
-- Ensure `.next/` cache is group-writable
-- Keep `USER 1001` (compatible with arbitrary UID since GID 0 is what matters)
+### 2. Update `backend/Dockerfile`
+- Build context changes from repo root to `backend/`
+- Remove path prefixes from COPY commands (they're now relative to `backend/`)
+
+### 3. Update `docker-compose.yaml`
+- `pcp` service: `context: ./backend`, remove `dockerfile:` (Dockerfile is at default location)
+
+### 4. Update `backend/alembic/env.py`
+- `sys.path.insert` line — parent path changes
+
+### 5. Update Helm chart `migration-job.yaml`
+- The migration job command should still work since the image is self-contained
+
+### 6. Update docs
+- `docs/architecture.md` — project structure diagram
+- `docs/deploy-openshift-crc.md` — docker build command
+- `README.md` — quickstart paths, test command
+
+### 7. Update `.gitignore` / `.dockerignore`
+- Adjust paths if needed
 
 ---
 
 ## Acceptance Criteria
 
-1. Both images build successfully
-2. Both containers run as non-root (UID 1001 by default)
-3. Both containers work under an arbitrary UID with GID 0 (OpenShift behavior)
-4. No file permission errors at runtime
-5. Existing functionality unchanged
+1. `docker build` from `backend/` works
+2. `docker-compose up` works
+3. All 159 tests pass (run from `backend/`)
+4. `alembic upgrade head` works from `backend/`
+5. Helm chart still deploys correctly (image is self-contained)
+6. Docs/README reflect new structure

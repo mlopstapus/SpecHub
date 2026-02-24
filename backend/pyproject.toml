@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "sh-server"
 version = "0.1.0"
 description = "Prompt Control Plane — an MCP server for centralized prompt management"
-readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
