@@ -8,7 +8,10 @@ dev-credentials.csv
 *.egg
 dist/
 build/
-scripts/
+
+# Backend scripts (except the Docker entrypoint)
+backend/scripts/*
+!backend/scripts/start.sh
 
 # Virtual environments
 .venv
