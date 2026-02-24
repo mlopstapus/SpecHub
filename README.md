@@ -297,7 +297,7 @@ When expanded, `include_prompt('review')` fetches the `review` prompt, renders i
 python -m pytest tests/ -v
 ```
 
-64 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, and workflows.
+159 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, workflows, and sharing.
 
 ## Tech Stack
 
