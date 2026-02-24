@@ -66,7 +66,7 @@ docker login $REGISTRY -u kubeadmin -p $(oc whoami -t)
 # Build the image
 # --provenance=false and --sbom=false are required — without them, Docker BuildKit
 # produces a manifest list with attestations that the OpenShift registry rejects (500 error)
-docker build --provenance=false --sbom=false -f backend/Dockerfile -t $REGISTRY/pcp/pcp:0.1.0 .
+docker build --provenance=false --sbom=false -t $REGISTRY/pcp/pcp:0.1.0 backend/
 
 # Push
 docker push $REGISTRY/pcp/pcp:0.1.0

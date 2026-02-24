@@ -21,11 +21,14 @@ Define prompts once, distribute them to every developer's AI tool (Claude, Winds
 
 ```bash
 git clone <repo> && cd pcp
-uv venv --python 3.12 .venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
 
 # Start Postgres
 docker-compose up -d postgres
+
+# Install backend dependencies
+cd backend
+uv venv --python 3.12 .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
 
 # Run migrations
 alembic upgrade head
@@ -294,6 +297,7 @@ When expanded, `include_prompt('review')` fetches the `review` prompt, renders i
 ## Running Tests
 
 ```bash
+cd backend
 python -m pytest tests/ -v
 ```
 
