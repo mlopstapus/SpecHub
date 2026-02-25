@@ -22,7 +22,7 @@ Define prompts once, distribute them to every developer's AI tool (Claude, Winds
 ```bash
 git clone <repo> && cd pcp
 
-# Start Postgres
+# Start Postgres (custom image with schema pre-initialized)
 docker-compose up -d postgres
 
 # Install backend dependencies

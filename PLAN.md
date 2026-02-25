@@ -1,91 +1,66 @@
-# Move Backend Source Into `backend/`
+# Custom PostgreSQL Image with Pre-initialized Schema
 
 ## Overview
 
-Consolidate all backend source code into `backend/` alongside its Dockerfile, mirroring the `frontend/` layout. The repo root becomes a thin shell holding only repo-wide files.
+Create a `database/` directory with a custom PostgreSQL Dockerfile that ships the PCP schema pre-initialized via `docker-entrypoint-initdb.d`. The image must be OpenShift-ready (arbitrary UID, GID 0). This replaces the stock `postgres:16-alpine` in docker-compose.
 
 ---
-
-## Current Layout
-
-```
-PCP/
-├── backend/Dockerfile      ← already here
-├── src/pcp_server/         ← needs to move
-├── tests/                  ← needs to move
-├── alembic/                ← needs to move
-├── alembic.ini             ← needs to move
-├── pyproject.toml          ← needs to move
-├── scripts/                ← needs to move
-├── frontend/               ← stays
-├── charts/                 ← stays
-├── docker-compose.yaml     ← stays (update paths)
-├── docs/                   ← stays (update refs)
-└── README.md               ← stays (update refs)
-```
 
 ## Target Layout
 
 ```
 PCP/
+├── database/
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   └── init/
+│       └── 001_schema.sql       # Full DDL from alembic migrations
 ├── backend/
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   ├── alembic.ini
-│   ├── alembic/
-│   ├── src/pcp_server/
-│   ├── tests/
-│   └── scripts/
 ├── frontend/
-│   ├── Dockerfile
-│   └── ...
-├── charts/
-├── docs/
-├── docker-compose.yaml
-└── README.md
+└── docker-compose.yaml          # updated to build: ./database
 ```
 
 ---
 
 ## Changes
 
-### 1. Move files
-- `src/` → `backend/src/`
-- `tests/` → `backend/tests/`
-- `alembic/` → `backend/alembic/`
-- `alembic.ini` → `backend/alembic.ini`
-- `pyproject.toml` → `backend/pyproject.toml`
-- `scripts/` → `backend/scripts/`
-- `.env.example` → `backend/.env.example`
+### 1. Generate `database/init/001_schema.sql`
+- Convert all 3 alembic migrations (001, 002, 003) into a single idempotent SQL init script
+- Include: all CREATE TABLE, indexes, constraints, enums
+- Include migration 002 (nullable user_template) and 003 (sharing tables)
 
-### 2. Update `backend/Dockerfile`
-- Build context changes from repo root to `backend/`
-- Remove path prefixes from COPY commands (they're now relative to `backend/`)
+### 2. Create `database/Dockerfile`
+- Base: `postgres:16-alpine`
+- COPY `init/*.sql` into `/docker-entrypoint-initdb.d/`
+- OpenShift-ready: `chmod -R g=u`, proper ownership, `USER` directive
+  - Note: postgres entrypoint handles user switching; need to ensure initdb works with arbitrary UID
 
-### 3. Update `docker-compose.yaml`
-- `pcp` service: `context: ./backend`, remove `dockerfile:` (Dockerfile is at default location)
+### 3. Create `database/.dockerignore`
 
-### 4. Update `backend/alembic/env.py`
-- `sys.path.insert` line — parent path changes
+### 4. Update `docker-compose.yaml`
+- Replace `image: postgres:16-alpine` with `build: ./database`
+- Keep existing env vars (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
 
-### 5. Update Helm chart `migration-job.yaml`
-- The migration job command should still work since the image is self-contained
+### 5. Update docs
+- README: mention custom DB image
+- architecture.md: add database/ to project structure
 
-### 6. Update docs
-- `docs/architecture.md` — project structure diagram
-- `docs/deploy-openshift-crc.md` — docker build command
-- `README.md` — quickstart paths, test command
+---
 
-### 7. Update `.gitignore` / `.dockerignore`
-- Adjust paths if needed
+## OpenShift Considerations
+
+- The official `postgres` image runs `initdb` as the `postgres` user
+- On OpenShift, the container runs as an arbitrary UID in GID 0
+- The Red Hat `postgresql` images handle this natively
+- Alternative: use `registry.redhat.io/rhel9/postgresql-16` which is OpenShift-native
+- Simpler: stick with `postgres:16-alpine` + fix permissions for `/var/lib/postgresql/data`
 
 ---
 
 ## Acceptance Criteria
 
-1. `docker build` from `backend/` works
-2. `docker-compose up` works
-3. All 159 tests pass (run from `backend/`)
-4. `alembic upgrade head` works from `backend/`
-5. Helm chart still deploys correctly (image is self-contained)
-6. Docs/README reflect new structure
+1. `docker build database/` succeeds
+2. `docker-compose up` creates DB with schema pre-loaded
+3. Backend `alembic upgrade head` is idempotent (no errors on already-initialized DB)
+4. All 159 backend tests still pass
+5. Image works on OpenShift (arbitrary UID with GID 0)

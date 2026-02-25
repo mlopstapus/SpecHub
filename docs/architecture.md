@@ -326,6 +326,10 @@ pcp/
 │       ├── app/               # Pages: dashboard, teams, prompts, workflows, settings, metrics
 │       ├── components/        # Navbar, project-switcher, playground, UI primitives
 │       └── lib/api.ts         # Typed API client
+├── database/                  # Custom PostgreSQL image
+│   ├── Dockerfile
+│   └── init/                  # SQL init scripts (run on first start)
+│       └── 001_schema.sql
 ├── charts/pcp/                # Helm chart for Kubernetes
 ├── docker-compose.yaml
 └── README.md
