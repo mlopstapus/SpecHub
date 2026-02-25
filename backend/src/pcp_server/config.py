@@ -1,8 +1,21 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://pcp:pcp@localhost:5432/pcp"
+
+    @model_validator(mode="after")
+    def _normalize_database_url(self) -> "Settings":
+        """Rewrite DATABASE_URL to use the asyncpg driver."""
+        for prefix in ("postgresql://", "postgres://"):
+            if self.database_url.startswith(prefix):
+                self.database_url = (
+                    "postgresql+asyncpg://" + self.database_url[len(prefix):]
+                )
+                break
+        return self
+
     auth_token: str = "dev-token-123"
     jwt_secret: str = "dev-jwt-secret-change-me-in-production"
     jwt_expiry_hours: int = 24
