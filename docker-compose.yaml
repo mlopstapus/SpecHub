@@ -21,10 +21,9 @@ services:
       - postgres
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        BACKEND_URL: http://pcp:8000
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://pcp:8000
     ports:
       - "3000:3000"
     depends_on:
