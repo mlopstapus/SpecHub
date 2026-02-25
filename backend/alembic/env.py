@@ -17,7 +17,13 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 if os.environ.get("DATABASE_URL"):
-    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+    _url = os.environ["DATABASE_URL"]
+    # Normalize to asyncpg driver regardless of what dialect the env var uses
+    for _prefix in ("postgresql://", "postgres://"):
+        if _url.startswith(_prefix):
+            _url = "postgresql+asyncpg://" + _url[len(_prefix):]
+            break
+    config.set_main_option("sqlalchemy.url", _url)
 
 target_metadata = Base.metadata
 
