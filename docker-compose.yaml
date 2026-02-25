@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    build: ./database
     environment:
       POSTGRES_USER: pcp
       POSTGRES_PASSWORD: pcp
