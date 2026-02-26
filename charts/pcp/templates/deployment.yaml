@@ -40,6 +40,8 @@ spec:
                   key: auth-token
             - name: LOG_LEVEL
               value: {{ .Values.backend.env.logLevel | quote }}
+            - name: ALLOWED_HOSTS
+              value: {{ .Values.backend.env.allowedHosts | default "" | quote }}
           livenessProbe:
             httpGet:
               path: /health
