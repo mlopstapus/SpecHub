@@ -1,0 +1,24 @@
+{{- if .Values.backend.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "pcp.backend.fullname" . }}
+  labels:
+    {{- include "pcp.labels" . | nindent 4 }}
+    {{- include "pcp.backend.selectorLabels" . | nindent 4 }}
+  annotations:
+    router.openshift.io/disable-http2: "true"
+spec:
+  {{- if .Values.backend.route.host }}
+  host: {{ .Values.backend.route.host | quote }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "pcp.backend.fullname" . }}
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

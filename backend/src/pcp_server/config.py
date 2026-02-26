@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     jwt_expiry_hours: int = 24
     invitation_expiry_hours: int = 72
     log_level: str = "info"
+    allowed_hosts: str = ""  # comma-separated list of allowed MCP Host headers (empty = local only)
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

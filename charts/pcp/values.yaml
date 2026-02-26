@@ -23,6 +23,9 @@ backend:
   env:
     logLevel: info
   authToken: dev-token-123
+  route:
+    enabled: true
+    # host: ""  # leave empty to let OpenShift auto-assign
 
 # ── Frontend ──────────────────────────────────────────────────────────────
 frontend:

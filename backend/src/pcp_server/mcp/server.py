@@ -1,4 +1,18 @@
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
+
+from src.pcp_server.config import settings
+
+_allowed = [h.strip() for h in settings.allowed_hosts.split(",") if h.strip()]
+if _allowed:
+    _transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=_allowed,
+    )
+else:
+    _transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    )
 
 mcp = FastMCP(
     "Prompt Control Plane",
@@ -13,4 +27,5 @@ mcp = FastMCP(
         "of each session — no need to fetch them separately."
     ),
     streamable_http_path="/",
+    transport_security=_transport_security,
 )
