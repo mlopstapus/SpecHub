@@ -73,7 +73,7 @@ oc new-app \
   --name=database \
   --strategy=docker \
   --context-dir=database \
-  https://github.com/mlopstapus/SpecHub.git#feature/openshift-ready-dockerfiles \
+  https://github.com/mlopstapus/SpecHub.git \
   -e POSTGRES_USER=pcp \
   -e POSTGRES_PASSWORD=pcp \
   -e POSTGRES_DB=pcp
@@ -108,7 +108,7 @@ oc new-app \
   --name=backend \
   --strategy=docker \
   --context-dir=backend \
-  https://github.com/mlopstapus/SpecHub.git#feature/openshift-ready-dockerfiles \
+  https://github.com/mlopstapus/SpecHub.git \
   -e DATABASE_URL=postgresql+asyncpg://pcp:pcp@${DB_SVC}:5432/pcp \
   -e AUTH_TOKEN=dev-token-123 \
   -e LOG_LEVEL=info
@@ -136,7 +136,7 @@ oc new-app \
   --name=frontend \
   --strategy=docker \
   --context-dir=frontend \
-  https://github.com/mlopstapus/SpecHub.git#feature/openshift-ready-dockerfiles \
+  https://github.com/mlopstapus/SpecHub.git \
   -e BACKEND_URL=http://${BACKEND_SVC}:8000
 
 # Wait for the build
