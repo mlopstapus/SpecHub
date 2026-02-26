@@ -9,8 +9,8 @@ keywords:
   - mcp
   - llm
   - ai
-home: https://github.com/andersbe/pcp
+home: https://github.com/mlopstapus/SpecHub
 sources:
-  - https://github.com/andersbe/pcp
+  - https://github.com/mlopstapus/SpecHub
 maintainers:
-  - name: andersbe
+  - name: mlopstapus
