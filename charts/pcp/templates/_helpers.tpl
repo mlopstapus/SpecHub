@@ -22,26 +22,78 @@ Create a default fully qualified app name.
 {{- end }}
 
 {{/*
+Component-qualified names
+*/}}
+{{- define "pcp.backend.fullname" -}}
+{{- printf "%s-backend" (include "pcp.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "pcp.frontend.fullname" -}}
+{{- printf "%s-frontend" (include "pcp.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{- define "pcp.database.fullname" -}}
+{{- printf "%s-database" (include "pcp.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Common labels
 */}}
 {{- define "pcp.labels" -}}
 helm.sh/chart: {{ include "pcp.name" . }}-{{ .Chart.Version | replace "+" "_" }}
-{{ include "pcp.selectorLabels" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
-
-{{/*
-Selector labels
-*/}}
-{{- define "pcp.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "pcp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Database URL
+Backend selector labels
+*/}}
+{{- define "pcp.backend.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pcp.name" . }}
+app.kubernetes.io/component: backend
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Frontend selector labels
+*/}}
+{{- define "pcp.frontend.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pcp.name" . }}
+app.kubernetes.io/component: frontend
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Database selector labels
+*/}}
+{{- define "pcp.database.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "pcp.name" . }}
+app.kubernetes.io/component: database
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Database host — use built-in StatefulSet service if enabled, otherwise user-provided host
+*/}}
+{{- define "pcp.database.host" -}}
+{{- if .Values.database.enabled }}
+{{- include "pcp.database.fullname" . }}
+{{- else }}
+{{- .Values.postgresql.host }}
+{{- end }}
+{{- end }}
+
+{{/*
+Database URL (asyncpg)
 */}}
 {{- define "pcp.databaseUrl" -}}
-postgresql+asyncpg://{{ .Values.postgresql.username }}:{{ .Values.postgresql.password }}@{{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}
+postgresql+asyncpg://{{ .Values.postgresql.username }}:{{ .Values.postgresql.password }}@{{ include "pcp.database.host" . }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}
+{{- end }}
+
+{{/*
+Backend internal URL (for frontend BACKEND_URL)
+*/}}
+{{- define "pcp.backend.url" -}}
+http://{{ include "pcp.backend.fullname" . }}:{{ .Values.backend.service.port }}
 {{- end }}

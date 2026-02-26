@@ -12,7 +12,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "pcp.selectorLabels" . | nindent 8 }}
+        {{- include "pcp.backend.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -21,8 +21,8 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: migrate
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           command: ["alembic", "upgrade", "head"]
           env:
             - name: DATABASE_URL

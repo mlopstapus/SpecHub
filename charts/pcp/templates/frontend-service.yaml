@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pcp.frontend.fullname" . }}
+  labels:
+    {{- include "pcp.labels" . | nindent 4 }}
+    {{- include "pcp.frontend.selectorLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "pcp.frontend.selectorLabels" . | nindent 4 }}

@@ -33,9 +33,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "pcp.fullname" $ }}
+                name: {{ include "pcp.frontend.fullname" $ }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  number: {{ $.Values.frontend.service.port }}
           {{- end }}
     {{- end }}
 {{- end }}
