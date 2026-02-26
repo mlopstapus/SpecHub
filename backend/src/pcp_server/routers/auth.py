@@ -1,7 +1,7 @@
 """Auth router: register, login, me, invitations."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.pcp_server.auth import get_current_user, require_admin

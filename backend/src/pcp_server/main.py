@@ -4,12 +4,12 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import src.pcp_server.mcp.tools as _mcp_tools  # noqa: F401 — registers @mcp.tool() decorators
 from src.pcp_server.config import settings
 from src.pcp_server.mcp.server import mcp
 from src.pcp_server.mcp.session import ApiKeyMiddleware
-import src.pcp_server.mcp.tools as _mcp_tools  # noqa: F401 — registers @mcp.tool() decorators
-from src.pcp_server.routers.auth import router as auth_router
 from src.pcp_server.routers.apikeys import router as apikeys_router
+from src.pcp_server.routers.auth import router as auth_router
 from src.pcp_server.routers.metrics import router as metrics_router
 from src.pcp_server.routers.objectives import router as objectives_router
 from src.pcp_server.routers.policies import router as policies_router

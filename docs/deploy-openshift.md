@@ -270,11 +270,14 @@ Trigger a new S2I build — the ImageStream tag `latest` updates automatically.
 Then restart the Helm-managed deployments to pick up the new image:
 
 ```bash
-# Rebuild one or all services
+# Automated: use the rollout script
+./scripts/rollout.sh              # rebuild all + cycle all
+./scripts/rollout.sh backend      # backend only
+./scripts/rollout.sh --no-build   # skip builds, just restart pods
+
+# Or manually:
 oc start-build backend --follow
 oc start-build frontend --follow
-
-# Restart the Helm-managed deployments to pull the new image
 oc rollout restart deployment/sh-pcp-backend
 oc rollout restart deployment/sh-pcp-frontend
 ```

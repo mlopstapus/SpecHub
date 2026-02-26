@@ -3,11 +3,9 @@ import uuid
 
 from jinja2 import StrictUndefined
 from jinja2.sandbox import SandboxedEnvironment
-from sqlalchemy import String, func, select
+from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from sqlalchemy import or_
 
 from src.pcp_server.models import Prompt, PromptShare, PromptVersion, User
 from src.pcp_server.schemas import (

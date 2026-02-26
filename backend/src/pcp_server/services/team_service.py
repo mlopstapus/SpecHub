@@ -2,9 +2,8 @@ import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from src.pcp_server.models import Team, User
+from src.pcp_server.models import Team
 from src.pcp_server.schemas import (
     TeamCreate,
     TeamListResponse,

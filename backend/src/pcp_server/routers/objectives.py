@@ -44,8 +44,9 @@ async def get_effective_objectives(
 async def resolve_team_effective_objectives(
     db: AsyncSession, team_id: uuid.UUID
 ) -> EffectiveObjectivesResponse:
-    from src.pcp_server.models import Objective
     from sqlalchemy import select
+
+    from src.pcp_server.models import Objective
     chain = await get_team_chain(db, team_id)
     inherited: list[ObjectiveResponse] = []
     local: list[ObjectiveResponse] = []

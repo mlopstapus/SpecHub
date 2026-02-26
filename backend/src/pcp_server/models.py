@@ -3,13 +3,13 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Enum,
-    Float,
-    Integer,
     JSON,
     Boolean,
     DateTime,
+    Enum,
+    Float,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,

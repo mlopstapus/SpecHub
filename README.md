@@ -68,6 +68,14 @@ See [`charts/pcp/values.yaml`](charts/pcp/values.yaml) for all configuration opt
 
 For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/deploy-openshift.md).
 
+### Rollout after a merge (OpenShift)
+
+```bash
+./scripts/rollout.sh              # rebuild all S2I images + cycle all deployments
+./scripts/rollout.sh backend      # backend only
+./scripts/rollout.sh --no-build   # skip builds, just restart pods
+```
+
 ## Connect Your AI Tool
 
 PCP uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.

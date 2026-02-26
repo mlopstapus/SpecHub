@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.pcp_server.models import Policy, Project, Team, User
+from src.pcp_server.models import Policy, User
 from src.pcp_server.schemas import (
     EffectivePoliciesResponse,
     PolicyCreate,
