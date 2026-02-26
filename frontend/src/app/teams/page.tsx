@@ -71,9 +71,9 @@ export default function TeamsPage() {
   } | null>(null);
 
   // Create team form — unified state
-  // mode: "child" (add child to parentId), "root" (add root team)
+  // mode: "child" (add child to parentId), "sibling" (add sibling next to targetId), "root" (add root team)
   const [addMode, setAddMode] = useState<{
-    mode: "child" | "root";
+    mode: "child" | "sibling" | "root";
     targetId?: string;   // the node id relevant to the action
     parentId?: string;   // parent to create under
   } | null>(null);
@@ -221,7 +221,7 @@ export default function TeamsPage() {
     } catch {}
   }
 
-  function startAdd(mode: "child" | "root", targetId?: string, parentId?: string) {
+  function startAdd(mode: "child" | "sibling" | "root", targetId?: string, parentId?: string) {
     setAddMode({ mode, targetId, parentId });
     setNewTeamName("");
   }
@@ -393,7 +393,7 @@ export default function TeamsPage() {
   /* ---- Helper: inline team name form ---- */
   function renderInlineForm() {
     if (!addMode) return null;
-    const label = addMode.mode === "child" ? "New sub-team" : "New root team";
+    const label = addMode.mode === "child" ? "New sub-team" : addMode.mode === "sibling" ? "New sibling team" : "New root team";
     return (
       <div className="flex flex-col items-center gap-1 animate-in fade-in zoom-in-95 duration-200">
         <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
@@ -533,58 +533,75 @@ export default function TeamsPage() {
 
     return (
       <div key={node.team.id} className="flex flex-col items-center">
-        {/* The node card */}
-        <div
-          className={`
-            relative group rounded-lg border-2 px-5 py-3.5 min-w-[180px] max-w-[260px]
-            transition-all duration-150 hover:shadow-md
-            ${isSelected
-              ? "border-primary bg-primary/5 shadow-md"
-              : isDragOver
-                ? "border-primary/60 bg-primary/10 shadow-lg scale-[1.02]"
-                : "border-border bg-card hover:border-primary/50"
-            }
-            ${isDragged ? "opacity-40 scale-95" : ""}
-          `}
-          draggable
-          onDragStart={(e) => handleDragStart(e, node.team.id)}
-          onDragOver={(e) => handleDragOver(e, node.team.id)}
-          onDragLeave={() => { if (dragOverNodeId === node.team.id) setDragOverNodeId(null); }}
-          onDrop={(e) => handleDrop(e, node.team.id, parentId)}
-          onDragEnd={handleDragEnd}
-          onClick={() => selectTeam(node.team, node.members)}
-          style={{ cursor: isDragged ? "grabbing" : "grab" }}
-        >
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-sm font-semibold truncate">{node.team.name}</span>
-          </div>
-          {owner && (
-            <div className="flex items-center gap-1 mt-1">
-              <Crown className="h-3 w-3 text-amber-500" />
-              <span className="text-xs text-muted-foreground truncate">
-                {owner.display_name || owner.username}
-              </span>
+        {/* The node card with right-side sibling hover zone */}
+        <div className="relative">
+          <div
+            className={`
+              relative group rounded-lg border-2 px-5 py-3.5 min-w-[180px] max-w-[260px]
+              transition-all duration-150 hover:shadow-md
+              ${isSelected
+                ? "border-primary bg-primary/5 shadow-md"
+                : isDragOver
+                  ? "border-primary/60 bg-primary/10 shadow-lg scale-[1.02]"
+                  : "border-border bg-card hover:border-primary/50"
+              }
+              ${isDragged ? "opacity-40 scale-95" : ""}
+            `}
+            draggable
+            onDragStart={(e) => handleDragStart(e, node.team.id)}
+            onDragOver={(e) => handleDragOver(e, node.team.id)}
+            onDragLeave={() => { if (dragOverNodeId === node.team.id) setDragOverNodeId(null); }}
+            onDrop={(e) => handleDrop(e, node.team.id, parentId)}
+            onDragEnd={handleDragEnd}
+            onClick={() => selectTeam(node.team, node.members)}
+            style={{ cursor: isDragged ? "grabbing" : "grab" }}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm font-semibold truncate">{node.team.name}</span>
             </div>
-          )}
-          <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
-            <span>{node.members.length} member{node.members.length !== 1 ? "s" : ""}</span>
-            {hasChildren && (
-              <span>{node.children.length} sub-team{node.children.length !== 1 ? "s" : ""}</span>
+            {owner && (
+              <div className="flex items-center gap-1 mt-1">
+                <Crown className="h-3 w-3 text-amber-500" />
+                <span className="text-xs text-muted-foreground truncate">
+                  {owner.display_name || owner.username}
+                </span>
+              </div>
             )}
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+              <span>{node.members.length} member{node.members.length !== 1 ? "s" : ""}</span>
+              {hasChildren && (
+                <span>{node.children.length} sub-team{node.children.length !== 1 ? "s" : ""}</span>
+              )}
+            </div>
+
+            {/* Delete button on hover */}
+            <button
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/80"
+              title="Delete team"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTeam(node.team.id);
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
           </div>
 
-          {/* Delete button on hover */}
-          <button
-            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/80"
-            title="Delete team"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteTeam(node.team.id);
-            }}
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
+          {/* Right side hover zone — add sibling */}
+          {addMode?.mode === "sibling" && addMode.targetId === node.team.id ? (
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 z-10">{renderInlineForm()}</div>
+          ) : (
+            <div className="group/right absolute left-full top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10">
+              <button
+                className="h-8 w-8 rounded-full border-2 border-dashed border-transparent group-hover/right:border-primary/40 group-hover/right:bg-primary/10 flex items-center justify-center transition-all opacity-0 group-hover/right:opacity-100 hover:scale-110"
+                title="Add sibling team"
+                onClick={(e) => { e.stopPropagation(); startAdd("sibling", node.team.id, parentId); }}
+              >
+                <Plus className="h-4 w-4 text-primary/60" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Expand/collapse toggle + children */}
