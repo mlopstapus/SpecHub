@@ -201,45 +201,76 @@ oc set env deployment/backend DATABASE_URL=postgresql+asyncpg://pcp:pcp@database
 
 The Helm chart deploys all three services with automatic env var wiring.
 
-### Step 1: Build and Push Images
+### Step 1: Build Images with S2I
 
-You need the three images available in a registry that OpenShift can pull from.
-Options:
+Use OpenShift S2I builds to create images directly on the cluster. No external
+registry or `docker push` needed — the built images land in the internal registry
+and are referenced by ImageStream tags.
 
-**Option 1: OpenShift internal registry**
 ```bash
-# Get the internal registry route
-REGISTRY=$(oc get route default-route -n openshift-image-registry \
-  -o jsonpath='{.spec.host}' 2>/dev/null)
+NS=$(oc project -q)  # e.g. spechub
+INT_REG=image-registry.openshift-image-registry.svc:5000
 
-# If no external route exists, expose it
-if [ -z "$REGISTRY" ]; then
-  oc patch configs.imageregistry.operator.openshift.io/cluster \
-    --type merge -p '{"spec":{"defaultRoute":true}}'
-  sleep 10
-  REGISTRY=$(oc get route default-route -n openshift-image-registry \
-    -o jsonpath='{.spec.host}')
-fi
+# Build all three images via S2I (Docker strategy)
+for component in database backend frontend; do
+  oc new-build \
+    --name=$component \
+    --strategy=docker \
+    --context-dir=$component \
+    https://github.com/mlopstapus/SpecHub.git
 
-# Login
-docker login $REGISTRY -u $(oc whoami) -p $(oc whoami -t)
-
-# Build and push all three images
-NS=spechub  # your OpenShift namespace
-for component in backend frontend database; do
-  docker build --provenance=false --sbom=false \
-    -t $REGISTRY/$NS/$component:0.1.0 \
-    ./$component/
-  docker push $REGISTRY/$NS/$component:0.1.0
+  # Follow the build log (blocks until done)
+  oc logs -f bc/$component
 done
 
-# Internal pull URL (used by pods)
-INT_REG=image-registry.openshift-image-registry.svc:5000
+# Verify the images landed
+oc get imagestream
 ```
 
-**Option 2: GitHub Container Registry (ghcr.io)**
+Each build creates an ImageStream tag `<name>:latest` that resolves to
+`image-registry.openshift-image-registry.svc:5000/<namespace>/<name>:latest`
+inside the cluster.
+
+### Step 2: Install the Helm Chart Using S2I Images
+
+Point the Helm chart at the internal registry images built by S2I:
+
 ```bash
-# Push to ghcr.io (or your CI does this)
+helm install sh ./charts/pcp \
+  --set backend.image.repository=$INT_REG/$NS/backend \
+  --set backend.image.tag=latest \
+  --set frontend.image.repository=$INT_REG/$NS/frontend \
+  --set frontend.image.tag=latest \
+  --set database.image.repository=$INT_REG/$NS/database \
+  --set database.image.tag=latest
+```
+
+> **What this gives you:** S2I handles image builds (no Docker locally, no
+> external registry), and the Helm chart handles all the deployment wiring
+> (services, env vars, secrets, routes, migrations).
+
+### Rebuilding After Code Changes
+
+Trigger a new S2I build — the ImageStream tag `latest` updates automatically.
+Then restart the Helm-managed deployments to pick up the new image:
+
+```bash
+# Rebuild one or all services
+oc start-build backend --follow
+oc start-build frontend --follow
+
+# Restart the Helm-managed deployments to pull the new image
+oc rollout restart deployment/sh-pcp-backend
+oc rollout restart deployment/sh-pcp-frontend
+```
+
+### Alternative: Pre-built Images
+
+If you prefer to push images from CI or locally instead of S2I:
+
+**GitHub Container Registry (ghcr.io):**
+```bash
+# Push from CI or locally
 for component in backend frontend database; do
   docker build -t ghcr.io/mlopstapus/spechub-$component:0.1.0 ./$component/
   docker push ghcr.io/mlopstapus/spechub-$component:0.1.0
@@ -250,25 +281,8 @@ oc create secret docker-registry ghcr-pull-secret \
   --docker-server=ghcr.io \
   --docker-username=<github-user> \
   --docker-password=<github-pat>
-
 oc secrets link default ghcr-pull-secret --for=pull
-```
 
-### Step 2: Install the Helm Chart
-
-**Using internal registry:**
-```bash
-helm install sh ./charts/pcp \
-  --set backend.image.repository=$INT_REG/$NS/backend \
-  --set backend.image.tag=0.1.0 \
-  --set frontend.image.repository=$INT_REG/$NS/frontend \
-  --set frontend.image.tag=0.1.0 \
-  --set database.image.repository=$INT_REG/$NS/database \
-  --set database.image.tag=0.1.0
-```
-
-**Using ghcr.io:**
-```bash
 helm install sh ./charts/pcp \
   --set backend.image.repository=ghcr.io/mlopstapus/spechub-backend \
   --set backend.image.tag=0.1.0 \
