@@ -43,29 +43,30 @@ uvicorn src.pcp_server.main:app --reload --port 8000
 - **Health check:** http://localhost:8000/health
 - **Frontend:** http://localhost:3000 (run `cd frontend && npm run dev`)
 
-## Deploy with Helm (Kubernetes)
+## Deploy with Helm
+
+The chart is published to GHCR as an OCI artifact — no git clone needed:
 
 ```bash
-# Add a PostgreSQL instance (e.g. Bitnami)
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm install pcp-postgresql bitnami/postgresql \
-  --set auth.username=pcp \
-  --set auth.password=pcp \
-  --set auth.database=pcp
+# Install the full stack (backend + frontend + database)
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0
 
-# Install PCP
-helm install pcp charts/pcp \
-  --set postgresql.host=pcp-postgresql \
-  --set postgresql.password=pcp \
-  --set authToken=my-secret-token
+# Or from a local clone
+helm install sh ./charts/pcp
+```
 
-# Verify
-kubectl get pods -l app.kubernetes.io/name=pcp
-kubectl port-forward svc/pcp 8000:8000
-curl http://localhost:8000/health
+Override defaults as needed:
+
+```bash
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0 \
+  --set postgresql.password=<strong-password> \
+  --set backend.authToken=<your-auth-token> \
+  --set frontend.route.enabled=true
 ```
 
 See [`charts/pcp/values.yaml`](charts/pcp/values.yaml) for all configuration options.
+
+For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/deploy-openshift.md).
 
 ## Connect Your AI Tool
 
@@ -316,6 +317,7 @@ python -m pytest tests/ -v
 ## Documentation
 
 - [Architecture & Design](docs/architecture.md)
+- [Deploy to OpenShift](docs/deploy-openshift.md)
 - [Deploy to OpenShift CRC](docs/deploy-openshift-crc.md)
 
 ## License

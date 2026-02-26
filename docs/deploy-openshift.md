@@ -201,6 +201,21 @@ oc set env deployment/backend DATABASE_URL=postgresql+asyncpg://pcp:pcp@database
 
 The Helm chart deploys all three services with automatic env var wiring.
 
+The chart is published to GHCR as an OCI artifact. You can install it directly
+without cloning the repo:
+
+```bash
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0 \
+  --set backend.image.repository=$INT_REG/$NS/backend \
+  --set backend.image.tag=latest \
+  --set frontend.image.repository=$INT_REG/$NS/frontend \
+  --set frontend.image.tag=latest \
+  --set database.image.repository=$INT_REG/$NS/database \
+  --set database.image.tag=latest
+```
+
+Or use the local chart from a clone: `helm install sh ./charts/pcp ...`
+
 ### Step 1: Build Images with S2I
 
 Use OpenShift S2I builds to create images directly on the cluster. No external
