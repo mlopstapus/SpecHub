@@ -1,40 +1,72 @@
-# Helm Chart Distribution via GHCR
+# Inline Team Name Editing
 
-## Overview
+**Date:** 2026-02-26T16:30:00-06:00
 
-Publish the SpecHub Helm chart as an OCI artifact to GitHub Container Registry
-(ghcr.io) so users can install directly with `helm install` — no git clone needed.
+## Executive Summary
+
+Allow team owners and admins to edit team names directly in the admin dashboard's
+detail panel. The backend already supports this via `PUT /api/v1/teams/{team_id}`
+with owner/admin/parent-owner authorization. This plan covers the frontend UI
+change and backend test coverage for authorization scenarios.
 
 ---
 
-## Changes
+## Current State
 
-### 1. Create GitHub Actions workflow: `.github/workflows/helm-publish.yml`
-- **Trigger:** push to `main` when `charts/pcp/**` changes, plus manual dispatch
-- **Steps:**
-  1. Checkout repo
-  2. Install Helm 3
-  3. `helm lint charts/pcp/`
-  4. `helm package charts/pcp/`
-  5. `helm registry login ghcr.io` using `GITHUB_TOKEN`
-  6. `helm push pcp-<version>.tgz oci://ghcr.io/mlopstapus/charts`
-- **Permissions:** `packages: write`, `contents: read`
+- **Backend:** `PUT /api/v1/teams/{team_id}` accepts `{ name?, description?, owner_id? }`.
+  Authorization checks: admin role, team `owner_id` match, or parent team `owner_id` match.
+- **Frontend:** `teams/page.tsx` detail panel shows team name as static `<h2>` text (line 702).
+  `Pencil` and `Check` icons are imported. `updateTeam()` exists in `lib/api.ts`.
+- **Tests:** `test_hierarchy.py::test_update_team` covers happy path with mock admin only.
 
-### 2. Update `charts/pcp/Chart.yaml`
-- Fix `home` and `sources` URLs to point to `mlopstapus/SpecHub`
+## Tasks
 
-### 3. Update `docs/deploy-openshift.md`
-- Add "Install from GHCR" section showing the OCI install command
-- This becomes the primary install path (no git clone needed)
+### 1. Frontend — Inline team name editing (~15 min)
 
-### 4. Update `README.md`
-- Add quick-start Helm install snippet
+- Add `editingTeamName` (boolean) and `editTeamNameValue` (string) state variables
+- In the detail panel header, add a Pencil icon button next to the team name
+- On click: replace `<h2>` with an `<Input>` pre-filled with the current name,
+  plus a Check button to confirm and X/Escape to cancel
+- On save: call `updateTeam(selectedTeam.id, { name: editTeamNameValue })`,
+  update `selectedTeam` with the response, reload the tree
+- **Dependencies:** None — uses existing `updateTeam()` API client and icons
+
+### 2. Backend tests — Authorization coverage (~10 min)
+
+- Add tests in `test_hierarchy.py` that create a dedicated client fixture
+  with a non-admin user to verify:
+  - Team owner can update team name → 200
+  - Parent team owner can update team name → 200
+  - Non-owner, non-admin user gets → 403
+- **Dependencies:** Need to create users with specific ownership and test
+  auth via direct service/router calls (test client overrides auth as admin)
+
+**Note:** The current test fixture always injects a mock admin user. True
+authorization tests require either a second client fixture with a non-admin
+user, or direct router-level testing. For now, we'll add a targeted integration
+test that exercises the authorization logic by calling the service layer directly.
+
+### 3. Verify (~5 min)
+
+- Run `python -m pytest tests/ -v` — all tests pass
+- Run `npm run build` in frontend — compiles without errors
+
+---
+
+## Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Slug out of sync after name edit | Don't auto-update slug — slug is an immutable identifier |
+| Stale tree after rename | Reload tree after successful save |
+| Test auth override masks real auth bugs | Note in plan; full RBAC tests deferred to future RBAC epic |
 
 ---
 
 ## Acceptance Criteria
 
-1. `helm lint charts/pcp/` passes
-2. GitHub Actions workflow is valid YAML
-3. Deploy doc shows OCI install command
-4. After merge to main, chart is published to `oci://ghcr.io/mlopstapus/charts/pcp`
+1. Clicking the pencil icon next to a team name opens an inline editor
+2. Saving updates the name in the detail panel and sidebar tree immediately
+3. Escape or X cancels without saving
+4. Backend tests confirm owner and admin can update; non-owner cannot
+5. All existing tests continue to pass

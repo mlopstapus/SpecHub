@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.pcp_server.models import Base, User
 
-
 # A mock admin user for tests that hit auth-protected endpoints
 _mock_admin = User(
     id=uuid.uuid4(),
@@ -75,4 +74,53 @@ async def client(db_engine) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
+    app.dependency_overrides.clear()
+
+
+def make_user_client_factory(db_engine):
+    """Return a factory that creates an AsyncClient authenticated as a specific User."""
+
+    async def _factory(user: User):
+        session_factory = async_sessionmaker(
+            db_engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async def override_get_db():
+            async with session_factory() as session:
+                yield session
+
+        def override_get_current_user():
+            return user
+
+        from src.pcp_server.auth import get_current_user
+        from src.pcp_server.database import get_db
+        from src.pcp_server.main import app
+
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_user] = override_get_current_user
+        # Do NOT override require_admin — let it check user.role naturally
+
+        transport = ASGITransport(app=app)
+        ac = AsyncClient(transport=transport, base_url="http://test")
+        return ac
+
+    return _factory
+
+
+@pytest_asyncio.fixture
+async def user_client_factory(db_engine):
+    """Fixture that returns a factory: await user_client_factory(user) → AsyncClient."""
+    factory = make_user_client_factory(db_engine)
+    clients = []
+
+    async def _wrapper(user: User):
+        ac = await factory(user)
+        clients.append(ac)
+        return ac
+
+    yield _wrapper
+
+    from src.pcp_server.main import app
+    for ac in clients:
+        await ac.aclose()
     app.dependency_overrides.clear()

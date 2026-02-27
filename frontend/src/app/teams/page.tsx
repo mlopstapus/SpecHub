@@ -108,6 +108,10 @@ export default function TeamsPage() {
   const [editObjectiveTitle, setEditObjectiveTitle] = useState("");
   const [editObjectiveDesc, setEditObjectiveDesc] = useState("");
 
+  // Edit team name state
+  const [editingTeamName, setEditingTeamName] = useState(false);
+  const [editTeamNameValue, setEditTeamNameValue] = useState("");
+
   // Owner assignment
   const [assigningOwner, setAssigningOwner] = useState(false);
 
@@ -175,6 +179,7 @@ export default function TeamsPage() {
     setCreatingPolicy(false);
     setCreatingObjective(false);
     setAssigningOwner(false);
+    setEditingTeamName(false);
     try {
       const [pol, obj] = await Promise.all([
         getTeamEffectivePolicies(team.id),
@@ -229,6 +234,30 @@ export default function TeamsPage() {
   function cancelAdd() {
     setAddMode(null);
     setNewTeamName("");
+  }
+
+  /* ---- Edit team name ---- */
+  function startEditTeamName() {
+    if (!selectedTeam) return;
+    setEditTeamNameValue(selectedTeam.name);
+    setEditingTeamName(true);
+  }
+
+  async function handleSaveTeamName() {
+    if (!selectedTeam || !editTeamNameValue.trim()) return;
+    if (editTeamNameValue.trim() === selectedTeam.name) {
+      setEditingTeamName(false);
+      return;
+    }
+    try {
+      const updated = await updateTeam(selectedTeam.id, { name: editTeamNameValue.trim() });
+      setSelectedTeam(updated);
+      setEditingTeamName(false);
+      await loadTree();
+    } catch (err) {
+      console.error("Failed to rename team", err);
+      alert(`Failed to rename team: ${err}`);
+    }
   }
 
   /* ---- Delete team ---- */
@@ -698,11 +727,42 @@ export default function TeamsPage() {
       <div className="shrink-0 space-y-5 pl-6 overflow-y-auto" style={{ width: `${detailWidth}px` }}>
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">{selectedTeam.name}</h2>
+          <div className="min-w-0 flex-1">
+            {editingTeamName ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editTeamNameValue}
+                  onChange={(e) => setEditTeamNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveTeamName();
+                    if (e.key === "Escape") setEditingTeamName(false);
+                  }}
+                  className="h-9 text-xl font-semibold"
+                  autoFocus
+                />
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={handleSaveTeamName}>
+                  <Check className="h-4 w-4 text-green-500" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => setEditingTeamName(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h2 className="text-xl font-semibold truncate">{selectedTeam.name}</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  onClick={startEditTeamName}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground">{selectedTeam.slug}</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setSelectedTeam(null)}>
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => setSelectedTeam(null)}>
             <X className="h-5 w-5" />
           </Button>
         </div>

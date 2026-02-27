@@ -4,7 +4,6 @@ import uuid
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helper: create a team via API
 # ---------------------------------------------------------------------------
@@ -128,6 +127,76 @@ async def test_update_team(client):
     resp = await client.put(f"/api/v1/teams/{team['id']}", json={"name": "NewName"})
     assert resp.status_code == 200
     assert resp.json()["name"] == "NewName"
+
+
+@pytest.mark.asyncio
+async def test_update_team_as_owner(client, user_client_factory):
+    """Team owner (non-admin) can rename their team."""
+    team = await _create_team(client, "OwnerTeam", "owner-update-team")
+    user = await _create_user(client, "team-owner-upd", team["id"])
+    # Set user as team owner
+    await client.put(f"/api/v1/teams/{team['id']}", json={"owner_id": user["id"]})
+
+    from src.pcp_server.models import User as UserModel
+    owner_user = UserModel(
+        id=uuid.UUID(user["id"]),
+        team_id=uuid.UUID(team["id"]),
+        username=user["username"],
+        role="member",
+        is_active=True,
+    )
+    owner_client = await user_client_factory(owner_user)
+    resp = await owner_client.put(
+        f"/api/v1/teams/{team['id']}", json={"name": "RenamedByOwner"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "RenamedByOwner"
+
+
+@pytest.mark.asyncio
+async def test_update_team_as_parent_owner(client, user_client_factory):
+    """Parent team owner (non-admin) can rename a child team."""
+    parent = await _create_team(client, "ParentOwn", "parent-own-upd")
+    child = await _create_team(client, "ChildOwn", "child-own-upd", parent_team_id=parent["id"])
+    user = await _create_user(client, "parent-owner-upd", parent["id"])
+    # Set user as parent team owner
+    await client.put(f"/api/v1/teams/{parent['id']}", json={"owner_id": user["id"]})
+
+    from src.pcp_server.models import User as UserModel
+    parent_owner = UserModel(
+        id=uuid.UUID(user["id"]),
+        team_id=uuid.UUID(parent["id"]),
+        username=user["username"],
+        role="member",
+        is_active=True,
+    )
+    po_client = await user_client_factory(parent_owner)
+    resp = await po_client.put(
+        f"/api/v1/teams/{child['id']}", json={"name": "RenamedByParentOwner"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "RenamedByParentOwner"
+
+
+@pytest.mark.asyncio
+async def test_update_team_forbidden_for_non_owner(client, user_client_factory):
+    """A non-owner, non-admin user cannot rename a team."""
+    team = await _create_team(client, "ForbidTeam", "forbid-update-team")
+    user = await _create_user(client, "random-member-upd", team["id"])
+
+    from src.pcp_server.models import User as UserModel
+    member_user = UserModel(
+        id=uuid.UUID(user["id"]),
+        team_id=uuid.UUID(team["id"]),
+        username=user["username"],
+        role="member",
+        is_active=True,
+    )
+    member_client = await user_client_factory(member_user)
+    resp = await member_client.put(
+        f"/api/v1/teams/{team['id']}", json={"name": "ShouldFail"}
+    )
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio
