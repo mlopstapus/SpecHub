@@ -205,7 +205,7 @@ The chart is published to GHCR as an OCI artifact. You can install it directly
 without cloning the repo:
 
 ```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0 \
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1 \
   --set backend.image.repository=$INT_REG/$NS/backend \
   --set backend.image.tag=latest \
   --set frontend.image.repository=$INT_REG/$NS/frontend \
@@ -290,8 +290,8 @@ If you prefer to push images from CI or locally instead of S2I:
 ```bash
 # Push from CI or locally
 for component in backend frontend database; do
-  docker build -t ghcr.io/mlopstapus/spechub-$component:0.1.0 ./$component/
-  docker push ghcr.io/mlopstapus/spechub-$component:0.1.0
+  docker build -t ghcr.io/mlopstapus/spechub-$component:0.1.1 ./$component/
+  docker push ghcr.io/mlopstapus/spechub-$component:0.1.1
 done
 
 # Create a pull secret if the registry is private
@@ -303,11 +303,11 @@ oc secrets link default ghcr-pull-secret --for=pull
 
 helm install sh ./charts/pcp \
   --set backend.image.repository=ghcr.io/mlopstapus/spechub-backend \
-  --set backend.image.tag=0.1.0 \
+  --set backend.image.tag=0.1.1 \
   --set frontend.image.repository=ghcr.io/mlopstapus/spechub-frontend \
-  --set frontend.image.tag=0.1.0 \
+  --set frontend.image.tag=0.1.1 \
   --set database.image.repository=ghcr.io/mlopstapus/spechub-database \
-  --set database.image.tag=0.1.0 \
+  --set database.image.tag=0.1.1 \
   --set imagePullSecrets[0].name=ghcr-pull-secret
 ```
 
@@ -340,11 +340,26 @@ curl -s https://${ROUTE}/api/v1/prompts
 
 ### Upgrading
 
+When upgrading the Helm chart version, pass the S2I image overrides again so the
+deployments continue to pull from the internal registry (not the default GHCR images
+in `values.yaml`):
+
 ```bash
-helm upgrade sh ./charts/pcp \
-  --set backend.image.tag=0.2.0 \
-  --set frontend.image.tag=0.2.0
+NS=$(oc project -q)
+INT_REG=image-registry.openshift-image-registry.svc:5000
+
+helm upgrade sh oci://ghcr.io/mlopstapus/charts/pcp --version <new-version> \
+  --set backend.image.repository=$INT_REG/$NS/backend \
+  --set backend.image.tag=latest \
+  --set frontend.image.repository=$INT_REG/$NS/frontend \
+  --set frontend.image.tag=latest \
+  --set database.image.repository=$INT_REG/$NS/database \
+  --set database.image.tag=latest
 ```
+
+> **Important:** Do not use `--reuse-values` without the image overrides — the
+> stored values may point at stale GHCR images instead of the S2I-built images
+> in the internal registry.
 
 ### Uninstalling
 

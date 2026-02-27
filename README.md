@@ -49,7 +49,7 @@ The chart is published to GHCR as an OCI artifact — no git clone needed:
 
 ```bash
 # Install the full stack (backend + frontend + database)
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1
 
 # Or from a local clone
 helm install sh ./charts/pcp
@@ -58,7 +58,7 @@ helm install sh ./charts/pcp
 Override defaults as needed:
 
 ```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.0 \
+helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1 \
   --set postgresql.password=<strong-password> \
   --set backend.authToken=<your-auth-token> \
   --set frontend.route.enabled=true
@@ -310,7 +310,7 @@ cd backend
 python -m pytest tests/ -v
 ```
 
-159 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, workflows, and sharing.
+162 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, workflows, and sharing.
 
 ## Tech Stack
 
