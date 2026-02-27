@@ -12,6 +12,8 @@ set -euo pipefail
 
 SERVICES=(backend frontend database)
 HELM_RELEASE="${HELM_RELEASE:-sh}"
+GIT_REPO="${GIT_REPO:-https://github.com/mlopstapus/SpecHub.git}"
+GIT_REF="${GIT_REF:-main}"
 SKIP_BUILD=false
 
 # ── Parse args ───────────────────────────────────────────────────────────────
@@ -48,6 +50,20 @@ NAMESPACE=$(oc project -q)
 echo "Namespace: ${NAMESPACE}"
 echo ""
 
+# ── Patch BuildConfigs if repo URL or ref is stale ────────────────────────
+if [[ "$SKIP_BUILD" == false ]]; then
+  for svc in "${targets[@]}"; do
+    if oc get bc/"$svc" &>/dev/null; then
+      CURRENT_URI=$(oc get bc/"$svc" -o jsonpath='{.spec.source.git.uri}')
+      CURRENT_REF=$(oc get bc/"$svc" -o jsonpath='{.spec.source.git.ref}')
+      if [[ "$CURRENT_URI" != "$GIT_REPO" ]] || [[ "$CURRENT_REF" != "$GIT_REF" ]]; then
+        echo "🔧 Patching BuildConfig ${svc}: ${CURRENT_URI}#${CURRENT_REF} → ${GIT_REPO}#${GIT_REF}"
+        oc patch bc/"$svc" -p "{\"spec\":{\"source\":{\"git\":{\"uri\":\"${GIT_REPO}\",\"ref\":\"${GIT_REF}\"}}}}"
+      fi
+    fi
+  done
+fi
+
 # ── Rebuild S2I images ──────────────────────────────────────────────────────
 if [[ "$SKIP_BUILD" == false ]]; then
   for svc in "${targets[@]}"; do
@@ -60,6 +76,29 @@ if [[ "$SKIP_BUILD" == false ]]; then
       echo "⚠️  No BuildConfig found for '${svc}' — skipping build"
     fi
   done
+fi
+
+# ── Helm upgrade to pick up new S2I images ────────────────────────────────
+INT_REG="image-registry.openshift-image-registry.svc:5000"
+CHART_DIR="${CHART_DIR:-$(cd "$(dirname "$0")/../charts/pcp" 2>/dev/null && pwd)}"
+
+if [[ -d "$CHART_DIR" ]] && command -v helm &>/dev/null; then
+  HELM_SETS=()
+  for svc in "${targets[@]}"; do
+    if oc get is/"$svc" &>/dev/null; then
+      HELM_SETS+=(--set "${svc}.image.repository=${INT_REG}/${NAMESPACE}/${svc}")
+      HELM_SETS+=(--set "${svc}.image.tag=latest")
+    fi
+  done
+
+  if [[ ${#HELM_SETS[@]} -gt 0 ]]; then
+    echo "📦 Helm upgrade: pointing images at internal registry..."
+    helm upgrade "$HELM_RELEASE" "$CHART_DIR" --reuse-values "${HELM_SETS[@]}"
+    echo "✅ Helm upgrade complete"
+    echo ""
+  fi
+else
+  echo "⚠️  Helm or chart dir not found — skipping helm upgrade, falling back to rollout restart"
 fi
 
 # ── Cycle deployments ───────────────────────────────────────────────────────
