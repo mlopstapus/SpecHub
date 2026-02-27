@@ -2,8 +2,8 @@ apiVersion: v2
 name: pcp
 description: Prompt Control Plane — an open-source, self-hosted prompt registry distributed via MCP
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "0.1.1"
 keywords:
   - prompts
   - mcp
