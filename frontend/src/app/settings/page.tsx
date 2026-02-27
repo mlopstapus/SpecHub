@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [newKeyName, setNewKeyName] = useState("");
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [configCopied, setConfigCopied] = useState(false);
 
   // Invitations (admin only)
   const [invitations, setInvitations] = useState<Invitation_t[]>([]);
@@ -94,6 +95,31 @@ export default function SettingsPage() {
       navigator.clipboard.writeText(rawKey);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const mcpConfig = rawKey
+    ? JSON.stringify(
+        {
+          mcpServers: {
+            spechub: {
+              serverUrl: `${window.location.origin}/mcp/`,
+              headers: {
+                Authorization: `Bearer ${rawKey}`,
+              },
+            },
+          },
+        },
+        null,
+        2
+      )
+    : "";
+
+  const handleCopyConfig = () => {
+    if (mcpConfig) {
+      navigator.clipboard.writeText(mcpConfig);
+      setConfigCopied(true);
+      setTimeout(() => setConfigCopied(false), 2000);
     }
   };
 
@@ -337,6 +363,23 @@ export default function SettingsPage() {
                       <Copy className="h-4 w-4" />
                     )}
                   </Button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <p className="text-sm font-medium">
+                    MCP server config — paste into your IDE:
+                  </p>
+                  <div className="flex items-start gap-2">
+                    <pre className="flex-1 text-xs bg-[#0d0d0d] rounded px-3 py-2 font-[family-name:var(--font-geist-mono)] overflow-x-auto">
+                      {mcpConfig}
+                    </pre>
+                    <Button variant="outline" size="sm" onClick={handleCopyConfig}>
+                      {configCopied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"

@@ -1,55 +1,55 @@
-# Inline Team Name Editing
+# Show MCP Server Config After API Key Creation
 
-**Date:** 2026-02-26T16:30:00-06:00
+**Date:** 2026-02-27T09:40:00-06:00
 
 ## Executive Summary
 
-Allow team owners and admins to edit team names directly in the admin dashboard's
-detail panel. The backend already supports this via `PUT /api/v1/teams/{team_id}`
-with owner/admin/parent-owner authorization. This plan covers the frontend UI
-change and backend test coverage for authorization scenarios.
+When a user creates an API key on the Settings page, show a ready-to-copy MCP
+server configuration snippet (JSON) alongside the raw key. This lets users
+immediately paste the config into their IDE (e.g. Windsurf `mcp_config.json`)
+without having to manually construct it.
 
 ---
 
 ## Current State
 
-- **Backend:** `PUT /api/v1/teams/{team_id}` accepts `{ name?, description?, owner_id? }`.
-  Authorization checks: admin role, team `owner_id` match, or parent team `owner_id` match.
-- **Frontend:** `teams/page.tsx` detail panel shows team name as static `<h2>` text (line 702).
-  `Pencil` and `Check` icons are imported. `updateTeam()` exists in `lib/api.ts`.
-- **Tests:** `test_hierarchy.py::test_update_team` covers happy path with mock admin only.
+- **API key creation flow:** `settings/page.tsx` shows a banner with the raw key
+  after creation (lines 319-353). Only a copy button for the raw key exists.
+- **MCP endpoint:** Mounted at `/mcp/` on the backend (`main.py:59`). Uses
+  streamable-HTTP transport with `Authorization: Bearer <pcp_key>`.
+- **Server URL:** Currently hardcoded to `http://localhost:8000` in dev. In
+  production it's the backend host. The frontend already knows the API base URL
+  via `lib/api.ts`.
 
 ## Tasks
 
-### 1. Frontend — Inline team name editing (~15 min)
+### 1. Frontend — MCP config snippet in raw-key banner (~15 min)
 
-- Add `editingTeamName` (boolean) and `editTeamNameValue` (string) state variables
-- In the detail panel header, add a Pencil icon button next to the team name
-- On click: replace `<h2>` with an `<Input>` pre-filled with the current name,
-  plus a Check button to confirm and X/Escape to cancel
-- On save: call `updateTeam(selectedTeam.id, { name: editTeamNameValue })`,
-  update `selectedTeam` with the response, reload the tree
-- **Dependencies:** None — uses existing `updateTeam()` API client and icons
+- After API key creation, generate a JSON config object:
+  ```json
+  {
+    "mcpServers": {
+      "spechub": {
+        "serverUrl": "<backend_origin>/mcp/",
+        "headers": {
+          "Authorization": "Bearer <raw_key>"
+        }
+      }
+    }
+  }
+  ```
+- Display it in a `<pre>` code block below the raw key in the existing banner
+- Add a second "Copy Config" button that copies the full JSON snippet
+- Derive `<backend_origin>` from the existing API base URL in `lib/api.ts`
 
-### 2. Backend tests — Authorization coverage (~10 min)
+### 2. Tests — Frontend build check (~5 min)
 
-- Add tests in `test_hierarchy.py` that create a dedicated client fixture
-  with a non-admin user to verify:
-  - Team owner can update team name → 200
-  - Parent team owner can update team name → 200
-  - Non-owner, non-admin user gets → 403
-- **Dependencies:** Need to create users with specific ownership and test
-  auth via direct service/router calls (test client overrides auth as admin)
-
-**Note:** The current test fixture always injects a mock admin user. True
-authorization tests require either a second client fixture with a non-admin
-user, or direct router-level testing. For now, we'll add a targeted integration
-test that exercises the authorization logic by calling the service layer directly.
+- Run `npm run build` to verify no compile errors
 
 ### 3. Verify (~5 min)
 
-- Run `python -m pytest tests/ -v` — all tests pass
-- Run `npm run build` in frontend — compiles without errors
+- Run `python -m pytest tests/ -v` — all existing tests pass
+- Visual check: create a key, see the config snippet, copy it
 
 ---
 
@@ -57,16 +57,14 @@ test that exercises the authorization logic by calling the service layer directl
 
 | Risk | Mitigation |
 |------|-----------|
-| Slug out of sync after name edit | Don't auto-update slug — slug is an immutable identifier |
-| Stale tree after rename | Reload tree after successful save |
-| Test auth override masks real auth bugs | Note in plan; full RBAC tests deferred to future RBAC epic |
+| Backend URL differs between environments | Derive from existing API base URL at runtime |
+| Config format changes across IDEs | Use standard MCP config format; add a note that it's for Windsurf/Cursor |
 
 ---
 
 ## Acceptance Criteria
 
-1. Clicking the pencil icon next to a team name opens an inline editor
-2. Saving updates the name in the detail panel and sidebar tree immediately
-3. Escape or X cancels without saving
-4. Backend tests confirm owner and admin can update; non-owner cannot
-5. All existing tests continue to pass
+1. After creating an API key, a copyable MCP server config JSON is displayed
+2. The config includes the correct server URL and Bearer token
+3. A "Copy Config" button copies the full JSON to clipboard
+4. All existing tests continue to pass
