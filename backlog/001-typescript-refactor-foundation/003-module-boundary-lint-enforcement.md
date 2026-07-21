@@ -11,16 +11,16 @@ Make tenet D1 ("bounded contexts own their models; no context reaches into anoth
 
 ## Requirements
 
-- [ ] A lint rule (e.g. `eslint-plugin-boundaries` or `dependency-cruiser`) configured to forbid imports from `src/bcs/<name>/` paths other than that BC's `index.ts` barrel
-- [ ] Rule explicitly forbids any BC importing another BC's Drizzle schema/model files directly
-- [ ] Rule allows `/shared/*` imports from anywhere
-- [ ] Violating import produces a lint error (fails `pnpm lint` and CI), with a clear message pointing at the offending BC's `CONTRACT.md`
+- [x] A lint rule (`eslint-plugin-boundaries`, its canonical `boundaries/dependencies` rule) configured to forbid imports from `src/bcs/<name>/` paths other than that BC's `index.ts` barrel
+- [x] Rule explicitly forbids any BC importing another BC's Drizzle schema/model files directly
+- [x] Rule allows `/shared/*` imports from anywhere
+- [x] Violating import produces a lint error (fails `pnpm lint`), with a clear message pointing at the offending BC's `CONTRACT.md`. CI enforcement specifically depends on `004-ci-pipeline` wiring `pnpm lint` into GitHub Actions (see Acceptance Criteria below) — not yet done, since that item hasn't started.
 
 ## Acceptance Criteria
 
-- [ ] A deliberately-broken test import (BC A reaching into BC B's internal folder) fails lint with a clear error message
-- [ ] The same import going through BC B's barrel (`index.ts`) passes lint
-- [ ] Rule is wired into the CI pipeline (`004-ci-pipeline`), not just available locally
+- [x] A deliberately-broken test import (BC A reaching into BC B's internal folder) fails lint with a clear error message
+- [x] The same import going through BC B's barrel (`index.ts`) passes lint
+- [ ] Rule is wired into the CI pipeline (`004-ci-pipeline`), not just available locally — **blocked on `004-ci-pipeline`**, which doesn't exist yet. The rule is already part of `pnpm lint`, so `004-ci-pipeline` will pick it up automatically once it wires that command into GitHub Actions; no further work is needed from this item once that happens.
 
 ## Open Questions
 
