@@ -1,0 +1,38 @@
+---
+epic: 002-identity-access
+feature: 002-team-hierarchy
+status: open
+dependencies: ["001-organization-tenant-model.md"]
+---
+
+# Team Hierarchy
+
+Port the recursive team hierarchy (`teams.parent_team_id`, `sub_teams`, `get_team_chain`) from the current Python `team_service.py`, scoped under `Organization` instead of being the tenant root itself. `getTeamChain` is a stability-guaranteed contract function per `bcs/identity-access/CONTRACT.md` — Governance's resolution correctness depends on its ordering never changing.
+
+## Requirements
+
+- [ ] `identity_access.teams` table: `id`, `organization_id`, `name`, `slug`, `description`, `owner_id` (nullable, FK to `users`), `parent_team_id` (nullable, self-FK), timestamps
+- [ ] Invariant enforced: `parent_team_id`, if set, must belong to the same `organization_id` as the child — reject cross-org reparenting
+- [ ] Invariant enforced: no cycles in the team tree (reject a reparent that would create one)
+- [ ] `getTeamChain(teamId)` returns ordered `TeamChainEntry[]`: self-first, root-last — matches current Python `get_team_chain` behavior exactly (characterization test against it)
+- [ ] CRUD operations: create team, update team, reparent team, list sub-teams
+- [ ] Insert-between: create a new team and splice it into the hierarchy between an existing team and its current parent (the existing team is reparented under the new one) — matches current `insert_team_between`/`POST /teams/insert-between/{child_team_id}`
+
+## Acceptance Criteria
+
+- [ ] `getTeamChain` output matches the current Python implementation's output for an equivalent multi-level hierarchy fixture, verified by a characterization test
+- [ ] Attempting to set `parent_team_id` to a team in a different organization is rejected
+- [ ] Attempting to create a cycle (A's parent is B, B's parent is A) is rejected
+- [ ] `TeamReparented` event fires on successful reparent (consumed by Audit per `bcs/governance/CONTRACT.md`'s note that Governance itself doesn't need to react, but Audit does)
+
+## Open Questions
+
+- None currently.
+
+## Dependencies
+
+- `001-organization-tenant-model.md`
+
+## Technical Notes
+
+Per D2 (tenet), the cycle-detection and cross-org-reparenting invariants belong in this feature's application service, not in a router/route-handler — they must apply identically whether the caller is the REST API or (eventually) an admin MCP tool. Per `bcs/identity-access/CONTRACT.md`'s Breaking Change Policy, `getTeamChain`'s ordering is a stability guarantee — any change here requires updating that CONTRACT.md in the same commit.

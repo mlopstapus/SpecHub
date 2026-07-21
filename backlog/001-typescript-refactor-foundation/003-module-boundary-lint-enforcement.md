@@ -1,0 +1,36 @@
+---
+epic: 001-typescript-refactor-foundation
+feature: 003-module-boundary-lint-enforcement
+status: open
+dependencies: ["backlog/000-foundations/001-repo-structure-and-module-boundaries.md"]
+---
+
+# Module Boundary Lint Enforcement
+
+Make tenet D1 ("bounded contexts own their models; no context reaches into another's internals directly") a build-breaking lint failure, not a code-review convention someone has to remember. This is what turns the `/bcs/*/CONTRACT.md` files from documentation into an actually-enforced boundary.
+
+## Requirements
+
+- [ ] A lint rule (e.g. `eslint-plugin-boundaries` or `dependency-cruiser`) configured to forbid imports from `src/bcs/<name>/` paths other than that BC's `index.ts` barrel
+- [ ] Rule explicitly forbids any BC importing another BC's Drizzle schema/model files directly
+- [ ] Rule allows `/shared/*` imports from anywhere
+- [ ] Violating import produces a lint error (fails `pnpm lint` and CI), with a clear message pointing at the offending BC's `CONTRACT.md`
+
+## Acceptance Criteria
+
+- [ ] A deliberately-broken test import (BC A reaching into BC B's internal folder) fails lint with a clear error message
+- [ ] The same import going through BC B's barrel (`index.ts`) passes lint
+- [ ] Rule is wired into the CI pipeline (`004-ci-pipeline`), not just available locally
+
+## Open Questions
+
+- None currently — this is a mechanical enforcement task once the repo structure is fixed.
+
+## Dependencies
+
+- `backlog/000-foundations/001-repo-structure-and-module-boundaries.md`
+- `001-nextjs-app-scaffolding.md` (needs the folder structure to exist first)
+
+## Technical Notes
+
+Directly implements tenet D1. The tenet's own rationale is worth restating here: today's `policy_service.py` imports `Team`/`User` straight from a shared `models.py`, and that's exactly the seam that made tenant isolation hard to guarantee uniformly. This feature exists so that seam cannot reopen in the rewrite.

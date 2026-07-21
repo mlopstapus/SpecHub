@@ -14,7 +14,7 @@ Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within 
 | `getOrganization(organizationId)` | Org record incl. `planId` pointer | All contexts |
 | `getUser(userId)` | User record (id, orgId, teamId, role) | All contexts |
 | `getTeamChain(teamId)` | Ordered list: team → parent → ... → root | Governance |
-| `authenticateSession(request)` | Resolves the calling user from cookie session | Distribution |
+| `authenticateSession(request)` | Resolves the calling user from a JWT carried in an httpOnly cookie (web UI) | Distribution |
 | `authenticateApiKey(rawKey)` | Resolves the calling user + scopes from a bearer key | Distribution |
 | `createTeam`, `createUser`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write operations | Distribution (route handlers) |
 
@@ -50,6 +50,8 @@ No other context receives a raw `User`/`Team`/`Organization` row — only these 
 ## Stability Guarantees
 
 `OrganizationId`, `UserId`, `TeamId` are stable UUIDs, never reused. `getTeamChain` ordering (self-first, root-last) will not change without a major version bump — Governance's resolution correctness depends on it.
+
+Web UI auth carries forward the current JWT approach (HS256, `sub`/`role`/`exp` claims) rather than switching to opaque server-side sessions, delivered via an httpOnly cookie instead of a client-managed header. Scoped bearer API keys remain the separate, unchanged mechanism for MCP/API access.
 
 ## Breaking Change Policy
 
