@@ -56,3 +56,9 @@ Independent of general usage metrics: who, what, when, on which tenant/resource 
 **C2 — All traffic is encrypted in transit; nothing security-critical ships with a functional insecure default**
 TLS everywhere outside local dev; startup fails loudly if `jwt_secret`/`auth_token` are still at their placeholder values, and environment-specific config (CORS origins, hosts) comes from settings, never a hardcoded literal.
 *Why:* `config.py` ships a functional dev JWT secret with no check that it was changed, and `main.py` hardcodes `allow_origins=["http://localhost:3000"]` — the Helm chart already supports a real ingress host, but CORS would silently break it today.
+
+## Productization
+
+**G1 — Every feature ships behind an entitlement gate**
+Every new feature — a UI surface, a REST route, an MCP tool — is gated by a checked entitlement flag before it does real work. Free vs. Paid (and future custom-override) availability is controlled by flipping an entitlement value via `resolveEntitlements()`, never by a separate code branch, a separate deploy, or a fork. A feature merged without a corresponding entitlement key is incomplete, not just under-configured.
+*Why:* PDR-004 already established entitlements as per-org data specifically so tier boundaries can move without a redeploy. A feature that ships without a gate defeats that design and creates a retrofit debt — and a real risk of a Paid-only feature quietly being available to Free (or vice versa) — the moment product wants to change packaging, which is expected to happen often before pricing stabilizes.

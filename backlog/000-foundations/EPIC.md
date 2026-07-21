@@ -1,7 +1,7 @@
 # Epic 000: Foundations
 
 **Priority:** 0
-**Status:** not-started
+**Status:** done
 **Goal:** Establish the decisions and written conventions every subsequent epic builds on, so implementation doesn't stall on undecided questions mid-feature.
 
 ## Overview
@@ -10,16 +10,17 @@
 
 None of epic 001 (TypeScript Refactor Foundation) should start until items 001, 002, and 003 below are resolved — the app scaffold, DB client, and CI pipeline are built directly on those answers.
 
-## Features
+## Decisions
 
-- [ ] [001 - Repo Structure & Module Boundaries](001-repo-structure-and-module-boundaries.md)
-- [ ] [002 - Database Schema & Tenancy Conventions](002-database-schema-and-tenancy-conventions.md)
-- [ ] [003 - Testing Strategy](003-testing-strategy.md)
-- [ ] [004 - API & Error Conventions](004-api-and-error-conventions.md)
-- [ ] [005 - Deployment, Environments & AWS Topology](005-deployment-environments-and-aws-topology.md)
-- [ ] [006 - Auth & Session Conventions](006-auth-and-session-conventions.md)
-- [ ] [007 - Entitlement Catalog](007-entitlement-catalog.md)
-- [ ] [008 - Third-Party Service Selection](008-third-party-services.md)
+- [x] [001 - Repo Structure & Module Boundaries](archive/001-repo-structure-and-module-boundaries.md) → `context/repo-structure.md`
+- [x] [002 - Database Schema & Tenancy Conventions](archive/002-database-schema-and-tenancy-conventions.md) → `context/database-conventions.md`
+- [x] [003 - Testing Strategy](archive/003-testing-strategy.md) → `context/testing-strategy.md`
+- [x] [004 - API & Error Conventions](archive/004-api-and-error-conventions.md) → `context/api-conventions.md`
+- [x] [005 - Deployment, Environments & AWS Topology](archive/005-deployment-environments-and-aws-topology.md) → `context/deployment.md`
+- [x] [006 - Auth & Session Conventions](archive/006-auth-and-session-conventions.md) → `context/auth-conventions.md`
+- [x] [007 - Entitlement Catalog](archive/007-entitlement-catalog.md) → `context/entitlements.md`
+- [x] [008 - Third-Party Service Selection](archive/008-third-party-services.md) → `context/third-party-services.md`
+- [x] [009 - Feature Gating & Flags](archive/009-feature-gating-and-flags.md) → `context/feature-gating.md`
 
 *Completed items are moved to `archive/` and checked off here.*
 
@@ -29,4 +30,4 @@ None — this is the starting point. Draws on `context/architecture.md` and `spe
 
 ## Notes
 
-Items 001–003 block epic 001. Items 004–008 can happen in parallel with epic 001 but must land before the epic that needs them (006 before 002-identity-access; 007 and 008 before 008-billing-entitlements).
+Items 001–003 block epic 001. Items 004–009 can happen in parallel with epic 001 but must land before the epic that needs them (006 before 002-identity-access; 007, 008, and 009 before 008-billing-entitlements; 009 also blocks any feature work in any epic per tenet G1 — every feature ships gated).
