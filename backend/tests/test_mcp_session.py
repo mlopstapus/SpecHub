@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.pcp_server.mcp.session import SessionManager, SessionState, _current_api_key
+from src.spechub_server.mcp.session import SessionManager, SessionState, _current_api_key
 
 
 class TestSessionState:
@@ -62,32 +62,32 @@ class TestSessionManager:
 
 class TestApiKeyContextVar:
     def test_default_is_none(self):
-        from src.pcp_server.mcp.session import get_current_api_key
+        from src.spechub_server.mcp.session import get_current_api_key
 
         assert get_current_api_key() is None
 
     def test_set_and_get(self):
-        from src.pcp_server.mcp.session import get_current_api_key
+        from src.spechub_server.mcp.session import get_current_api_key
 
-        token = _current_api_key.set("pcp_test123")
+        token = _current_api_key.set("sh_test123")
         try:
-            assert get_current_api_key() == "pcp_test123"
+            assert get_current_api_key() == "sh_test123"
         finally:
             _current_api_key.reset(token)
 
     def test_reset(self):
-        from src.pcp_server.mcp.session import get_current_api_key
+        from src.spechub_server.mcp.session import get_current_api_key
 
-        token = _current_api_key.set("pcp_test123")
+        token = _current_api_key.set("sh_test123")
         _current_api_key.reset(token)
         assert get_current_api_key() is None
 
 
 class TestApiKeyMiddleware:
     @pytest.mark.asyncio
-    async def test_extracts_pcp_key(self):
-        """Middleware should set the context var for pcp_ prefixed keys."""
-        from src.pcp_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+    async def test_extracts_sh_key(self):
+        """Middleware should set the context var for sh_ prefixed keys."""
+        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -99,16 +99,16 @@ class TestApiKeyMiddleware:
         scope = {
             "type": "http",
             "headers": [
-                (b"authorization", b"Bearer pcp_abc123"),
+                (b"authorization", b"Bearer sh_abc123"),
             ],
         }
         await middleware(scope, None, None)
-        assert captured_key == "pcp_abc123"
+        assert captured_key == "sh_abc123"
 
     @pytest.mark.asyncio
-    async def test_ignores_non_pcp_key(self):
-        """Middleware should not set context var for non-pcp keys."""
-        from src.pcp_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+    async def test_ignores_non_sh_key(self):
+        """Middleware should not set context var for non-spechub keys."""
+        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -129,7 +129,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_no_auth_header(self):
         """Middleware should handle missing auth header gracefully."""
-        from src.pcp_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -145,7 +145,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_resets_after_request(self):
         """Context var should be reset after the middleware completes."""
-        from src.pcp_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         async def inner_app(scope, receive, send):
             pass
@@ -153,7 +153,7 @@ class TestApiKeyMiddleware:
         middleware = ApiKeyMiddleware(inner_app)
         scope = {
             "type": "http",
-            "headers": [(b"authorization", b"Bearer pcp_abc123")],
+            "headers": [(b"authorization", b"Bearer sh_abc123")],
         }
         await middleware(scope, None, None)
         # After middleware completes, context var should be reset
@@ -162,7 +162,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_passthrough_non_http(self):
         """Non-HTTP scopes should pass through without setting context var."""
-        from src.pcp_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         called = False
 

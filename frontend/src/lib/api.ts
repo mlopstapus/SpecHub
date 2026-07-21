@@ -1,5 +1,5 @@
 const API_BASE = "/api/v1";
-const TOKEN_KEY = "pcp-auth-token";
+const TOKEN_KEY = "spechub-auth-token";
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;

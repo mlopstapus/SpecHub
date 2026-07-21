@@ -1,0 +1,16 @@
+apiVersion: v2
+name: spechub
+description: SpecHub — an open-source, self-hosted prompt registry distributed via MCP
+type: application
+version: 0.1.1
+appVersion: "0.1.1"
+keywords:
+  - prompts
+  - mcp
+  - llm
+  - ai
+home: https://github.com/mlopstapus/SpecHub
+sources:
+  - https://github.com/mlopstapus/SpecHub
+maintainers:
+  - name: mlopstapus

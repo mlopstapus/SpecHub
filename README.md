@@ -1,8 +1,8 @@
-# PCP — Prompt Control Plane
+# SpecHub
 
 An open-source, self-hosted prompt registry with **hierarchical governance**, distributed via [MCP (Model Context Protocol)](https://modelcontextprotocol.io/).
 
-Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. PCP never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
+Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SpecHub never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
 
 ## Key Features
 
@@ -20,7 +20,7 @@ Define prompts once, distribute them to every developer's AI tool (Claude, Winds
 ## Quickstart (docker-compose)
 
 ```bash
-git clone <repo> && cd pcp
+git clone <repo> && cd spechub
 
 # Start Postgres (custom image with schema pre-initialized)
 docker-compose up -d postgres
@@ -34,7 +34,7 @@ uv pip install -e ".[dev]"
 alembic upgrade head
 
 # Start the server
-uvicorn src.pcp_server.main:app --reload --port 8000
+uvicorn src.spechub_server.main:app --reload --port 8000
 ```
 
 - **REST API:** http://localhost:8000/api/v1/prompts
@@ -49,22 +49,22 @@ The chart is published to GHCR as an OCI artifact — no git clone needed:
 
 ```bash
 # Install the full stack (backend + frontend + database)
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1
+helm install sh oci://ghcr.io/mlopstapus/charts/spechub --version 0.1.1
 
 # Or from a local clone
-helm install sh ./charts/pcp
+helm install sh ./charts/spechub
 ```
 
 Override defaults as needed:
 
 ```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1 \
+helm install sh oci://ghcr.io/mlopstapus/charts/spechub --version 0.1.1 \
   --set postgresql.password=<strong-password> \
   --set backend.authToken=<your-auth-token> \
   --set frontend.route.enabled=true
 ```
 
-See [`charts/pcp/values.yaml`](charts/pcp/values.yaml) for all configuration options.
+See [`charts/spechub/values.yaml`](charts/spechub/values.yaml) for all configuration options.
 
 For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/deploy-openshift.md).
 
@@ -78,11 +78,11 @@ For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/dep
 
 ## Connect Your AI Tool
 
-PCP uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.
+SpecHub uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.
 
 ### Step 1: Get Your API Key
 
-If an admin has already set up the PCP instance, ask them for your user account. Then generate an API key:
+If an admin has already set up the SpecHub instance, ask them for your user account. Then generate an API key:
 
 ```bash
 # Via the admin dashboard at http://localhost:3000/settings/api-keys
@@ -93,7 +93,7 @@ curl -X POST http://localhost:8000/api/v1/api-keys \
   -d '{"name": "my-ide", "scopes": ["read", "expand"]}'
 ```
 
-The response includes a `raw_key` (e.g., `pcp_a3f1...`). **Save it — it's shown only once.**
+The response includes a `raw_key` (e.g., `sh_a3f1...`). **Save it — it's shown only once.**
 
 ### Step 2: Configure Your IDE
 
@@ -104,10 +104,10 @@ Open MCP settings (⌘+Shift+P → "MCP: Configure MCP Servers") and add:
 ```json
 {
   "mcpServers": {
-    "pcp": {
+    "spechub": {
       "serverUrl": "http://localhost:8000/mcp/",
       "headers": {
-        "Authorization": "Bearer pcp_YOUR_API_KEY_HERE"
+        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
       }
     }
   }
@@ -121,11 +121,11 @@ Add to `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "pcp": {
+    "spechub": {
       "transport": "sse",
       "url": "http://localhost:8000/mcp/",
       "headers": {
-        "Authorization": "Bearer pcp_YOUR_API_KEY_HERE"
+        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
       }
     }
   }
@@ -139,10 +139,10 @@ Add to your MCP configuration:
 ```json
 {
   "mcpServers": {
-    "pcp": {
+    "spechub": {
       "url": "http://localhost:8000/mcp/",
       "headers": {
-        "Authorization": "Bearer pcp_YOUR_API_KEY_HERE"
+        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
       }
     }
   }
@@ -177,7 +177,7 @@ Once connected, you get these tools automatically:
 | `sh-review` | Perform a thorough code review |
 | `sh-document` | Generate documentation |
 | `sh-commit` | Commit changes to the repository |
-| `sh-ralph` | Iteratively improve PCP prompts based on session takeaways |
+| `sh-ralph` | Iteratively improve SpecHub prompts based on session takeaways |
 | `sh-list` | List all available prompts |
 | `sh-search` | Search prompts by name or tag |
 | `sh-context` | Show effective policies and objectives for the current user |
@@ -186,7 +186,7 @@ All prompt tools accept an optional `project` parameter (UUID) to layer project-
 
 ## Governance Model
 
-PCP uses a recursive team hierarchy for governance:
+SpecHub uses a recursive team hierarchy for governance:
 
 ```
 Org (root team)
@@ -278,12 +278,12 @@ Returns `{ "inherited": [...], "local": [...] }`.
 
 1. Admin creates teams, users, policies, and objectives via REST API or the admin dashboard
 2. Admin creates prompts via the admin dashboard or REST API
-3. PCP dynamically registers each prompt as an `sh-{name}` MCP tool
-4. Developers connect their AI tool to PCP's MCP endpoint
+3. SpecHub dynamically registers each prompt as an `sh-{name}` MCP tool
+4. Developers connect their AI tool to SpecHub's MCP endpoint
 5. Developer invokes `sh-plan build a feature store`
-6. PCP resolves the user's effective policies and objectives from the team chain
-7. PCP applies policy enforcement (prepend/append/inject) to the templates
-8. PCP expands Jinja2 templates → returns `system_message` + `user_message` + `applied_policies` + `objectives`
+6. SpecHub resolves the user's effective policies and objectives from the team chain
+7. SpecHub applies policy enforcement (prepend/append/inject) to the templates
+8. SpecHub expands Jinja2 templates → returns `system_message` + `user_message` + `applied_policies` + `objectives`
 9. The IDE's own LLM uses the returned prompt to generate the response
 
 ## Prompt Composition

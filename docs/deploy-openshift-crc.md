@@ -1,11 +1,11 @@
-# Deploying PCP to OpenShift CRC
+# Deploying SpecHub to OpenShift CRC
 
-Step-by-step guide to deploy the Prompt Control Plane on a local OpenShift cluster using [CRC (CodeReady Containers)](https://developers.redhat.com/products/openshift-local/overview).
+Step-by-step guide to deploy the SpecHub on a local OpenShift cluster using [CRC (CodeReady Containers)](https://developers.redhat.com/products/openshift-local/overview).
 
 ## Prerequisites
 
 - **CRC installed and running** — verify with `crc status`
-- **CRC memory: 14GB+** — CRC defaults to ~11GB which is not enough for OpenShift + PostgreSQL + PCP. Increase before starting:
+- **CRC memory: 14GB+** — CRC defaults to ~11GB which is not enough for OpenShift + PostgreSQL + SpecHub. Increase before starting:
   ```bash
   crc config set memory 14336   # 14GB
   crc start
@@ -24,13 +24,13 @@ oc login -u kubeadmin https://api.crc.testing:6443
 # Verify
 oc whoami
 
-# Create a project for PCP
-oc new-project pcp
+# Create a project for SpecHub
+oc new-project spechub
 ```
 
-## Step 2: Build and Push the PCP Image
+## Step 2: Build and Push the SpecHub Image
 
-CRC has an internal image registry. You need to push the PCP image there.
+CRC has an internal image registry. You need to push the SpecHub image there.
 
 ### Configure Docker Desktop for CRC's Registry
 
@@ -66,15 +66,15 @@ docker login $REGISTRY -u kubeadmin -p $(oc whoami -t)
 # Build the image
 # --provenance=false and --sbom=false are required — without them, Docker BuildKit
 # produces a manifest list with attestations that the OpenShift registry rejects (500 error)
-docker build --provenance=false --sbom=false -t $REGISTRY/pcp/pcp:0.1.0 backend/
+docker build --provenance=false --sbom=false -t $REGISTRY/spechub/spechub:0.1.0 backend/
 
 # Push
-docker push $REGISTRY/pcp/pcp:0.1.0
+docker push $REGISTRY/spechub/spechub:0.1.0
 ```
 
 Verify the image landed in the registry:
 ```bash
-oc get imagestream -n pcp
+oc get imagestream -n spechub
 ```
 
 ## Step 3: Deploy PostgreSQL
@@ -85,9 +85,9 @@ image is already cached in CRC.
 
 ```bash
 oc new-app postgresql-persistent \
-  --param POSTGRESQL_USER=pcp \
-  --param POSTGRESQL_PASSWORD=pcp \
-  --param POSTGRESQL_DATABASE=pcp \
+  --param POSTGRESQL_USER=spechub \
+  --param POSTGRESQL_PASSWORD=spechub \
+  --param POSTGRESQL_DATABASE=spechub \
   --param VOLUME_CAPACITY=1Gi
 ```
 
@@ -101,9 +101,9 @@ oc get pods -w
 > `sh-postgresql` like the Bitnami chart). This affects the Helm install in the
 > next step.
 
-## Step 4: Install the PCP Helm Chart
+## Step 4: Install the SpecHub Helm Chart
 
-The PCP image is referenced differently inside vs outside the cluster:
+The SpecHub image is referenced differently inside vs outside the cluster:
 
 | Context | Registry URL |
 |---------|-------------|
@@ -114,8 +114,8 @@ Install the chart using the **internal** registry path, and override the Postgre
 host to match the OpenShift template service name:
 
 ```bash
-helm install pcp ./charts/pcp \
-  --set image.repository=image-registry.openshift-image-registry.svc:5000/pcp/pcp \
+helm install spechub ./charts/spechub \
+  --set image.repository=image-registry.openshift-image-registry.svc:5000/spechub/spechub \
   --set image.tag=0.1.0 \
   --set postgresql.host=postgresql
 ```
@@ -123,28 +123,28 @@ helm install pcp ./charts/pcp \
 ## Step 5: Verify the Deployment
 
 ```bash
-# Check pods — you should see pcp and postgresql running
+# Check pods — you should see spechub and postgresql running
 oc get pods
 
 # Check the migration job (runs automatically via Helm post-install hook)
 oc get jobs
 
-# Check PCP logs
-oc logs deploy/pcp
+# Check SpecHub logs
+oc logs deploy/spechub
 ```
 
-## Step 6: Expose PCP via an OpenShift Route
+## Step 6: Expose SpecHub via an OpenShift Route
 
 ```bash
-oc expose svc/pcp
-oc get route pcp
+oc expose svc/spechub
+oc get route spechub
 ```
 
-This creates a route like `http://sh-pcp.apps-crc.testing`.
+This creates a route like `http://sh-spechub.apps-crc.testing`.
 
 Test it:
 ```bash
-ROUTE=$(oc get route pcp -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route spechub -o jsonpath='{.spec.host}')
 curl http://$ROUTE/health
 # Expected: {"status":"ok"}
 ```
@@ -162,7 +162,7 @@ curl http://$ROUTE/api/v1/prompts | python3 -m json.tool
 Get the route URL:
 
 ```bash
-oc get route pcp -o jsonpath='{.spec.host}'
+oc get route spechub -o jsonpath='{.spec.host}'
 ```
 
 Update your IDE's MCP config (e.g. `~/.codeium/windsurf/mcp_config.json`):
@@ -170,8 +170,8 @@ Update your IDE's MCP config (e.g. `~/.codeium/windsurf/mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "pcp": {
-      "serverUrl": "http://sh-pcp.apps-crc.testing/mcp"
+    "spechub": {
+      "serverUrl": "http://sh-spechub.apps-crc.testing/mcp"
     }
   }
 }
@@ -182,8 +182,8 @@ Restart your IDE to pick up the new MCP config.
 ## Cleanup
 
 ```bash
-# Remove PCP
-helm uninstall pcp
+# Remove SpecHub
+helm uninstall spechub
 
 # Remove PostgreSQL (deployed via OpenShift template)
 oc delete all -l app=postgresql
@@ -191,7 +191,7 @@ oc delete pvc postgresql
 oc delete secret postgresql
 
 # Delete the project
-oc delete project pcp
+oc delete project spechub
 ```
 
 ## Troubleshooting
@@ -203,7 +203,7 @@ oc delete project pcp
 | **`x509: certificate signed by unknown authority` on `docker push`** | Add the registry to Docker Desktop's insecure registries (see Step 2). |
 | **500 error on `docker push` (layers push but manifest fails)** | Rebuild with `--provenance=false --sbom=false` to produce a simple manifest instead of a manifest list. |
 | **ImagePullBackOff for external images (Docker Hub)** | CRC's VM can't reach external registries due to TLS issues. Use OpenShift built-in templates or push images to the internal registry manually. |
-| **ImagePullBackOff for PCP image** | Verify image was pushed: `oc get imagestream -n pcp`. Ensure the Helm install uses the **internal** registry URL (`image-registry.openshift-image-registry.svc:5000`). |
-| **CrashLoopBackOff on PCP pod** | Check logs: `oc logs deploy/pcp`. Usually a DB connection issue — verify PostgreSQL is running and `postgresql.host` matches the service name. |
-| **Migration job stuck** | Check: `oc logs job/sh-migrate`. DB might not be ready yet. Delete the job and re-run: `oc delete job sh-migrate && helm upgrade pcp ./charts/pcp ...` |
+| **ImagePullBackOff for SpecHub image** | Verify image was pushed: `oc get imagestream -n spechub`. Ensure the Helm install uses the **internal** registry URL (`image-registry.openshift-image-registry.svc:5000`). |
+| **CrashLoopBackOff on SpecHub pod** | Check logs: `oc logs deploy/spechub`. Usually a DB connection issue — verify PostgreSQL is running and `postgresql.host` matches the service name. |
+| **Migration job stuck** | Check: `oc logs job/sh-migrate`. DB might not be ready yet. Delete the job and re-run: `oc delete job sh-migrate && helm upgrade spechub ./charts/spechub ...` |
 | **Route not resolving** | CRC routes use `*.apps-crc.testing`. Verify DNS: `ping apps-crc.testing`. |

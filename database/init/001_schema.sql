@@ -1,4 +1,4 @@
--- PCP Schema Init
+-- SpecHub Schema Init
 -- Generated from alembic migrations 001 + 002 + 003
 -- This runs automatically on first container start via docker-entrypoint-initdb.d
 

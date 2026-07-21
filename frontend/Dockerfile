@@ -25,7 +25,7 @@ RUN chmod -R g=u /app
 
 # BACKEND_URL is read at runtime by next.config.mjs rewrites().
 # Override this per deployment (e.g. http://backend-app:8000 on OpenShift).
-ENV BACKEND_URL=http://pcp:8000
+ENV BACKEND_URL=http://spechub:8000
 
 USER 1001
 EXPOSE 3000

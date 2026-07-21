@@ -24,7 +24,7 @@ async def test_create_api_key(client):
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["raw_key"].startswith("pcp_")
+    assert data["raw_key"].startswith("sh_")
     assert data["key"]["name"] == "ci-pipeline"
     assert data["key"]["prefix"] == data["raw_key"][:12]
     assert data["key"]["is_active"] is True

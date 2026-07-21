@@ -137,7 +137,7 @@ async def test_update_team_as_owner(client, user_client_factory):
     # Set user as team owner
     await client.put(f"/api/v1/teams/{team['id']}", json={"owner_id": user["id"]})
 
-    from src.pcp_server.models import User as UserModel
+    from src.spechub_server.models import User as UserModel
     owner_user = UserModel(
         id=uuid.UUID(user["id"]),
         team_id=uuid.UUID(team["id"]),
@@ -162,7 +162,7 @@ async def test_update_team_as_parent_owner(client, user_client_factory):
     # Set user as parent team owner
     await client.put(f"/api/v1/teams/{parent['id']}", json={"owner_id": user["id"]})
 
-    from src.pcp_server.models import User as UserModel
+    from src.spechub_server.models import User as UserModel
     parent_owner = UserModel(
         id=uuid.UUID(user["id"]),
         team_id=uuid.UUID(parent["id"]),
@@ -184,7 +184,7 @@ async def test_update_team_forbidden_for_non_owner(client, user_client_factory):
     team = await _create_team(client, "ForbidTeam", "forbid-update-team")
     user = await _create_user(client, "random-member-upd", team["id"])
 
-    from src.pcp_server.models import User as UserModel
+    from src.spechub_server.models import User as UserModel
     member_user = UserModel(
         id=uuid.UUID(user["id"]),
         team_id=uuid.UUID(team["id"]),
@@ -549,7 +549,7 @@ async def test_api_key_user_scoped(client):
     assert resp.status_code == 201
     data = resp.json()
     assert data["key"]["user_id"] == user["id"]
-    assert data["raw_key"].startswith("pcp_")
+    assert data["raw_key"].startswith("sh_")
 
     # List keys
     resp = await client.get(f"/api/v1/users/{user['id']}/api-keys")

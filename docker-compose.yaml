@@ -2,20 +2,20 @@ services:
   postgres:
     build: ./database
     environment:
-      POSTGRES_USER: pcp
-      POSTGRES_PASSWORD: pcp
-      POSTGRES_DB: pcp
+      POSTGRES_USER: spechub
+      POSTGRES_PASSWORD: spechub
+      POSTGRES_DB: spechub
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pcp:
+  spechub:
     build: ./backend
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://pcp:pcp@postgres:5432/pcp
+      DATABASE_URL: postgresql+asyncpg://spechub:spechub@postgres:5432/spechub
       AUTH_TOKEN: dev-token-123
     depends_on:
       - postgres
@@ -23,11 +23,11 @@ services:
   frontend:
     build: ./frontend
     environment:
-      BACKEND_URL: http://pcp:8000
+      BACKEND_URL: http://spechub:8000
     ports:
       - "3000:3000"
     depends_on:
-      - pcp
+      - spechub
 
 volumes:
   pgdata:

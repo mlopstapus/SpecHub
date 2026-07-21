@@ -1,4 +1,4 @@
-# Deploying SpecHub (PCP) on OpenShift
+# Deploying SpecHub on OpenShift
 
 This guide covers deploying the full SpecHub stack (frontend, backend, database) on
 **Azure Red Hat OpenShift (ARO)** or any OpenShift 4.x cluster. Two methods are
@@ -49,11 +49,11 @@ Internet
 | Service | Variable | Value |
 |---------|----------|-------|
 | Frontend | `BACKEND_URL` | `http://<backend-service>:8000` |
-| Backend | `DATABASE_URL` | `postgresql+asyncpg://pcp:pcp@<db-service>:5432/pcp` |
+| Backend | `DATABASE_URL` | `postgresql+asyncpg://spechub:spechub@<db-service>:5432/spechub` |
 | Backend | `AUTH_TOKEN` | Your API auth token |
-| Database | `POSTGRES_USER` | `pcp` |
-| Database | `POSTGRES_PASSWORD` | `pcp` |
-| Database | `POSTGRES_DB` | `pcp` |
+| Database | `POSTGRES_USER` | `spechub` |
+| Database | `POSTGRES_PASSWORD` | `spechub` |
+| Database | `POSTGRES_DB` | `spechub` |
 
 > **Important:** The backend auto-normalizes `DATABASE_URL` — if you provide
 > `postgresql://...` it will be rewritten to `postgresql+asyncpg://...` at startup.
@@ -74,9 +74,9 @@ oc new-app \
   --strategy=docker \
   --context-dir=database \
   https://github.com/mlopstapus/SpecHub.git \
-  -e POSTGRES_USER=pcp \
-  -e POSTGRES_PASSWORD=pcp \
-  -e POSTGRES_DB=pcp
+  -e POSTGRES_USER=spechub \
+  -e POSTGRES_PASSWORD=spechub \
+  -e POSTGRES_DB=spechub
 
 # Wait for the build to complete
 oc logs -f bc/database
@@ -94,7 +94,7 @@ oc rollout status deployment/database
 
 Verify:
 ```bash
-oc rsh deployment/database pg_isready -U pcp
+oc rsh deployment/database pg_isready -U spechub
 # Expected: accepting connections
 ```
 
@@ -109,7 +109,7 @@ oc new-app \
   --strategy=docker \
   --context-dir=backend \
   https://github.com/mlopstapus/SpecHub.git \
-  -e DATABASE_URL=postgresql+asyncpg://pcp:pcp@${DB_SVC}:5432/pcp \
+  -e DATABASE_URL=postgresql+asyncpg://spechub:spechub@${DB_SVC}:5432/spechub \
   -e AUTH_TOKEN=dev-token-123 \
   -e LOG_LEVEL=info
 
@@ -192,7 +192,7 @@ oc set env deployment/backend --list
 
 # Update an env var (triggers automatic rollout)
 oc set env deployment/frontend BACKEND_URL=http://backend:8000
-oc set env deployment/backend DATABASE_URL=postgresql+asyncpg://pcp:pcp@database:5432/pcp
+oc set env deployment/backend DATABASE_URL=postgresql+asyncpg://spechub:spechub@database:5432/spechub
 ```
 
 ---
@@ -205,7 +205,7 @@ The chart is published to GHCR as an OCI artifact. You can install it directly
 without cloning the repo:
 
 ```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1 \
+helm install sh oci://ghcr.io/mlopstapus/charts/spechub --version 0.1.1 \
   --set backend.image.repository=$INT_REG/$NS/backend \
   --set backend.image.tag=latest \
   --set frontend.image.repository=$INT_REG/$NS/frontend \
@@ -214,7 +214,7 @@ helm install sh oci://ghcr.io/mlopstapus/charts/pcp --version 0.1.1 \
   --set database.image.tag=latest
 ```
 
-Or use the local chart from a clone: `helm install sh ./charts/pcp ...`
+Or use the local chart from a clone: `helm install sh ./charts/spechub ...`
 
 ### Step 1: Build Images with S2I
 
@@ -251,7 +251,7 @@ inside the cluster.
 Point the Helm chart at the internal registry images built by S2I:
 
 ```bash
-helm install sh ./charts/pcp \
+helm install sh ./charts/spechub \
   --set backend.image.repository=$INT_REG/$NS/backend \
   --set backend.image.tag=latest \
   --set frontend.image.repository=$INT_REG/$NS/frontend \
@@ -278,8 +278,8 @@ Then restart the Helm-managed deployments to pick up the new image:
 # Or manually:
 oc start-build backend --follow
 oc start-build frontend --follow
-oc rollout restart deployment/sh-pcp-backend
-oc rollout restart deployment/sh-pcp-frontend
+oc rollout restart deployment/sh-spechub-backend
+oc rollout restart deployment/sh-spechub-frontend
 ```
 
 ### Alternative: Pre-built Images
@@ -301,7 +301,7 @@ oc create secret docker-registry ghcr-pull-secret \
   --docker-password=<github-pat>
 oc secrets link default ghcr-pull-secret --for=pull
 
-helm install sh ./charts/pcp \
+helm install sh ./charts/spechub \
   --set backend.image.repository=ghcr.io/mlopstapus/spechub-backend \
   --set backend.image.tag=0.1.1 \
   --set frontend.image.repository=ghcr.io/mlopstapus/spechub-frontend \
@@ -313,7 +313,7 @@ helm install sh ./charts/pcp \
 
 **Overriding defaults:**
 ```bash
-helm install sh ./charts/pcp \
+helm install sh ./charts/spechub \
   --set postgresql.password=<strong-password> \
   --set backend.authToken=<your-auth-token> \
   --set database.storage.size=5Gi \
@@ -330,7 +330,7 @@ oc get pods -l app.kubernetes.io/instance=sh
 oc get jobs -l app.kubernetes.io/instance=sh
 
 # Get the frontend route URL
-ROUTE=$(oc get route sh-pcp-frontend -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route sh-spechub-frontend -o jsonpath='{.spec.host}')
 echo "SpecHub is live at: https://${ROUTE}"
 
 # Test
@@ -348,7 +348,7 @@ in `values.yaml`):
 NS=$(oc project -q)
 INT_REG=image-registry.openshift-image-registry.svc:5000
 
-helm upgrade sh oci://ghcr.io/mlopstapus/charts/pcp --version <new-version> \
+helm upgrade sh oci://ghcr.io/mlopstapus/charts/spechub --version <new-version> \
   --set backend.image.repository=$INT_REG/$NS/backend \
   --set backend.image.tag=latest \
   --set frontend.image.repository=$INT_REG/$NS/frontend \
@@ -376,15 +376,15 @@ oc delete pvc -l app.kubernetes.io/instance=sh
 
 | Resource | Name | Purpose |
 |----------|------|---------|
-| Secret | `sh-pcp` | DATABASE_URL, AUTH_TOKEN, postgresql-password |
-| Deployment | `sh-pcp-backend` | FastAPI backend, port 8000 |
-| Service | `sh-pcp-backend` | ClusterIP for backend |
-| Deployment | `sh-pcp-frontend` | Next.js frontend, port 3000 |
-| Service | `sh-pcp-frontend` | ClusterIP for frontend |
-| Route | `sh-pcp-frontend` | TLS edge route (OpenShift) |
-| StatefulSet | `sh-pcp-database` | PostgreSQL with PVC |
-| Service | `sh-pcp-database` | ClusterIP for database |
-| Job | `sh-pcp-migrate` | Alembic migration (Helm hook) |
+| Secret | `sh-spechub` | DATABASE_URL, AUTH_TOKEN, postgresql-password |
+| Deployment | `sh-spechub-backend` | FastAPI backend, port 8000 |
+| Service | `sh-spechub-backend` | ClusterIP for backend |
+| Deployment | `sh-spechub-frontend` | Next.js frontend, port 3000 |
+| Service | `sh-spechub-frontend` | ClusterIP for frontend |
+| Route | `sh-spechub-frontend` | TLS edge route (OpenShift) |
+| StatefulSet | `sh-spechub-database` | PostgreSQL with PVC |
+| Service | `sh-spechub-database` | ClusterIP for database |
+| Job | `sh-spechub-migrate` | Alembic migration (Helm hook) |
 
 ---
 
@@ -394,12 +394,12 @@ To use an existing PostgreSQL instance (e.g. Azure Database for PostgreSQL)
 instead of the built-in StatefulSet:
 
 ```bash
-helm install sh ./charts/pcp \
+helm install sh ./charts/spechub \
   --set database.enabled=false \
   --set postgresql.host=my-pg-server.postgres.database.azure.com \
   --set postgresql.port=5432 \
-  --set postgresql.database=pcp \
-  --set postgresql.username=pcp \
+  --set postgresql.database=spechub \
+  --set postgresql.username=spechub \
   --set postgresql.password=<password>
 ```
 
@@ -410,7 +410,7 @@ helm install sh ./charts/pcp \
 Once deployed, get the route URL and configure your IDE:
 
 ```bash
-ROUTE=$(oc get route sh-pcp-frontend -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route sh-spechub-frontend -o jsonpath='{.spec.host}')
 echo "MCP endpoint: https://${ROUTE}/mcp"
 ```
 
@@ -438,7 +438,7 @@ Add to your MCP config (e.g. `~/.codeium/windsurf/mcp_config.json`):
 | `ENOTFOUND` on service name | Frontend can't resolve backend DNS | Verify service exists: `oc get svc`. Use the exact service name in `BACKEND_URL` |
 | `ImagePullBackOff` | Image not accessible from cluster | Check `oc describe pod <name>` for the exact error. Verify registry credentials and image path |
 | Backend `ConnectionRefusedError` on port 5432 | Database not ready yet | Wait for database pod: `oc rollout status deployment/database`. Backend will retry on next request |
-| Migration job fails | Database not ready when job runs | Delete and re-run: `oc delete job sh-pcp-migrate && helm upgrade sh ./charts/pcp ...` |
+| Migration job fails | Database not ready when job runs | Delete and re-run: `oc delete job sh-spechub-migrate && helm upgrade sh ./charts/spechub ...` |
 | `sharp` missing error in frontend | Old frontend image | Rebuild: `oc start-build frontend --follow` |
 | Route not resolving | DNS not configured | Check: `oc get route`. ARO routes use `*.apps.<cluster>.aroapp.io` — no extra DNS needed |
 

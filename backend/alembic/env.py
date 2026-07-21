@@ -6,11 +6,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from src.pcp_server.models import Base
+from alembic import context
+from src.spechub_server.models import Base
 
 config = context.config
 if config.config_file_name is not None:

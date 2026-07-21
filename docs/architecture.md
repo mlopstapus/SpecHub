@@ -1,18 +1,18 @@
-# PCP Architecture
+# SpecHub Architecture
 
-**Prompt Control Plane — An Open-Source, Self-Hosted Prompt Registry with Hierarchical Governance, Distributed via MCP**
+**SpecHub — An Open-Source, Self-Hosted Prompt Registry with Hierarchical Governance, Distributed via MCP**
 
 ---
 
 ## Overview
 
-PCP is an infrastructure layer for managing, versioning, and distributing LLM prompts across any AI-powered IDE or tool. It solves the fragmentation problem where prompts are siloed inside individual tools (Windsurf, Claude Code, Copilot) with no portability, versioning, or observability.
+SpecHub is an infrastructure layer for managing, versioning, and distributing LLM prompts across any AI-powered IDE or tool. It solves the fragmentation problem where prompts are siloed inside individual tools (Windsurf, Claude Code, Copilot) with no portability, versioning, or observability.
 
-The primary distribution mechanism is **MCP (Model Context Protocol)** — PCP exposes an MCP server that Claude, Windsurf, GitHub Copilot, and any MCP-compatible client can connect to natively. Developers don't need a separate CLI or plugin; their existing AI tools connect directly to the company's PCP instance over the corporate network.
+The primary distribution mechanism is **MCP (Model Context Protocol)** — SpecHub exposes an MCP server that Claude, Windsurf, GitHub Copilot, and any MCP-compatible client can connect to natively. Developers don't need a separate CLI or plugin; their existing AI tools connect directly to the company's SpecHub instance over the corporate network.
 
-PCP does **not** call LLMs — it serves expanded prompts to the IDE, and the IDE's own LLM does the work.
+SpecHub does **not** call LLMs — it serves expanded prompts to the IDE, and the IDE's own LLM does the work.
 
-PCP includes a **hierarchical governance model** based on recursive teams, enabling organizations to define cascading policies and objectives that are automatically enforced during prompt expansion.
+SpecHub includes a **hierarchical governance model** based on recursive teams, enabling organizations to define cascading policies and objectives that are automatically enforced during prompt expansion.
 
 ---
 
@@ -47,7 +47,7 @@ PCP includes a **hierarchical governance model** based on recursive teams, enabl
                           |
                           v
               +-----------+------------+
-              |     PCP Server         |
+              |     SpecHub Server         |
               |  +------------------+  |
               |  | MCP Server       |  |
               |  +------------------+  |
@@ -77,7 +77,7 @@ PCP includes a **hierarchical governance model** based on recursive teams, enabl
 
 ### Hierarchical Governance
 
-PCP organizes entities in a recursive team hierarchy:
+SpecHub organizes entities in a recursive team hierarchy:
 
 ```
 Team (root)
@@ -127,19 +127,19 @@ A versioned template with:
 
 ### Execution Model
 
-PCP is a **prompt source**, not an LLM proxy. It never calls an LLM.
+SpecHub is a **prompt source**, not an LLM proxy. It never calls an LLM.
 
 1. Developer invokes `sh-plan "build a feature store"` in their AI tool
-2. AI tool calls the `sh-plan` MCP tool on the PCP server
-3. PCP looks up the `plan` prompt, resolves the user's effective policies and objectives
-4. PCP applies policy enforcement (prepend/append/inject) to the templates
-5. PCP expands Jinja2 templates with input variables + policy/objective context
-6. PCP returns the expanded `system_message` + `user_message` + applied policies + objectives
+2. AI tool calls the `sh-plan` MCP tool on the SpecHub server
+3. SpecHub looks up the `plan` prompt, resolves the user's effective policies and objectives
+4. SpecHub applies policy enforcement (prepend/append/inject) to the templates
+5. SpecHub expands Jinja2 templates with input variables + policy/objective context
+6. SpecHub returns the expanded `system_message` + `user_message` + applied policies + objectives
 7. The AI tool's own LLM uses the returned prompt to generate the response
 
 ### MCP Integration
 
-PCP exposes an MCP server over Streamable HTTP transport. Every prompt in the registry is automatically exposed as an MCP tool with an `sh-` prefix.
+SpecHub exposes an MCP server over Streamable HTTP transport. Every prompt in the registry is automatically exposed as an MCP tool with an `sh-` prefix.
 
 **Dynamically registered tools:**
 
@@ -154,7 +154,7 @@ PCP exposes an MCP server over Streamable HTTP transport. Every prompt in the re
 - **`sh-` prefix** — explicit routing; no ambiguity with local skills
 - **Dynamic registration** — new prompt → new MCP tool automatically
 - **Optional `project` parameter** — each tool accepts an optional project UUID to layer project context
-- **PCP returns prompts, not LLM responses**
+- **SpecHub returns prompts, not LLM responses**
 - **Bearer token auth** via user-scoped API keys
 
 ---
@@ -283,13 +283,13 @@ PCP exposes an MCP server over Streamable HTTP transport. Every prompt in the re
 ## Project Structure
 
 ```
-pcp/
+spechub/
 ├── backend/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   ├── alembic.ini
 │   ├── alembic/               # Database migrations
-│   ├── src/pcp_server/
+│   ├── src/spechub_server/
 │   │   ├── main.py            # FastAPI app + MCP server entrypoint
 │   │   ├── config.py          # Settings (pydantic-settings)
 │   │   ├── database.py        # SQLAlchemy engine + session
@@ -330,7 +330,7 @@ pcp/
 │   ├── Dockerfile
 │   └── init/                  # SQL init scripts (run on first start)
 │       └── 001_schema.sql
-├── charts/pcp/                # Helm chart for Kubernetes
+├── charts/spechub/                # Helm chart for Kubernetes
 ├── docker-compose.yaml
 └── README.md
 ```

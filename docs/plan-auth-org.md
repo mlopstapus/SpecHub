@@ -99,7 +99,7 @@ The approach uses **email + password auth with JWT tokens**, keeping the system 
 | Breaking existing tests | Tests use a test client that bypasses auth; add auth override fixture |
 | Password security | bcrypt with proper work factor; never store plaintext |
 | JWT secret management | Auto-generated for dev; must be set via env var in production |
-| Single-org assumption | For now, one org per PCP instance; multi-org is a future extension |
+| Single-org assumption | For now, one org per SpecHub instance; multi-org is a future extension |
 
 ---
 

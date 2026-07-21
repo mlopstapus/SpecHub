@@ -16,7 +16,7 @@ without having to manually construct it.
 - **API key creation flow:** `settings/page.tsx` shows a banner with the raw key
   after creation (lines 319-353). Only a copy button for the raw key exists.
 - **MCP endpoint:** Mounted at `/mcp/` on the backend (`main.py:59`). Uses
-  streamable-HTTP transport with `Authorization: Bearer <pcp_key>`.
+  streamable-HTTP transport with `Authorization: Bearer <sh_key>`.
 - **Server URL:** Currently hardcoded to `http://localhost:8000` in dev. In
   production it's the backend host. The frontend already knows the API base URL
   via `lib/api.ts`.
