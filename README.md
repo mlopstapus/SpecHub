@@ -4,6 +4,8 @@ An open-source, self-hosted prompt registry with **hierarchical governance**, di
 
 Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SpecHub never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
 
+> **In progress:** SpecHub is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented and running today in the preserved `legacy/backend/` and `legacy/frontend/` — `docker compose up -d` still builds and runs them. The new root-level scaffold (`pnpm dev`) has no business logic yet.
+
 ## Key Features
 
 - **Prompt Registry** — versioned Jinja2 templates with input schemas, tags, and deprecation
@@ -26,7 +28,7 @@ git clone <repo> && cd spechub
 docker-compose up -d postgres
 
 # Install backend dependencies
-cd backend
+cd legacy/backend
 uv venv --python 3.12 .venv && source .venv/bin/activate
 uv pip install -e ".[dev]"
 
@@ -41,7 +43,7 @@ uvicorn src.spechub_server.main:app --reload --port 8000
 - **MCP endpoint:** http://localhost:8000/mcp/
 - **OpenAPI docs:** http://localhost:8000/docs
 - **Health check:** http://localhost:8000/health
-- **Frontend:** http://localhost:3000 (run `cd frontend && npm run dev`)
+- **Frontend:** http://localhost:3000 (run `cd legacy/frontend && npm run dev`)
 
 ## Deploy with Helm
 
@@ -306,8 +308,8 @@ When expanded, `include_prompt('review')` fetches the `review` prompt, renders i
 ## Running Tests
 
 ```bash
-cd backend
-python -m pytest tests/ -v
+cd legacy/backend
+uv run pytest tests/ -v
 ```
 
 162 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, workflows, and sharing.

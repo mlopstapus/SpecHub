@@ -1,5 +1,7 @@
-frontend/node_modules
-frontend/.next
+legacy/frontend/node_modules
+legacy/frontend/.next
+node_modules
+.next
 .venv
 __pycache__
 *.pyc
