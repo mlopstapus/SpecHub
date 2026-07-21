@@ -30,8 +30,10 @@ CREATE POLICY tenant_isolation ON governance.policies
 
 ```ts
 // app layer, start of every request's transaction
-await db.execute(sql`SET LOCAL app.current_org_id = ${orgId}`);
+await db.execute(sql`select set_config('app.current_org_id', ${orgId}, true)`);
 ```
+
+Use `set_config(name, value, is_local)` rather than a literal `SET LOCAL name = value` statement — Postgres's `SET` command does not accept bind parameters, so `SET LOCAL app.current_org_id = ${orgId}` either fails or forces unsafe string interpolation. `set_config(..., true)` is the parameterizable equivalent (`is_local = true` matches `SET LOCAL`'s transaction-scoped, auto-reset-on-commit/rollback behavior) and is what `shared/db/tenant-context.ts`'s `withTenantContext()` actually implements — see epic `001-typescript-refactor-foundation`'s `002-drizzle-shared-db-kernel`.
 
 Chosen over a role-per-tenant model (too much connection-pool/role-management overhead for Drizzle's pooled connections) or JWT-claim-reading policy functions (couples RLS to the auth layer instead of the request's resolved tenant context). This is a **backstop** per tenet M2 — the app layer's explicit `organization_id` filtering (tenet M1) remains the primary control and what tests target directly.
 
