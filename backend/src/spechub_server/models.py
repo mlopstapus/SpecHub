@@ -252,7 +252,9 @@ class Prompt(Base):
         order_by="PromptVersion.created_at.desc()",
         foreign_keys="[PromptVersion.prompt_id]",
     )
-    shares: Mapped[list["PromptShare"]] = relationship(back_populates="prompt", cascade="all, delete-orphan")
+    shares: Mapped[list["PromptShare"]] = relationship(
+        back_populates="prompt", cascade="all, delete-orphan"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -326,7 +328,9 @@ class Workflow(Base):
 
     user: Mapped["User"] = relationship(back_populates="workflows")
     project: Mapped["Project | None"] = relationship(back_populates="workflows")
-    shares: Mapped[list["WorkflowShare"]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
+    shares: Mapped[list["WorkflowShare"]] = relationship(
+        back_populates="workflow", cascade="all, delete-orphan"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -410,4 +414,6 @@ class PromptUsage(Base):
     prompt_version: Mapped[str] = mapped_column(String(50), nullable=False)
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )

@@ -194,7 +194,9 @@ async def run_workflow(
 async def share_workflow(
     db: AsyncSession, workflow_id: uuid.UUID, target_user_id: uuid.UUID
 ) -> ShareResponse | None:
-    workflow = (await db.execute(select(Workflow).where(Workflow.id == workflow_id))).scalar_one_or_none()
+    workflow = (
+        await db.execute(select(Workflow).where(Workflow.id == workflow_id))
+    ).scalar_one_or_none()
     if not workflow:
         return None
     existing = (
@@ -244,8 +246,12 @@ async def unshare_workflow(
     return True
 
 
-async def list_workflow_shares(db: AsyncSession, workflow_id: uuid.UUID) -> list[ShareResponse] | None:
-    workflow = (await db.execute(select(Workflow).where(Workflow.id == workflow_id))).scalar_one_or_none()
+async def list_workflow_shares(
+    db: AsyncSession, workflow_id: uuid.UUID
+) -> list[ShareResponse] | None:
+    workflow = (
+        await db.execute(select(Workflow).where(Workflow.id == workflow_id))
+    ).scalar_one_or_none()
     if not workflow:
         return None
     result = await db.execute(

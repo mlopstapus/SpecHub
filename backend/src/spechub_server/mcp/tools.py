@@ -169,7 +169,9 @@ async def sh_search(query: str, ctx: Context) -> str:
 
 @mcp.tool(name="sh-context")
 async def sh_context(ctx: Context, project_id: str | None = None) -> str:
-    """Show effective policies and objectives for the authenticated user, optionally within a project context.
+    """Show effective policies and objectives for the authenticated user.
+
+    Optionally scoped within a project context.
 
     Args:
         project_id: Optional UUID of the project to layer on top.
@@ -348,7 +350,9 @@ async def sh_workflow_run(name: str, input: str, ctx: Context) -> str:  # noqa: 
     parts = [f"Workflow: {run_result.workflow_name} ({len(run_result.steps)} steps)"]
     for sr in run_result.steps:
         status_icon = "✓" if sr.status == "success" else "✗"
-        parts.append(f"\n--- {status_icon} {sr.step_id} ({sr.prompt_name} v{sr.prompt_version}) ---")
+        parts.append(
+            f"\n--- {status_icon} {sr.step_id} ({sr.prompt_name} v{sr.prompt_version}) ---"
+        )
         if sr.error:
             parts.append(f"Error: {sr.error}")
         else:

@@ -1,0 +1,56 @@
+# Identity & Access — Contract
+
+**Owner:** Ben Anderson
+**Status:** Draft
+
+## Purpose
+
+Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within an organization, `User` accounts, invitations, sessions, and scoped API keys. This is the context every other bounded context depends on for "who is this and what org/team are they in" — but it exposes those facts as opaque IDs and read contracts, not as raw table access.
+
+## Exposed APIs
+
+| Endpoint / Method | Description | Consumers |
+|---|---|---|
+| `getOrganization(organizationId)` | Org record incl. `planId` pointer | All contexts |
+| `getUser(userId)` | User record (id, orgId, teamId, role) | All contexts |
+| `getTeamChain(teamId)` | Ordered list: team → parent → ... → root | Governance |
+| `authenticateSession(request)` | Resolves the calling user from cookie session | Distribution |
+| `authenticateApiKey(rawKey)` | Resolves the calling user + scopes from a bearer key | Distribution |
+| `createTeam`, `createUser`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write operations | Distribution (route handlers) |
+
+## Events Published
+
+| Event | Payload summary | Consumers |
+|---|---|---|
+| `OrganizationCreated` | orgId, name, createdBy | Billing (provisions default Plan/Entitlement) |
+| `UserJoined` | orgId, userId, teamId | Audit |
+| `TeamCreated` / `TeamReparented` | orgId, teamId, parentTeamId | Governance (invalidates any cached resolution), Audit |
+| `ApiKeyCreated` / `ApiKeyRevoked` | orgId, userId, keyId (never the raw key) | Audit |
+
+## Events Consumed
+
+| Event | From BC | What this BC does with it |
+|---|---|---|
+| `SubscriptionUpdated` | Billing & Entitlements | Nothing directly — Identity never gates its own writes on entitlements itself; callers (Distribution) check entitlements before calling Identity's write APIs (e.g. "can this org create another team") |
+
+## Data Contracts
+
+```ts
+type OrganizationId = string; // uuid
+type UserId = string;
+type TeamId = string;
+
+interface OrgSummary { id: OrganizationId; name: string; slug: string; planId: string }
+interface UserSummary { id: UserId; orgId: OrganizationId; teamId: TeamId; role: "admin" | "member"; email: string }
+interface TeamChainEntry { id: TeamId; name: string; parentTeamId: TeamId | null }
+```
+
+No other context receives a raw `User`/`Team`/`Organization` row — only these summary shapes.
+
+## Stability Guarantees
+
+`OrganizationId`, `UserId`, `TeamId` are stable UUIDs, never reused. `getTeamChain` ordering (self-first, root-last) will not change without a major version bump — Governance's resolution correctness depends on it.
+
+## Breaking Change Policy
+
+Any change to the shapes above, or to team-chain ordering, requires updating this file in the same commit and is called out explicitly in the PR description.

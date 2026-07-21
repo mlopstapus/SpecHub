@@ -26,6 +26,12 @@ logger = logging.getLogger("spechub")
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("SpecHub server starting up")
+    if settings.jwt_secret == "dev-jwt-secret-change-me-in-production":
+        logger.warning(
+            "JWT_SECRET is using the insecure default value. Set the JWT_SECRET "
+            "environment variable before exposing this server beyond local dev — "
+            "anyone with this public default can forge valid auth tokens."
+        )
     async with mcp.session_manager.run():
         yield
     logger.info("SpecHub server shutting down")

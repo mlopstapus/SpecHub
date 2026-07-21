@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from jinja2 import UndefinedError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.spechub_server.auth import get_current_user
 from src.spechub_server.database import get_db
+from src.spechub_server.models import User
 from src.spechub_server.schemas import (
     ExpandRequest,
     ExpandResponse,
@@ -23,7 +25,11 @@ router = APIRouter(prefix="/api/v1", tags=["prompts"])
 
 
 @router.post("/prompts", response_model=PromptResponse, status_code=201)
-async def create_prompt(data: PromptCreate, db: AsyncSession = Depends(get_db)):
+async def create_prompt(
+    data: PromptCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     try:
         result = await prompt_service.create_prompt(db, data)
     except Exception as e:
@@ -41,7 +47,9 @@ async def list_prompts(
     user_id: uuid.UUID | None = None,
     db: AsyncSession = Depends(get_db),
 ):
-    return await prompt_service.list_prompts(db, page=page, page_size=page_size, tag=tag, user_id=user_id)
+    return await prompt_service.list_prompts(
+        db, page=page, page_size=page_size, tag=tag, user_id=user_id
+    )
 
 
 @router.get("/prompts/{name}", response_model=PromptResponse)
@@ -62,7 +70,10 @@ async def get_prompt_versions(name: str, db: AsyncSession = Depends(get_db)):
 
 @router.put("/prompts/{name}", response_model=PromptVersionResponse, status_code=201)
 async def create_version(
-    name: str, data: NewVersionCreate, db: AsyncSession = Depends(get_db)
+    name: str,
+    data: NewVersionCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
         result = await prompt_service.create_version(db, name, data)
@@ -79,14 +90,23 @@ async def create_version(
 
 
 @router.delete("/prompts/{name}", status_code=204)
-async def deprecate_prompt(name: str, db: AsyncSession = Depends(get_db)):
+async def deprecate_prompt(
+    name: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     success = await prompt_service.deprecate_prompt(db, name)
     if not success:
         raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found")
 
 
 @router.post("/prompts/{name}/rollback/{version}", response_model=PromptResponse)
-async def rollback_prompt(name: str, version: str, db: AsyncSession = Depends(get_db)):
+async def rollback_prompt(
+    name: str,
+    version: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     result = await prompt_service.pin_version(db, name, version)
     if not result:
         raise HTTPException(
@@ -138,7 +158,12 @@ async def expand_prompt_version(
 
 
 @router.post("/prompts/{name}/shares", response_model=ShareResponse, status_code=201)
-async def share_prompt(name: str, data: ShareRequest, db: AsyncSession = Depends(get_db)):
+async def share_prompt(
+    name: str,
+    data: ShareRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     result = await prompt_service.share_prompt(db, name, data.user_id)
     if not result:
         raise HTTPException(status_code=404, detail=f"Prompt '{name}' not found")
@@ -154,7 +179,12 @@ async def list_prompt_shares(name: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/prompts/{name}/shares/{user_id}", status_code=204)
-async def unshare_prompt(name: str, user_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+async def unshare_prompt(
+    name: str,
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     success = await prompt_service.unshare_prompt(db, name, user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Share not found")

@@ -27,7 +27,9 @@ async def create_user(
         return await user_service.create_user(db, data)
     except Exception as e:
         if "unique" in str(e).lower():
-            raise HTTPException(status_code=409, detail=f"Username '{data.username}' already exists")
+            raise HTTPException(
+                status_code=409, detail=f"Username '{data.username}' already exists"
+            )
         raise
 
 

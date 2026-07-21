@@ -93,7 +93,7 @@ async def insert_team_between(
     db: AsyncSession, data: TeamCreate, child_team_id: uuid.UUID
 ) -> TeamResponse:
     """Create a new team between parent and child.
-    
+
     The new team gets the child's current parent_team_id.
     The child is reparented under the new team.
     """
@@ -121,7 +121,10 @@ async def insert_team_between(
 
 
 async def get_team_chain(db: AsyncSession, team_id: uuid.UUID) -> list[Team]:
-    """Walk the parent chain from team_id up to the root. Returns [current, parent, grandparent, ...]."""
+    """Walk the parent chain from team_id up to the root.
+
+    Returns [current, parent, grandparent, ...].
+    """
     chain: list[Team] = []
     current_id = team_id
     seen: set[uuid.UUID] = set()

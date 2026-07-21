@@ -74,7 +74,10 @@ async def update_team(
             is_parent_owner = True
 
     if not (is_admin or is_owner or is_parent_owner):
-        raise HTTPException(status_code=403, detail="Only admins, team owners, or parent team owners can update this team")
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins, team owners, or parent team owners can update this team",
+        )
 
     result = await team_service.update_team(db, team_id, data)
     if not result:
@@ -89,7 +92,10 @@ async def insert_team_between(
     admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new team between a child and its current parent. The child is reparented under the new team."""
+    """Create a new team between a child and its current parent.
+
+    The child is reparented under the new team.
+    """
     try:
         return await team_service.insert_team_between(db, data, child_team_id)
     except ValueError as e:

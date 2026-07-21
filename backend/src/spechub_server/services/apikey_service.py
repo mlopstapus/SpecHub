@@ -51,6 +51,11 @@ async def list_api_keys(
     return list(result.scalars().all())
 
 
+async def get_api_key(db: AsyncSession, key_id: uuid.UUID) -> ApiKey | None:
+    result = await db.execute(select(ApiKey).where(ApiKey.id == key_id))
+    return result.scalar_one_or_none()
+
+
 async def revoke_api_key(db: AsyncSession, key_id: uuid.UUID) -> bool:
     result = await db.execute(select(ApiKey).where(ApiKey.id == key_id))
     key = result.scalar_one_or_none()

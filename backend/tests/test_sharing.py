@@ -109,7 +109,9 @@ async def test_share_prompt(db_session: AsyncSession, owned_prompt: Prompt, othe
 
 
 @pytest.mark.asyncio
-async def test_share_prompt_idempotent(db_session: AsyncSession, owned_prompt: Prompt, other_user: User):
+async def test_share_prompt_idempotent(
+    db_session: AsyncSession, owned_prompt: Prompt, other_user: User
+):
     from src.spechub_server.services import prompt_service
 
     r1 = await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
@@ -256,7 +258,9 @@ async def test_list_workflow_shares_not_found(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_unshare_workflow(db_session: AsyncSession, owned_workflow: Workflow, other_user: User):
+async def test_unshare_workflow(
+    db_session: AsyncSession, owned_workflow: Workflow, other_user: User
+):
     from src.spechub_server.services import workflow_service
 
     await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)

@@ -7,8 +7,9 @@ Create Date: 2026-02-20
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision: str = "002"
 down_revision: Union[str, None] = "001"
@@ -27,7 +28,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Backfill any NULLs before making NOT NULL again
-    op.execute("UPDATE prompt_versions SET user_template = '{{ input }}' WHERE user_template IS NULL")
+    op.execute(
+        "UPDATE prompt_versions SET user_template = '{{ input }}' WHERE user_template IS NULL"
+    )
     op.alter_column(
         "prompt_versions",
         "user_template",

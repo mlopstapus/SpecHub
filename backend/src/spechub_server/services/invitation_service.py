@@ -35,7 +35,11 @@ async def create_invitation(
     # Filter expiry in Python to avoid naive/aware datetime issues with SQLite
     existing = result.scalar_one_or_none()
     if existing:
-        exp = existing.expires_at if existing.expires_at.tzinfo else existing.expires_at.replace(tzinfo=timezone.utc)
+        exp = (
+            existing.expires_at
+            if existing.expires_at.tzinfo
+            else existing.expires_at.replace(tzinfo=timezone.utc)
+        )
         if exp <= now:
             existing = None
     if existing:
@@ -93,7 +97,11 @@ async def accept_invitation(
         return None
     if invitation.accepted_at is not None:
         return None
-    exp = invitation.expires_at if invitation.expires_at.tzinfo else invitation.expires_at.replace(tzinfo=timezone.utc)
+    exp = (
+        invitation.expires_at
+        if invitation.expires_at.tzinfo
+        else invitation.expires_at.replace(tzinfo=timezone.utc)
+    )
     if exp < datetime.now(timezone.utc):
         return None
 

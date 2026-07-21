@@ -14,7 +14,12 @@ async def test_create_project(client):
     team_id = await _make_team(client)
     resp = await client.post(
         "/api/v1/projects",
-        json={"name": "My Project", "slug": "my-project", "description": "Test project", "team_id": team_id},
+        json={
+            "name": "My Project",
+            "slug": "my-project",
+            "description": "Test project",
+            "team_id": team_id,
+        },
     )
     assert resp.status_code == 201
     data = resp.json()
@@ -41,7 +46,9 @@ async def test_create_project_duplicate_slug(client):
 @pytest.mark.asyncio
 async def test_list_projects(client):
     team_id = await _make_team(client, slug="list-team")
-    await client.post("/api/v1/projects", json={"name": "Alpha", "slug": "alpha", "team_id": team_id})
+    await client.post(
+        "/api/v1/projects", json={"name": "Alpha", "slug": "alpha", "team_id": team_id}
+    )
     await client.post("/api/v1/projects", json={"name": "Beta", "slug": "beta", "team_id": team_id})
     resp = await client.get("/api/v1/projects")
     assert resp.status_code == 200

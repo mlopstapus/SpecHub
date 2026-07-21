@@ -213,7 +213,9 @@ async def get_invitation_info(token: str, db: AsyncSession = Depends(get_db)):
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
-    expires = inv.expires_at if inv.expires_at.tzinfo else inv.expires_at.replace(tzinfo=timezone.utc)
+    expires = (
+        inv.expires_at if inv.expires_at.tzinfo else inv.expires_at.replace(tzinfo=timezone.utc)
+    )
     if expires < now:
         raise HTTPException(status_code=410, detail="Invitation expired")
     return {
