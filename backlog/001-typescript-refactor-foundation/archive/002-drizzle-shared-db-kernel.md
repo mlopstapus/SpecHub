@@ -1,7 +1,7 @@
 ---
 epic: 001-typescript-refactor-foundation
 feature: 002-drizzle-shared-db-kernel
-status: open
+status: done
 dependencies: ["backlog/000-foundations/002-database-schema-and-tenancy-conventions.md"]
 ---
 

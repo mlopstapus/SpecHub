@@ -1,7 +1,7 @@
 ---
 epic: 001-typescript-refactor-foundation
 feature: 001-nextjs-app-scaffolding
-status: open
+status: done
 dependencies: ["backlog/000-foundations/001-repo-structure-and-module-boundaries.md"]
 ---
 

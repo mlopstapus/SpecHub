@@ -1,0 +1,26 @@
+{
+  "id": "d8a95bd8-082d-45c7-96f9-745dc600f1be",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {
+    "audit": "audit",
+    "billing": "billing",
+    "distribution": "distribution",
+    "governance": "governance",
+    "identity_access": "identity_access",
+    "prompt_registry": "prompt_registry",
+    "workflow": "workflow"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
