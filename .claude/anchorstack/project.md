@@ -29,6 +29,15 @@ Note: backend has no type checker configured (no mypy/pyright). Skipped for now 
 cd backend && ruff check . ; cd frontend && npm run lint
 
 ## Test
-cd backend && python -m pytest tests/ -v
+cd backend && uv run pytest tests/ -v
 
-Note: frontend has no test script configured.
+Note: frontend has no test script configured. Use `uv run pytest` (not bare `python -m pytest`) —
+this repo's deps live in uv's managed venv, and `uv run` works without requiring the venv to be
+manually activated first.
+
+## Rebuild — port conflicts
+This machine runs multiple unrelated Docker Compose projects concurrently (tribe-build, multica,
+supabase stack, seamless-postgres). SpecHub's default ports (5432 postgres, 8000 backend, 3000
+frontend) can collide with them. Confirmed resolution preference: stop the conflicting containers
+from the other project rather than remap SpecHub's ports — ask before stopping anything, since it
+affects other in-progress work.

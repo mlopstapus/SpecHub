@@ -1,6 +1,11 @@
 """Tests for the prompt CRUD REST API and expansion endpoint."""
 
 import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from src.spechub_server.models import Base
 
 
 @pytest.mark.asyncio
@@ -586,3 +591,95 @@ async def test_health(client):
     resp = await client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Endpoint protection — a separate client that does NOT override auth
+# dependencies, so we can test the real auth flow end-to-end.
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def auth_engine():
+    engine = create_async_engine("sqlite+aiosqlite://", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def auth_client(auth_engine) -> AsyncClient:
+    """Client with real auth — no dependency overrides for auth."""
+    session_factory = async_sessionmaker(auth_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    from src.spechub_server.database import get_db
+    from src.spechub_server.main import app
+
+    original_overrides = dict(app.dependency_overrides)
+    app.dependency_overrides = {get_db: override_get_db}
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides = original_overrides
+
+
+@pytest.mark.asyncio
+async def test_create_prompt_no_auth(auth_client):
+    resp = await auth_client.post(
+        "/api/v1/prompts",
+        json={"name": "no-auth-prompt", "version": {"version": "1.0.0", "user_template": "hi"}},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_create_version_no_auth(auth_client):
+    resp = await auth_client.put(
+        "/api/v1/prompts/whatever",
+        json={"version": "2.0.0", "user_template": "hi"},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_deprecate_prompt_no_auth(auth_client):
+    resp = await auth_client.delete("/api/v1/prompts/whatever")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_rollback_prompt_no_auth(auth_client):
+    resp = await auth_client.post("/api/v1/prompts/whatever/rollback/1.0.0")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_share_prompt_no_auth(auth_client):
+    resp = await auth_client.post(
+        "/api/v1/prompts/whatever/shares",
+        json={"user_id": "00000000-0000-0000-0000-000000000000"},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_unshare_prompt_no_auth(auth_client):
+    resp = await auth_client.delete(
+        "/api/v1/prompts/whatever/shares/00000000-0000-0000-0000-000000000000"
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_list_prompts_still_public(auth_client):
+    """Read-only prompt listing does not require auth."""
+    resp = await auth_client.get("/api/v1/prompts")
+    assert resp.status_code == 200
