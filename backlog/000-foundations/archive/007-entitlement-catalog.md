@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 007-entitlement-catalog
-status: open
+status: done
 deliverable: context/entitlements.md
 ---
 

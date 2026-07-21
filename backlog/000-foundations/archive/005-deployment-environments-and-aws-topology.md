@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 005-deployment-environments-and-aws-topology
-status: open
+status: done
 deliverable: context/deployment.md
 ---
 

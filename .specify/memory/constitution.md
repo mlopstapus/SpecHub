@@ -1,19 +1,11 @@
 <!--
 Sync Impact Report
 ==================
-Version change: [TEMPLATE UNFILLED] → 1.0.0 (initial ratification)
-Modified principles: n/a (first fill of template placeholders)
+Version change: 1.0.0 → 1.1.0 (new principle added)
+Modified principles: n/a
 Added sections:
-  - I. Test-First Development (Red-Green-Iterate)
-  - II. Domain-Driven Bounded Contexts
-  - III. Domain Invariants Live in the Domain Layer
-  - IV. Multi-Tenant Isolation by Default
-  - V. Secure by Default
-  - VI. Auditable & Compliant (SOC2)
-  - Technology & Compliance Constraints
-  - Development Workflow & Quality Gates
-  - Governance
-Removed sections: none (template placeholders only)
+  - VII. Feature-Gated by Entitlement (new principle, tenet G1)
+Removed sections: none
 Templates requiring updates:
   - ✅ .specify/templates/plan-template.md — Constitution Check gate is generic
     ("[Gates determined based on constitution file]") and already reads from
@@ -24,7 +16,7 @@ Templates requiring updates:
     references found; no edit needed.
   - ✅ README.md / CLAUDE.md / docs/ — no outdated constitution references
     found.
-Follow-up TODOs: none. Principle IDs (P1, D1, D2, M1-M3, S1-S3, C1-C2) map
+Follow-up TODOs: none. Principle IDs (P1, D1, D2, M1-M3, S1-S3, C1-C2, G1) map
 1:1 to spec/tenets.md; keep both files in sync on amendment.
 -->
 
@@ -122,6 +114,24 @@ is currently hardcoded to `localhost:3000` and the JWT secret ships with a
 working (if labeled) development default; neither should be able to reach
 a real deployment unnoticed.
 
+### VII. Feature-Gated by Entitlement `[G1]`
+Every new feature — a UI surface, a REST route, an MCP tool — MUST be gated
+by a checked entitlement flag before it does real work. Free vs. Paid (and
+future custom-override) availability MUST be controlled by flipping an
+entitlement value read via `resolveEntitlements()`, never by a separate code
+branch, a separate deploy, or a fork. A feature merged without a
+corresponding entitlement key is incomplete, not merely under-configured —
+including features meant for everyone, which MUST gate on a key that
+defaults to enabled for both tiers rather than skipping the gate call
+entirely.
+
+Rationale: PDR-004 established entitlements as per-org data specifically so
+tier boundaries can move without a redeploy. A feature that ships without a
+gate defeats that design and creates retrofit debt — and a real risk of a
+Paid-only feature quietly being available to Free, or vice versa — the
+moment product changes packaging, which is expected to happen often before
+pricing stabilizes.
+
 ## Technology & Compliance Constraints
 
 - **Stack**: Python/FastAPI backend (SQLAlchemy async + asyncpg, Alembic
@@ -158,6 +168,13 @@ a real deployment unnoticed.
   invariant, or anything touching secrets/logging/audit trails MUST be
   checked against the relevant principle above before merge — the "why"
   in each principle names the concrete failure mode to look for.
+- **Feature gating**: a PR that adds a new REST route or MCP tool MUST be
+  checked for a `requireEntitlement`/`hasEntitlement`/`requireUnderLimit`
+  call (Principle VII) before merge — reviewed the same way a new
+  tenant-scoped table is checked for RLS. `context/feature-gating.md`
+  defines the gate primitive and where it lives on the Billing &
+  Entitlements contract; `context/entitlements.md` is the source of truth
+  for which keys exist.
 
 ## Governance
 
@@ -175,4 +192,4 @@ until a dedicated automated check exists — treat that as a standing gap
 this constitution's principles are meant to close over time, not a reason
 to skip review.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-20
+**Version**: 1.1.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-21

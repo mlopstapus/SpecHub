@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 008-third-party-services
-status: open
+status: done
 deliverable: context/third-party-services.md
 ---
 

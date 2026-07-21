@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 004-api-and-error-conventions
-status: open
+status: done
 deliverable: context/api-conventions.md
 ---
 

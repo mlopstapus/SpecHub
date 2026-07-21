@@ -11,7 +11,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   spechub:
-    build: ./backend
+    build: ./legacy/backend
     ports:
       - "8000:8000"
     environment:
@@ -21,7 +21,7 @@ services:
       - postgres
 
   frontend:
-    build: ./frontend
+    build: ./legacy/frontend
     environment:
       BACKEND_URL: http://spechub:8000
     ports:

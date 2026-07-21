@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 002-database-schema-and-tenancy-conventions
-status: open
+status: done
 deliverable: context/database-conventions.md
 ---
 

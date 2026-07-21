@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 001-repo-structure-and-module-boundaries
-status: open
+status: done
 deliverable: context/repo-structure.md
 ---
 

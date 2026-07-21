@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 003-testing-strategy
-status: open
+status: done
 deliverable: context/testing-strategy.md
 ---
 

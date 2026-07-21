@@ -9,9 +9,16 @@ dev-credentials.csv
 dist/
 build/
 
-# Backend scripts (except the Docker entrypoint)
-backend/scripts/*
-!backend/scripts/start.sh
+# Legacy backend scripts (except the Docker entrypoint)
+legacy/backend/scripts/*
+!legacy/backend/scripts/start.sh
+
+# Node.js / Next.js scaffold
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.pnpm-store/
 
 # Virtual environments
 .venv

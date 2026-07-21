@@ -1,7 +1,7 @@
 ---
 type: foundations
 item: 006-auth-and-session-conventions
-status: open
+status: done
 deliverable: context/auth-conventions.md
 ---
 

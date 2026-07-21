@@ -5,9 +5,9 @@ provider: github
 base_branch: main
 
 ## Stack
-Monorepo: Python/FastAPI backend (`backend/`) — SQLAlchemy async + asyncpg, Alembic migrations, MCP server (sh-server), uv for dependency management, ruff for lint, pytest for tests. Next.js 14 + TypeScript frontend (`frontend/`) — Radix UI, Tailwind CSS. Postgres database (`database/`) with custom init image. Docker Compose for local dev; Helm chart (`charts/spechub/`) for Kubernetes deploy, published to GHCR as an OCI artifact.
+Unified pnpm-managed Next.js/TypeScript application at the repo root (`src/`) — App Router, seven bounded-context folders under `src/bcs/` plus `src/shared/{db,ui,config,logging}`, per `context/repo-structure.md`. Currently an empty scaffold (no business logic yet). The previous split Python/FastAPI backend and Next.js 14 frontend are preserved at `legacy/backend/` and `legacy/frontend/` (SQLAlchemy async + asyncpg, Alembic, MCP server, uv/ruff/pytest; Radix UI + Tailwind) and remain what `docker compose up -d` actually runs until later epics port their behavior into `src/`. Postgres database (`database/`) with custom init image. Docker Compose for local dev; Helm chart (`charts/spechub/`) for Kubernetes deploy, published to GHCR as an OCI artifact.
 
-Note: backend is expected to be refactored to TypeScript in a future initiative — re-run as-setup-project after that migration to update stack/commands.
+Note: this is the TypeScript refactor in progress (epic `001-typescript-refactor-foundation`). Re-run as-setup-project once the legacy backend/frontend are fully retired to drop the legacy-specific notes below.
 
 ## Compliance
 hipaa: false
@@ -17,23 +17,32 @@ pci: false
 
 Note: NIST (likely NIST 800-53 / CSF alignment) also called out as in-scope alongside SOC2. Not a dedicated as-finish check yet — flag NIST-relevant controls (access control, audit logging, encryption) manually until a dedicated check exists.
 
-## Rebuild
+## Install
+pnpm install
+
+## Dev
+pnpm dev
+
+## Build
+pnpm build
+
+## Rebuild (self-hosted stack — still runs legacy/backend + legacy/frontend)
 docker compose up -d
 
 ## Type check
-cd frontend && npx tsc --noEmit
+pnpm typecheck
 
-Note: backend has no type checker configured (no mypy/pyright). Skipped for now per user — backend is slated for a future rewrite in TypeScript, at which point tsc coverage will extend to it.
+Note: the new scaffold has strict TypeScript project-wide. Legacy backend has no type checker configured (no mypy/pyright) — it's the code this rewrite is replacing, not something to extend coverage to.
 
 ## Lint
-cd backend && ruff check . ; cd frontend && npm run lint
+pnpm lint
+
+Note: legacy lint commands (`cd legacy/backend && ruff check .` / `cd legacy/frontend && npm run lint`) still work against the preserved legacy code if needed.
 
 ## Test
-cd backend && uv run pytest tests/ -v
+pnpm test
 
-Note: frontend has no test script configured. Use `uv run pytest` (not bare `python -m pytest`) —
-this repo's deps live in uv's managed venv, and `uv run` works without requiring the venv to be
-manually activated first.
+Note: legacy backend tests still run via `cd legacy/backend && uv run pytest tests/ -v` (use `uv run`, not bare `python -m pytest` — deps live in uv's managed venv). If pytest/pytest-asyncio are missing (`ModuleNotFoundError`), the venv only has base deps — run `uv sync --extra dev` first (bare `uv sync` does not install the `dev` optional-dependency group). Legacy frontend has no test script configured. The new scaffold's `pnpm test` currently only runs a trivial smoke test — real test coverage lands with the epics that add real logic.
 
 ## Rebuild — port conflicts
 This machine runs multiple unrelated Docker Compose projects concurrently (tribe-build, multica,
