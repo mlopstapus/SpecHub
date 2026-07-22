@@ -1,5 +1,4 @@
-legacy/frontend/node_modules
-legacy/frontend/.next
+legacy
 node_modules
 .next
 .venv
@@ -7,3 +6,6 @@ __pycache__
 *.pyc
 .git
 .pytest_cache
+.pnpm-store
+*.tsbuildinfo
+.env*
