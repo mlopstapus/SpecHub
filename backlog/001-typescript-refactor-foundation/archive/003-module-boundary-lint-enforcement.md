@@ -1,7 +1,7 @@
 ---
 epic: 001-typescript-refactor-foundation
 feature: 003-module-boundary-lint-enforcement
-status: open
+status: done
 dependencies: ["backlog/000-foundations/001-repo-structure-and-module-boundaries.md"]
 ---
 

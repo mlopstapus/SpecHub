@@ -11,23 +11,23 @@ Wire lint, typecheck, and test into GitHub Actions so every PR is gated before m
 
 ## Requirements
 
-- [ ] GitHub Actions workflow runs on every PR: `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`
-- [ ] Test job spins up a real Postgres instance (per `context/testing-strategy.md`'s Testcontainers-or-equivalent decision) so integration and RLS tests can run in CI, not just unit tests
-- [ ] Module-boundary lint rule (`003-module-boundary-lint-enforcement`) runs as part of the lint step
-- [ ] Build step (`pnpm build`) runs and must succeed before merge
-- [ ] Docker image build step, producing the same image used for both self-hosted distribution and the AWS SaaS deploy (per PDR-006's single-repo model)
-- [ ] Workflow status is a required check on the `main` branch
+- [x] GitHub Actions workflow runs on every PR: `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test` (`.github/workflows/ci.yml`)
+- [x] Test job spins up a real Postgres instance (per `context/testing-strategy.md`'s Testcontainers-or-equivalent decision) so integration and RLS tests can run in CI, not just unit tests (no CI-level `services:` block needed — the existing `startTestDb()`/Testcontainers helper self-provisions per test file; `ci.yml`'s `test` job only needs the runner's Docker daemon)
+- [x] Module-boundary lint rule (`003-module-boundary-lint-enforcement`) runs as part of the lint step (the `lint` job runs `pnpm lint`, which already includes it — no separate step)
+- [x] Build step (`pnpm build`) runs and must succeed before merge (`build` job, gated by `ci-gate`)
+- [x] Docker image build step, producing the same image used for both self-hosted distribution and the AWS SaaS deploy (per PDR-006's single-repo model) — root `Dockerfile` authored, `docker-build` job builds it on every PR (no push), `docker-publish.yml` pushes to `ghcr.io/mlopstapus/spechub` on merge to `main`; verified locally that the built image runs and serves HTTP 200
+- [ ] Workflow status is a required check on the `main` branch — `ci-gate` job exists and is designed as the single required check (see `specs/004-ci-pipeline/contracts/required-check.md`), but branch protection has not yet been configured against a live GitHub Actions run
 
 ## Acceptance Criteria
 
-- [ ] A PR with a failing test is blocked from merging
-- [ ] A PR with a lint violation (including a module-boundary violation) is blocked from merging
-- [ ] A PR with a passing empty test suite (at this epic's stage, before any BC has real tests) merges cleanly
-- [ ] CI run completes in a reasonable time budget for a solo maintainer's iteration loop (target: under 5 minutes for the full pipeline at this stage)
+- [ ] A PR with a failing test is blocked from merging — unverified until this feature's own PR is open and branch protection is configured
+- [ ] A PR with a lint violation (including a module-boundary violation) is blocked from merging — unverified, same reason
+- [ ] A PR with a passing empty test suite (at this epic's stage, before any BC has real tests) merges cleanly — unverified, same reason
+- [ ] CI run completes in a reasonable time budget for a solo maintainer's iteration loop (target: under 5 minutes for the full pipeline at this stage) — unverified until a real workflow run exists
 
 ## Open Questions
 
-- Does the Docker image build run on every PR (slower, catches build breaks early) or only on merge to `main` (faster PR feedback)? Lean toward PR-time given the image is also what self-hosters pull.
+- ~~Does the Docker image build run on every PR (slower, catches build breaks early) or only on merge to `main` (faster PR feedback)? Lean toward PR-time given the image is also what self-hosters pull.~~ **Resolved** via `/speckit-clarify` (see `specs/004-ci-pipeline/spec.md` Clarifications, 2026-07-21): build on every PR (no push), push to the registry only on merge to `main`.
 
 ## Dependencies
 
