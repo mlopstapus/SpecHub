@@ -1,33 +1,33 @@
 services:
-  postgres:
+  database:
     build: ./database
     environment:
-      POSTGRES_USER: spechub
-      POSTGRES_PASSWORD: spechub
-      POSTGRES_DB: spechub
+      # Overridable via a shell env var or a .env file next to this compose
+      # file (e.g. POSTGRES_PASSWORD=<strong-password>) for a real self-hosted
+      # deployment; the "spechub" fallback keeps local dev zero-config.
+      POSTGRES_USER: ${POSTGRES_USER:-spechub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spechub}
+      POSTGRES_DB: ${POSTGRES_DB:-spechub}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spechub} -d ${POSTGRES_DB:-spechub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  spechub:
-    build: ./legacy/backend
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql+asyncpg://spechub:spechub@postgres:5432/spechub
-      AUTH_TOKEN: dev-token-123
-    depends_on:
-      - postgres
-
-  frontend:
-    build: ./legacy/frontend
-    environment:
-      BACKEND_URL: http://spechub:8000
+  app:
+    build: .
     ports:
       - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-spechub}:${POSTGRES_PASSWORD:-spechub}@database:5432/${POSTGRES_DB:-spechub}
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-spechub}:${POSTGRES_PASSWORD:-spechub}@database:5432/${POSTGRES_DB:-spechub}
     depends_on:
-      - spechub
+      database:
+        condition: service_healthy
 
 volumes:
   pgdata:

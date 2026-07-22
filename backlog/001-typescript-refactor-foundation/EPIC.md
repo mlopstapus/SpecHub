@@ -1,7 +1,7 @@
 # Epic 001: TypeScript Refactor Foundation
 
 **Priority:** 1
-**Status:** not-started
+**Status:** done
 **Goal:** Stand up the empty-but-real skeleton of the new unified TypeScript application — scaffolding, database wiring, module-boundary enforcement, CI, and local dev — so that every subsequent bounded-context epic is purely "add domain logic to an already-working shell," not "also figure out the plumbing."
 
 ## Overview
@@ -12,11 +12,11 @@ Nothing here is new product behavior — see epic 002 onward for the actual boun
 
 ## Features
 
-- [ ] [001 - Next.js App Scaffolding](001-nextjs-app-scaffolding.md)
-- [ ] [002 - Drizzle Shared DB Kernel](002-drizzle-shared-db-kernel.md)
-- [ ] [003 - Module Boundary Lint Enforcement](003-module-boundary-lint-enforcement.md)
-- [ ] [004 - CI Pipeline](004-ci-pipeline.md)
-- [ ] [005 - Docker Compose Dev Environment](005-docker-compose-dev-environment.md)
+- [x] [001 - Next.js App Scaffolding](archive/001-nextjs-app-scaffolding.md)
+- [x] [002 - Drizzle Shared DB Kernel](archive/002-drizzle-shared-db-kernel.md)
+- [x] [003 - Module Boundary Lint Enforcement](archive/003-module-boundary-lint-enforcement.md)
+- [x] [004 - CI Pipeline](archive/004-ci-pipeline.md)
+- [x] [005 - Docker Compose Dev Environment](archive/005-docker-compose-dev-environment.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 

@@ -4,7 +4,7 @@ An open-source, self-hosted prompt registry with **hierarchical governance**, di
 
 Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SpecHub never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
 
-> **In progress:** SpecHub is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented and running today in the preserved `legacy/backend/` and `legacy/frontend/` — `docker compose up -d` still builds and runs them. The new root-level scaffold (`pnpm dev`) has no business logic yet.
+> **In progress:** SpecHub is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented today in the preserved `legacy/backend/` and `legacy/frontend/`, but `docker compose up -d` now builds and runs the new unified scaffold (`app`) plus Postgres (`database`) instead — the new scaffold has no business logic yet, so run the legacy backend/frontend manually (see Quickstart below) during the transition.
 
 ## Key Features
 
@@ -24,8 +24,8 @@ Define prompts once, distribute them to every developer's AI tool (Claude, Winds
 ```bash
 git clone <repo> && cd spechub
 
-# Start Postgres (custom image with schema pre-initialized)
-docker-compose up -d postgres
+# Start Postgres
+docker compose up -d database
 
 # Install backend dependencies
 cd legacy/backend
