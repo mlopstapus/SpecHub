@@ -2,6 +2,7 @@ import {
   type AnyPgColumn,
   boolean,
   index,
+  jsonb,
   text,
   timestamp,
   unique,
@@ -123,4 +124,35 @@ export const invitations = identityAccessSchema.table(
     ...timestamps(),
   },
   (table) => [index().on(table.organizationId, table.email)],
+);
+
+/**
+ * A scoped bearer credential for non-browser clients (MCP/API access),
+ * belonging to exactly one user (010-api-keys). Only a SHA-256 hash of the
+ * raw key plus a short display `prefix` are ever stored — the raw value
+ * exists solely in the creation response (research.md §3). `scopes` are
+ * validated structurally (`<resource>:<action>`) and capped at the
+ * creator's own role at creation time only (research.md §1–2); neither
+ * rule is re-derived from this column at read time. No RLS policy yet
+ * either — same deferral `teams`/`users`/`invitations` already carry,
+ * owned by `007-tenant-isolation-tests-and-rls.md`.
+ */
+export const apiKeys = identityAccessSchema.table(
+  "api_keys",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    keyHash: text("key_hash").notNull().unique(),
+    prefix: text("prefix").notNull(),
+    scopes: jsonb("scopes").$type<string[]>().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    isActive: boolean("is_active").notNull().default(true),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    ...timestamps(),
+  },
+  (table) => [index().on(table.organizationId, table.userId)],
 );
