@@ -31,4 +31,4 @@ Port `PromptShare` from the current Python `models.py`/`prompt_service.py` — g
 
 ## Technical Notes
 
-This is the access-control input to `sh-run`'s "not found or not shared with you" check (ported in epic 007's MCP feature) — keep the accessible-prompts query here as the single source of truth Distribution calls into, rather than Distribution re-deriving access logic itself.
+This is the access-control input to the "not found or not shared with you" check on prompt expansion — used by epic 007's REST expand route (and, in turn, its skill-sync CLI feature) today, and by the MCP feature's `sh-run` if that's built later. Keep the accessible-prompts query here as the single source of truth Distribution calls into, rather than each caller re-deriving access logic itself.
