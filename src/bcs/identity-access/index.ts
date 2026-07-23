@@ -32,3 +32,8 @@ export type {
   InvitationRole,
   InvitationState,
 } from "./domain/invitation";
+export { createApiKey } from "./application/create-api-key";
+export { authenticateApiKey } from "./application/authenticate-api-key";
+export { revokeApiKey } from "./application/revoke-api-key";
+export { listApiKeys } from "./application/list-api-keys";
+export type { ApiKey, ApiKeySummary } from "./domain/api-key";

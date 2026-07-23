@@ -15,7 +15,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [x] [003 - User Accounts & Registration](archive/003-user-accounts-and-registration.md)
 - [X] [004 - JWT Session Auth](archive/004-jwt-session-auth.md)
 - [x] [005 - Invitations](archive/005-invitations.md)
-- [ ] [006 - API Keys](006-api-keys.md)
+- [x] [006 - API Keys](archive/006-api-keys.md)
 - [ ] [007 - Tenant Isolation Tests & RLS](007-tenant-isolation-tests-and-rls.md)
 
 *Completed features are moved to `archive/` and checked off here.*
