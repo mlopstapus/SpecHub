@@ -1,7 +1,7 @@
 # Epic 003: Audit & Compliance
 
 **Priority:** 3
-**Status:** not-started
+**Status:** in-progress (item 001's schema/write-path pulled forward ahead of this epic's normal sequencing — see Notes)
 **Goal:** Build the immutable audit log and the transactional write path every subsequent bounded context will call into, so audit coverage is complete from the first mutation onward rather than retrofitted later.
 
 ## Overview
@@ -24,3 +24,5 @@ Built deliberately early — right after Identity & Access, before Governance, P
 ## Notes
 
 Feature 002's retention logic depends on `resolveEntitlements()`, which doesn't exist until epic 008 — build it against a hardcoded Free-tier default (per `bcs/billing-entitlements/OWNERSHIP.md`'s self-host note) and wire in the real entitlement call once epic 008 lands, rather than blocking this epic on billing.
+
+**Sequencing exception (2026-07-23)**: `002-identity-access/008-jwt-session-auth` (still within epic 002, not after it) needed a real audit write path *now* — for login/logout audit events — rather than waiting for this epic to start per its normal "right after Identity & Access [fully finishes]" sequencing. Rather than block that feature or build a throwaway parallel audit mechanism, it pulled item 001's schema/`record()`/redaction/index requirements forward and completed them directly (see that feature's plan.md Complexity Tracking and `001-audit-event-schema-and-write-path.md`, still `status: open`). Item 001's retrofit requirement (wrapping already-shipped epic-002 mutations in `withAudit()`) is untouched and remains this epic's own work whenever it formally starts. New gap surfaced by this: `audit.audit_events` has no RLS policy yet and no existing backlog item owns adding one for the `audit` schema.

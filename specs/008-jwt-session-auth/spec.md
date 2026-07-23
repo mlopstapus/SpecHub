@@ -8,6 +8,13 @@
 
 **Input**: User description: "/Users/ben/repos/SkillCanon/backlog/002-identity-access/004-jwt-session-auth.md"
 
+## Clarifications
+
+### Session 2026-07-23
+
+- Q: Should this feature emit audit events for login (success/failure) and logout itself, or is that left for the audit-compliance epic to retrofit later, the way it's retrofitting other epic-002 mutations? → A: This feature calls the real audit write path itself, now — login success, login failure, and logout are all recorded as audit events by this feature, not deferred to a later retrofit.
+- Q: Epic `003-audit-compliance`'s own `EPIC.md` states it depends on all of `002-identity-access` being done first, which conflicts with the answer above (this feature needs a real audit write path *before* that epic starts). How should that sequencing conflict resolve? → A: Reorder — this feature takes an explicit new dependency on `003-audit-compliance/001-audit-event-schema-and-write-path` specifically (not the whole epic), pulling that one item forward so the real `record()` write path exists when this feature needs it.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Log in with email and password (Priority: P1)
@@ -24,6 +31,7 @@ A registered user visits SkillCanon, enters their email and password, and is sig
 2. **Given** a registered user, **When** they submit an incorrect password, **Then** they receive a generic "invalid credentials" error and no session cookie is set.
 3. **Given** no account exists for a submitted email, **When** that email/password pair is submitted, **Then** the response is identical in form to a wrong-password attempt (no indication the email doesn't exist).
 4. **Given** a user account that has been deactivated, **When** they submit otherwise-correct credentials, **Then** the login is rejected the same way as invalid credentials.
+5. **Given** any login attempt, succeeding or failing, **When** it completes, **Then** an audit event recording the attempt is written, and the submitted password never appears in that record.
 
 ---
 
@@ -56,6 +64,7 @@ A signed-in user chooses to log out, ending their session on this device.
 
 1. **Given** a signed-in user, **When** they log out, **Then** their session cookie is cleared and subsequent requests no longer resolve to their identity.
 2. **Given** no active session, **When** logout is triggered anyway, **Then** it completes without error (idempotent).
+3. **Given** a signed-in user logs out, **When** the logout completes, **Then** an audit event recording the logout is written for that user.
 
 ---
 
@@ -81,6 +90,7 @@ An operator deploying SkillCanon (self-hosted or otherwise) cannot end up runnin
 - How does the system handle a session cookie sent over a non-secure (plain HTTP) connection outside local development? The cookie is marked secure outside local dev, so a compliant browser will not transmit it over plain HTTP in the first place.
 - How does logout behave if the session cookie was already expired at the time of the logout request? Still succeeds (clearing an already-invalid cookie is a no-op in effect, but the endpoint doesn't error).
 - What happens if two devices are signed in as the same user and one of them logs out? Only that device's session cookie is cleared; this feature does not implement cross-device/session-list revocation.
+- What happens if the audit event for a login or logout cannot be written (e.g. the audit store is unavailable)? The login/logout does not silently succeed while its audit record is lost — the action fails closed, consistent with the project's audit-write guarantee that a mutation and its audit record never diverge.
 
 ## Requirements *(mandatory)*
 
@@ -96,6 +106,9 @@ An operator deploying SkillCanon (self-hosted or otherwise) cannot end up runnin
 - **FR-008**: Only active (non-deactivated) user accounts MAY authenticate; a deactivated account's credentials MUST be rejected the same way as invalid credentials.
 - **FR-009**: System MUST refuse to start if the secret used to sign sessions is unset or left at a known placeholder/default value.
 - **FR-010**: Session resolution MUST reject a session whose signature does not verify (tampered or forged), treating it identically to an expired or missing session.
+- **FR-011**: Every login attempt MUST be recorded as an audit event — on success, identifying the authenticated user; on failure, identifying the attempted email (and the matching user, if the email resolves to a real account) — and MUST NOT record the submitted password in any form.
+- **FR-012**: Every logout MUST be recorded as an audit event identifying the user who logged out.
+- **FR-013**: If a login or logout's audit event cannot be written, the login/logout itself MUST NOT be reported as successful — the two never diverge.
 
 ### Key Entities
 
@@ -121,3 +134,4 @@ An operator deploying SkillCanon (self-hosted or otherwise) cannot end up runnin
 - Startup secret validation fails closed (refuses to start) rather than starting with a loud warning — this is the decided severity, not the softer alternative the originating backlog item left open.
 - The session cookie has no explicit domain attribute (host-only) at launch — no subdomain-per-tenant pattern exists yet for this to accommodate.
 - Programmatic/MCP access continues to use the separate scoped API-key mechanism; this feature governs only the browser/web-UI session and does not change or overlap with API-key authentication.
+- This feature takes a new, explicit dependency on `backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md` (the `audit.audit_events` table and `record()` function), pulled forward ahead of that item's originally-planned epic-level sequencing so login/logout audit events (FR-011–FR-013) have a real write path to call. The originating backlog item (`backlog/002-identity-access/004-jwt-session-auth.md`) predates this decision and does not yet list that dependency — its dependency list should be updated to match.

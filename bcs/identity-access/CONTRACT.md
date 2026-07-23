@@ -14,7 +14,9 @@ Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within 
 | `getOrganization(organizationId)` | Org record incl. `planId` pointer | All contexts |
 | `getUser(userId)` | User record (id, orgId, teamId, role, email) | All contexts |
 | `getTeamChain(teamId)` | Ordered list: team → parent → ... → root | Governance |
-| `authenticateSession(request)` | Resolves the calling user from a JWT carried in an httpOnly cookie (web UI) | Distribution |
+| `login(db, email, password)` | Verifies credentials (email looked up across all organizations — see 008-jwt-session-auth's research.md §8 — since email is only unique per-org), returns `{ user, cookie }` or `null`; audit-logs every attempt | Distribution (route handlers) |
+| `authenticateSession(db, cookieHeader)` | Resolves the calling user from a JWT carried in an httpOnly cookie (web UI); `null` for missing/expired/invalid, never throws | Distribution |
+| `logout(db, userId)` | Audit-logs the logout, returns a cookie descriptor clearing the session cookie | Distribution (route handlers) |
 | `authenticateApiKey(rawKey)` | Resolves the calling user + scopes from a bearer key | Distribution |
 | `bootstrapOrganization` | Creates the tenant-root Organization plus (via the real `provisionTeamAndAdmin` callback) the root Team and admin User, atomically — self-hosted first-run only | Distribution (route handlers) |
 | `registerFirstRunAdmin` | First-run registration composition: checks the entitlement gate, then calls `bootstrapOrganization` with the real `provisionTeamAndAdmin` | Distribution (route handlers) |

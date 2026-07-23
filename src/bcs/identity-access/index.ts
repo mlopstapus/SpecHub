@@ -18,3 +18,7 @@ export type { InsertTeamBetweenParams } from "./application/insert-team-between"
 export { listSubTeams } from "./application/list-sub-teams";
 export type { TeamSummary } from "./application/list-sub-teams";
 export type { Team, TeamChainEntry } from "./domain/team";
+export { login } from "./application/login";
+export { authenticateSession } from "./application/authenticate-session";
+export { logout } from "./application/logout";
+export type { SessionCookieDescriptor } from "./domain/session";

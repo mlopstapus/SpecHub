@@ -50,6 +50,23 @@ export async function findById(tx: Tx, id: string) {
   return row;
 }
 
+/**
+ * Returns every user matching `email` (already-lowercased), across *all*
+ * organizations, active or not. Login has no organization context yet to
+ * scope by — email is only unique per-organization (PDR-003), not globally
+ * — so more than one row can come back if two different organizations each
+ * have an account with this email (research.md §8). Includes deactivated
+ * users deliberately: FR-008 requires `login()` to still *reject* them, but
+ * FR-011's audit trail is meant to identify "the matching user, if the
+ * email resolves to a real account" even when that account is deactivated
+ * — that's a real login-attempt-against-a-real-account, not the same as an
+ * unknown email, even though both produce the same public "invalid
+ * credentials" response.
+ */
+export async function findByEmail(tx: Tx, email: string) {
+  return tx.select().from(users).where(eq(users.email, email));
+}
+
 /** Returns `undefined` if the id exists but belongs to a different organization — used for cross-org checks (M3). */
 export async function findByOrgAndId(
   tx: Tx,
