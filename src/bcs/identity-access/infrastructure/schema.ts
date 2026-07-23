@@ -1,7 +1,9 @@
 import {
   type AnyPgColumn,
   boolean,
+  index,
   text,
+  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -87,4 +89,38 @@ export const users = identityAccessSchema.table(
     unique().on(table.organizationId, table.email),
     unique().on(table.organizationId, table.username),
   ],
+);
+
+/**
+ * An open offer for one email to join one organization on one team with one
+ * role (009-invitations). `token` is the unique redemption credential — 32
+ * bytes of CSPRNG output, base64url-encoded (research.md §2), never a
+ * signed/derivable value. State (pending/accepted/expired/revoked) is
+ * derived from `acceptedAt`/`revokedAt`/`expiresAt` at read time
+ * (`deriveInvitationState`), not stored as its own column (research.md §1).
+ * No RLS policy yet either — same deferral `teams`/`users` already carry,
+ * owned by `007-tenant-isolation-tests-and-rls.md`.
+ */
+export const invitations = identityAccessSchema.table(
+  "invitations",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id),
+    email: text("email").notNull(),
+    role: text("role", { enum: ["admin", "member"] })
+      .notNull()
+      .default("member"),
+    token: text("token").notNull().unique(),
+    invitedById: uuid("invited_by_id")
+      .notNull()
+      .references(() => users.id),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ...timestamps(),
+  },
+  (table) => [index().on(table.organizationId, table.email)],
 );

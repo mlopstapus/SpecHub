@@ -43,3 +43,60 @@ export function getJwtExpiryHours(
   }
   return parsed;
 }
+
+/**
+ * Invitation token lifetime, hours. Defaults to 168 (7 days) when unset —
+ * matches the legacy system's configurable-expiry behavior (009-invitations).
+ */
+export function getInvitationExpiryHours(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  const raw = env.INVITATION_EXPIRY_HOURS;
+  if (!raw) {
+    return 168;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      "INVITATION_EXPIRY_HOURS must be a positive number when set. Got: " + raw,
+    );
+  }
+  return parsed;
+}
+
+/** Base URL used to build links (e.g. invitation accept links) shared outside the app. */
+export function getAppBaseUrl(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  return env.APP_BASE_URL || "http://localhost:3000";
+}
+
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string | undefined;
+  pass: string | undefined;
+  from: string;
+}
+
+/**
+ * Generic self-host SMTP fallback per `context/third-party-services.md`.
+ * Returns `null` when unconfigured — the caller (`shared/email`) treats
+ * that as "log instead of send," never a startup failure (unlike
+ * `getJwtSecret`, SMTP has no insecure-default concern to fail closed on).
+ */
+export function getSmtpConfig(
+  env: Record<string, string | undefined> = process.env,
+): SmtpConfig | null {
+  const host = env.SMTP_HOST;
+  if (!host) {
+    return null;
+  }
+  return {
+    host,
+    port: env.SMTP_PORT ? Number(env.SMTP_PORT) : 587,
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+    from: env.SMTP_FROM || "no-reply@example.com",
+  };
+}

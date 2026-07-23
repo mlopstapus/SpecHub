@@ -21,7 +21,11 @@ Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within 
 | `bootstrapOrganization` | Creates the tenant-root Organization plus (via the real `provisionTeamAndAdmin` callback) the root Team and admin User, atomically — self-hosted first-run only | Distribution (route handlers) |
 | `registerFirstRunAdmin` | First-run registration composition: checks the entitlement gate, then calls `bootstrapOrganization` with the real `provisionTeamAndAdmin` | Distribution (route handlers) |
 | `updateTeam`, `reparentTeam`, `insertTeamBetween`, `listSubTeams` | Team hierarchy CRUD/reorganization — enforce same-organization and no-cycle invariants regardless of caller | Distribution (route handlers) |
-| `createTeam`, `createUser`, `updateUser`, `deactivateUser`, `listUsers`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write/read operations — `createUser`/`updateUser`/`deactivateUser` are admin-only (or self-or-admin for a user's own non-privileged fields); `listUsers` is org-scoped, no role restriction | Distribution (route handlers) |
+| `createTeam`, `createUser`, `updateUser`, `deactivateUser`, `listUsers`, `createApiKey`, `revokeApiKey` | Standard write/read operations — `createUser`/`updateUser`/`deactivateUser` are admin-only (or self-or-admin for a user's own non-privileged fields); `listUsers` is org-scoped, no role restriction | Distribution (route handlers) |
+| `inviteUser(db, actingUser, { teamId, email, role? })` | Creates an invitation (org admin or the target team's owner only); best-effort emails the invite link, attempts delivery via `shared/email` (SMTP if configured, else logs); returns `{ id, token }` — the only place the raw token is ever returned (009-invitations) | Distribution (route handlers) |
+| `acceptInvitation(db, token, { username, password, displayName? })` | Redeems a pending, unexpired, unrevoked invitation into a new active user scoped solely to the invitation's own org/team/role — cross-organization redemption is structurally impossible, not just checked; race-safe for concurrent accepts on the same token | Distribution (route handlers) |
+| `revokeInvitation(db, actingUser, invitationId)` | Cancels a pending invitation (org admin or the target team's owner only); idempotent no-op if already revoked; rejects if already accepted | Distribution (route handlers) |
+| `listInvitations(db, actingUser)` | Org-admin-only; lists an organization's invitations with each one's derived state (pending/accepted/expired/revoked), never the raw token | Distribution (route handlers) |
 
 ## Events Published
 
@@ -48,6 +52,7 @@ type TeamId = string;
 interface OrgSummary { id: OrganizationId; name: string; slug: string; planId: string }
 interface UserSummary { id: UserId; orgId: OrganizationId; teamId: TeamId; role: "admin" | "member"; email: string }
 interface TeamChainEntry { id: TeamId; name: string; parentTeamId: TeamId | null }
+interface InvitationSummary { id: string; email: string; teamId: TeamId; role: "admin" | "member"; state: "pending" | "accepted" | "expired" | "revoked"; createdAt: Date }
 ```
 
 No other context receives a raw `User`/`Team`/`Organization` row — only these summary shapes.

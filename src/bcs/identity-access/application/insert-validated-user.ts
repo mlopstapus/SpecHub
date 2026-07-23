@@ -15,6 +15,8 @@ const BCRYPT_COST_FACTOR = 12;
 const MIN_PASSWORD_LENGTH = 8;
 
 export interface InsertValidatedUserParams {
+  /** Optional client-generated id, passed through to `users-repo.insert` (009-invitations). */
+  id?: string;
   organizationId: string;
   teamId: string;
   username: string;
@@ -49,6 +51,7 @@ export async function insertValidatedUser(
 
   try {
     return await insert(tx, {
+      ...(params.id ? { id: params.id } : {}),
       organizationId: params.organizationId,
       teamId: params.teamId,
       username: params.username.toLowerCase(),
