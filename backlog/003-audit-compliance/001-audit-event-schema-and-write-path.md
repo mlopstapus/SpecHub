@@ -15,7 +15,7 @@ Implement the `audit.audit_events` table and the `record()` contract function th
 - [ ] `record(event)` function: inserts one row, callable only from within `withAudit()`'s transaction (not exposed as a standalone unaudited write path)
 - [ ] Redaction: `before`/`after` payloads strip known-sensitive fields (`password_hash`, `key_hash`, raw JWT/API key values) before storage — never store secret material even inside an audit diff
 - [ ] Index on `(organization_id, created_at)` for query and retention-pruning performance
-- [ ] Retrofit epic 002's (identity-access) mutations built before this table existed — organization creation (`backlog/002-identity-access/001-organization-tenant-model.md`), team creation, user creation, invitations, API key issuance — to call `withAudit()` now that a real write path exists; they predate this feature and may not be wrapped yet
+- [ ] Retrofit epic 002's (identity-access) mutations built before this table existed — organization creation (`backlog/002-identity-access/001-organization-tenant-model.md`), team creation/update/reparenting/insert-between (`backlog/002-identity-access/002-team-hierarchy.md` — reparenting specifically is this backlog item's own unmet `TeamReparented` acceptance criterion), user creation, invitations, API key issuance — to call `withAudit()` now that a real write path exists; they predate this feature and may not be wrapped yet
 
 ## Acceptance Criteria
 
