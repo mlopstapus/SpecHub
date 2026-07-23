@@ -10,7 +10,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 
 ## Features
 
-- [ ] [001 - Organization Tenant Model](001-organization-tenant-model.md)
+- [X] [001 - Organization Tenant Model](archive/001-organization-tenant-model.md)
 - [ ] [002 - Team Hierarchy](002-team-hierarchy.md)
 - [ ] [003 - User Accounts & Registration](003-user-accounts-and-registration.md)
 - [ ] [004 - JWT Session Auth](004-jwt-session-auth.md)
