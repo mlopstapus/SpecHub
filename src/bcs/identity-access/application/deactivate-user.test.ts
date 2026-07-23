@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import type { UserSummary } from "../domain/user";
 import { CrossOrgUserAccessError, LastActiveAdminError, NotAuthorizedError } from "../domain/user";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
@@ -10,11 +11,11 @@ import { insertValidatedUser } from "./insert-validated-user";
 import { deactivateUser } from "./deactivate-user";
 
 async function makeOrgWithTeam(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
@@ -28,7 +29,7 @@ async function makeUser(
   teamId: string,
   role: "admin" | "member" = "member",
 ): Promise<UserSummary> {
-  const { id } = await insertValidatedUser(testDb.appDb, {
+  const { id } = await insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -37,7 +38,7 @@ async function makeUser(
     password: "password123",
     role,
   });
-  const row = await findById(testDb.appDb, id);
+  const row = await findById(testDb.authDb, id);
   if (!row) {
     throw new Error("fixture setup failed");
   }
@@ -66,9 +67,13 @@ describe("deactivateUser", () => {
     const admin = await makeUser(testDb, organizationId, teamId, "admin");
     const otherAdmin = await makeUser(testDb, organizationId, teamId, "admin");
 
-    await deactivateUser(testDb.appDb, admin, otherAdmin.id);
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      deactivateUser(tx, admin, otherAdmin.id),
+    );
 
-    const row = await findById(testDb.appDb, otherAdmin.id);
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      findById(tx, otherAdmin.id),
+    );
     expect(row?.isActive).toBe(false);
   });
 
@@ -78,7 +83,9 @@ describe("deactivateUser", () => {
     const target = await makeUser(testDb, organizationId, teamId, "member");
 
     await expect(
-      deactivateUser(testDb.appDb, nonAdmin, target.id),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        deactivateUser(tx, nonAdmin, target.id),
+      ),
     ).rejects.toThrow(NotAuthorizedError);
   });
 
@@ -87,10 +94,14 @@ describe("deactivateUser", () => {
     const soleAdmin = await makeUser(testDb, organizationId, teamId, "admin");
 
     await expect(
-      deactivateUser(testDb.appDb, soleAdmin, soleAdmin.id),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        deactivateUser(tx, soleAdmin, soleAdmin.id),
+      ),
     ).rejects.toThrow(LastActiveAdminError);
 
-    const row = await findById(testDb.appDb, soleAdmin.id);
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      findById(tx, soleAdmin.id),
+    );
     expect(row?.isActive).toBe(true);
   });
 
@@ -111,7 +122,9 @@ describe("deactivateUser", () => {
     );
 
     await expect(
-      deactivateUser(testDb.appDb, admin, targetInOtherOrg.id),
+      withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+        deactivateUser(tx, admin, targetInOtherOrg.id),
+      ),
     ).rejects.toThrow(CrossOrgUserAccessError);
   });
 });

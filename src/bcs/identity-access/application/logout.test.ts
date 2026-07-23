@@ -9,16 +9,16 @@ import { insertValidatedUser } from "./insert-validated-user";
 import { logout } from "./logout";
 
 async function makeUser(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: userId } = await insertValidatedUser(testDb.appDb, {
+  const { id: userId } = await insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `jdoe-${randomUUID()}`,
@@ -48,7 +48,7 @@ describe("logout", () => {
   it("returns a clearing cookie descriptor", async () => {
     const userId = await makeUser(testDb);
 
-    const { cookie } = await logout(testDb.appDb, userId);
+    const { cookie } = await logout(testDb.authDb, userId);
 
     expect(cookie.value).toBe("");
     expect(cookie.maxAge).toBe(0);
@@ -57,9 +57,9 @@ describe("logout", () => {
   it("writes exactly one user.logout audit event", async () => {
     const userId = await makeUser(testDb);
 
-    await logout(testDb.appDb, userId);
+    await logout(testDb.authDb, userId);
 
-    const result = await testDb.appDb.execute<{ action: string }>(
+    const result = await testDb.authDb.execute<{ action: string }>(
       sql`select action from audit.audit_events where actor_user_id = ${userId}`,
     );
     const rows = Array.from(result);
@@ -70,8 +70,8 @@ describe("logout", () => {
   it("succeeds twice in a row for the same user (idempotent)", async () => {
     const userId = await makeUser(testDb);
 
-    await expect(logout(testDb.appDb, userId)).resolves.toBeTruthy();
-    await expect(logout(testDb.appDb, userId)).resolves.toBeTruthy();
+    await expect(logout(testDb.authDb, userId)).resolves.toBeTruthy();
+    await expect(logout(testDb.authDb, userId)).resolves.toBeTruthy();
   });
 
   it("throws and returns no cookie when the audit write fails", async () => {
@@ -80,6 +80,6 @@ describe("logout", () => {
       new Error("audit store unavailable"),
     );
 
-    await expect(logout(testDb.appDb, userId)).rejects.toThrow("audit store unavailable");
+    await expect(logout(testDb.authDb, userId)).rejects.toThrow("audit store unavailable");
   });
 });

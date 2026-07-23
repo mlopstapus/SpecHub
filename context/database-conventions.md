@@ -37,6 +37,21 @@ Use `set_config(name, value, is_local)` rather than a literal `SET LOCAL name = 
 
 Chosen over a role-per-tenant model (too much connection-pool/role-management overhead for Drizzle's pooled connections) or JWT-claim-reading policy functions (couples RLS to the auth layer instead of the request's resolved tenant context). This is a **backstop** per tenet M2 — the app layer's explicit `organization_id` filtering (tenet M1) remains the primary control and what tests target directly.
 
+### The `skillcanon_auth` exception
+
+A small set of operations must legitimately run *before* any organization context exists: resolving a login by email, a session by JWT subject, an API key by hash, or an invitation by its redemption token, and bootstrapping a brand-new organization's first team and admin (including the self-hosted single-org guard's cross-org count). The ordinary `tenant_isolation` policy above can't accommodate these — there is no `current_org_id` to set yet.
+
+Rather than weakening `tenant_isolation` itself, `identity-access`'s tables (`organizations`, `teams`, `users`, `invitations`, `api_keys`) each get a second policy scoped `TO skillcanon_auth`, a dedicated role used only by those specific flows:
+
+```sql
+CREATE POLICY auth_role_bypass ON identity_access.<table>
+  TO skillcanon_auth
+  USING (true)
+  WITH CHECK (true);
+```
+
+`skillcanon_auth` is granted `SELECT, INSERT, UPDATE` (no `DELETE`) on `identity_access` only — narrower than the migration/owner role, which bypasses RLS entirely as the table owner and has unrestricted DDL+DML across all seven schemas. See `specs/011-tenant-isolation-rls/data-model.md` for the full policy shape and which application-layer functions use this role (`login`, `authenticateSession`, `authenticateApiKey`, `acceptInvitation`, `createOrganization`/`bootstrapOrganization`) versus the ordinary `skillcanon_app` connection every other function expects.
+
 ## Soft-delete vs. hard-delete
 
 **Hard-delete everywhere**, with one exception: `audit.audit_events` is never deleted by application code at all — only by the entitlement-driven retention job (`auditRetentionDays`, see `context/entitlements.md`). No other domain in this system has a compliance requirement that survives a row's deletion; Audit & Compliance already captures the before-state of any mutation, so soft-delete's `WHERE deleted_at IS NULL` tax on every query isn't justified elsewhere.

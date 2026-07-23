@@ -40,7 +40,7 @@ describe("registerFirstRunAdmin", () => {
   it("produces a real Organization + root Team + admin User, with the team's owner_id set to the new user's id", async () => {
     const slug = randomUUID();
 
-    const result = await registerFirstRunAdmin(testDb.appDb, {
+    const result = await registerFirstRunAdmin(testDb.authDb, {
       organization: { name: "Acme", slug: `acme-${slug}` },
       team: { name: "Root", slug: `root-${slug}` },
       admin: {
@@ -54,14 +54,14 @@ describe("registerFirstRunAdmin", () => {
     expect(result.teamId).toBeTruthy();
     expect(result.userId).toBeTruthy();
 
-    const [teamRow] = await testDb.appDb
+    const [teamRow] = await testDb.authDb
       .select()
       .from(teams)
       .where(eq(teams.id, result.teamId));
     expect(teamRow?.ownerId).toBe(result.userId);
     expect(teamRow?.organizationId).toBe(result.organizationId);
 
-    const [userRow] = await testDb.appDb
+    const [userRow] = await testDb.authDb
       .select()
       .from(users)
       .where(eq(users.id, result.userId));
@@ -74,7 +74,7 @@ describe("registerFirstRunAdmin", () => {
     const spy = vi.spyOn(entitlementGate, "assertCoreFeaturesEnabled");
 
     const slug = randomUUID();
-    await registerFirstRunAdmin(testDb.appDb, {
+    await registerFirstRunAdmin(testDb.authDb, {
       organization: { name: "Acme", slug: `acme-${slug}` },
       team: { name: "Root", slug: `root-${slug}` },
       admin: {
@@ -97,7 +97,7 @@ describe("registerFirstRunAdmin", () => {
     const slug = randomUUID();
 
     await expect(
-      registerFirstRunAdmin(testDb.appDb, {
+      registerFirstRunAdmin(testDb.authDb, {
         organization: { name: "Acme", slug: `acme-${slug}` },
         team: { name: "Root", slug: `root-${slug}` },
         admin: {
@@ -108,7 +108,7 @@ describe("registerFirstRunAdmin", () => {
       }),
     ).rejects.toThrow(EntitlementRequiredError);
 
-    const orgRows = await testDb.appDb
+    const orgRows = await testDb.authDb
       .select()
       .from(organizations)
       .where(eq(organizations.slug, `acme-${slug}`));
@@ -120,7 +120,7 @@ describe("registerFirstRunAdmin", () => {
     const email = `admin-${slug}@example.com`;
 
     // First registration succeeds, occupying `email` in its own org.
-    await registerFirstRunAdmin(testDb.appDb, {
+    await registerFirstRunAdmin(testDb.authDb, {
       organization: { name: "Acme", slug: `acme-${slug}` },
       team: { name: "Root", slug: `root-${slug}` },
       admin: { username: `admin-${slug}`, email, password: "password123" },
@@ -132,7 +132,7 @@ describe("registerFirstRunAdmin", () => {
     // org already exists).
     const secondSlug = randomUUID();
     await expect(
-      registerFirstRunAdmin(testDb.appDb, {
+      registerFirstRunAdmin(testDb.authDb, {
         organization: { name: "Beta", slug: `beta-${secondSlug}` },
         team: { name: "Root", slug: `root-${secondSlug}` },
         admin: {
@@ -143,7 +143,7 @@ describe("registerFirstRunAdmin", () => {
       }),
     ).rejects.toThrow();
 
-    const orgRows = await testDb.appDb
+    const orgRows = await testDb.authDb
       .select()
       .from(organizations)
       .where(eq(organizations.slug, `beta-${secondSlug}`));

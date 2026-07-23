@@ -11,16 +11,16 @@ import { insertValidatedUser } from "./insert-validated-user";
 import { authenticateSession } from "./authenticate-session";
 
 async function makeOrgTeamUser(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: userId } = await insertValidatedUser(testDb.appDb, {
+  const { id: userId } = await insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `jdoe-${randomUUID()}`,
@@ -58,9 +58,9 @@ describe("authenticateSession", () => {
     const token = await signSessionJwt({ sub: userId, role: "member" });
     const cookieHeader = `${SESSION_COOKIE_NAME}=${token}`;
 
-    await updateUserRow(testDb.appDb, userId, { role: "admin" });
+    await updateUserRow(testDb.authDb, userId, { role: "admin" });
 
-    const resolved = await authenticateSession(testDb.appDb, cookieHeader);
+    const resolved = await authenticateSession(testDb.authDb, cookieHeader);
 
     expect(resolved).toEqual({
       id: userId,
@@ -79,7 +79,7 @@ describe("authenticateSession", () => {
     vi.spyOn(jwtModule, "verifySessionJwt").mockResolvedValueOnce(null);
 
     const resolved = await authenticateSession(
-      testDb.appDb,
+      testDb.authDb,
       `${SESSION_COOKIE_NAME}=some-token`,
     );
 
@@ -92,7 +92,7 @@ describe("authenticateSession", () => {
     const tampered = token.slice(0, -2) + (token.endsWith("a") ? "b" : "a");
 
     const resolved = await authenticateSession(
-      testDb.appDb,
+      testDb.authDb,
       `${SESSION_COOKIE_NAME}=${tampered}`,
     );
 
@@ -100,14 +100,14 @@ describe("authenticateSession", () => {
   });
 
   it("resolves null for null/undefined/empty cookie headers", async () => {
-    expect(await authenticateSession(testDb.appDb, null)).toBeNull();
-    expect(await authenticateSession(testDb.appDb, undefined)).toBeNull();
-    expect(await authenticateSession(testDb.appDb, "")).toBeNull();
+    expect(await authenticateSession(testDb.authDb, null)).toBeNull();
+    expect(await authenticateSession(testDb.authDb, undefined)).toBeNull();
+    expect(await authenticateSession(testDb.authDb, "")).toBeNull();
   });
 
   it("resolves null when the cookie header lacks this feature's session-cookie name", async () => {
     const resolved = await authenticateSession(
-      testDb.appDb,
+      testDb.authDb,
       "some_other_cookie=value",
     );
 

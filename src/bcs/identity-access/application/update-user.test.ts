@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import type { UserSummary } from "../domain/user";
 import { CrossOrgUserAccessError, NotAuthorizedError } from "../domain/user";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
@@ -10,11 +11,11 @@ import { insertValidatedUser } from "./insert-validated-user";
 import { updateUser } from "./update-user";
 
 async function makeOrgWithTeam(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
@@ -28,7 +29,7 @@ async function makeUser(
   teamId: string,
   role: "admin" | "member" = "member",
 ) {
-  const { id } = await insertValidatedUser(testDb.appDb, {
+  const { id } = await insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -37,7 +38,7 @@ async function makeUser(
     password: "password123",
     role,
   });
-  const row = await findById(testDb.appDb, id);
+  const row = await findById(testDb.authDb, id);
   if (!row) {
     throw new Error("fixture setup failed");
   }
@@ -66,11 +67,13 @@ describe("updateUser", () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const self = await makeUser(testDb, organizationId, teamId, "member");
 
-    await updateUser(testDb.appDb, self, self.id, {
-      displayName: "New Name",
-    });
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      updateUser(tx, self, self.id, { displayName: "New Name" }),
+    );
 
-    const row = await findById(testDb.appDb, self.id);
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      findById(tx, self.id),
+    );
     expect(row?.displayName).toBe("New Name");
   });
 
@@ -79,13 +82,15 @@ describe("updateUser", () => {
     const self = await makeUser(testDb, organizationId, teamId, "member");
 
     await expect(
-      updateUser(testDb.appDb, self, self.id, { role: "admin" }),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        updateUser(tx, self, self.id, { role: "admin" }),
+      ),
     ).rejects.toThrow(NotAuthorizedError);
   });
 
   it("allows an admin to update any field for any user in their organization, including teamId", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
-    const { id: otherTeamId } = await insertTeam(testDb.appDb, {
+    const { id: otherTeamId } = await insertTeam(testDb.authDb, {
       organizationId,
       name: "Other Team",
       slug: `other-${randomUUID()}`,
@@ -93,12 +98,16 @@ describe("updateUser", () => {
     const admin = await makeUser(testDb, organizationId, teamId, "admin");
     const target = await makeUser(testDb, organizationId, teamId, "member");
 
-    await updateUser(testDb.appDb, admin, target.id, {
-      teamId: otherTeamId,
-      displayName: "Updated",
-    });
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      updateUser(tx, admin, target.id, {
+        teamId: otherTeamId,
+        displayName: "Updated",
+      }),
+    );
 
-    const row = await findById(testDb.appDb, target.id);
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      findById(tx, target.id),
+    );
     expect(row?.teamId).toBe(otherTeamId);
     expect(row?.displayName).toBe("Updated");
   });
@@ -110,9 +119,11 @@ describe("updateUser", () => {
     const target = await makeUser(testDb, organizationId, teamId, "member");
 
     await expect(
-      updateUser(testDb.appDb, admin, target.id, {
-        teamId: otherOrg.teamId,
-      }),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        updateUser(tx, admin, target.id, {
+          teamId: otherOrg.teamId,
+        }),
+      ),
     ).rejects.toThrow();
   });
 
@@ -133,9 +144,11 @@ describe("updateUser", () => {
     );
 
     await expect(
-      updateUser(testDb.appDb, admin, targetInOtherOrg.id, {
-        displayName: "Hijacked",
-      }),
+      withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+        updateUser(tx, admin, targetInOtherOrg.id, {
+          displayName: "Hijacked",
+        }),
+      ),
     ).rejects.toThrow(CrossOrgUserAccessError);
   });
 });

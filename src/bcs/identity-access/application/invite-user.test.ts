@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import * as email from "@/shared/email";
 import type { UserSummary } from "../domain/user";
 import { DuplicateUserError, InvalidTeamAssignmentError, NotAuthorizedError } from "../domain/user";
@@ -13,6 +14,9 @@ import { insert as insertInvitation, markRevoked } from "../infrastructure/invit
 import { inviteUser } from "./invite-user";
 
 async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
+  // schema (011-tenant-isolation-rls scopes it to identity_access only);
+  // skillcanon_app can already read every schema (0000_create_schemas.sql).
   const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
     sql`select action, resource_id from audit.audit_events where ${whereSql}`,
   );
@@ -20,11 +24,11 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
 }
 
 async function makeOrgWithTeam(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
@@ -39,7 +43,7 @@ async function makePersistedUser(
   teamId: string,
   role: "admin" | "member" = "admin",
 ): Promise<UserSummary> {
-  const { id } = await insertUser(testDb.appDb, {
+  const { id } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `acting-${randomUUID()}`,
@@ -71,10 +75,12 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(testDb.appDb, admin, {
-      teamId,
-      email: "new.hire@example.com",
-    });
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, {
+        teamId,
+        email: "new.hire@example.com",
+      }),
+    );
 
     expect(result.id).toBeTruthy();
     expect(result.token).toBeTruthy();
@@ -83,7 +89,7 @@ describe("inviteUser", () => {
   it("allows the target team's owner (a non-admin) to invite for their own team", async () => {
     const { organizationId, teamId: bootstrapTeamId } = await makeOrgWithTeam(testDb);
     const owner = await makePersistedUser(testDb, organizationId, bootstrapTeamId, "member");
-    const { id: teamId } = await insertTeam(testDb.appDb, {
+    const { id: teamId } = await insertTeam(testDb.authDb, {
       organizationId,
       name: "Owned Team",
       slug: `owned-${randomUUID()}`,
@@ -91,10 +97,8 @@ describe("inviteUser", () => {
     });
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(
-      testDb.appDb,
-      { ...owner, teamId },
-      { teamId, email: "new.hire@example.com" },
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, { ...owner, teamId }, { teamId, email: "new.hire@example.com" }),
     );
 
     expect(result.id).toBeTruthy();
@@ -105,7 +109,9 @@ describe("inviteUser", () => {
     const nonOwnerMember = await makePersistedUser(testDb, organizationId, teamId, "member");
 
     await expect(
-      inviteUser(testDb.appDb, nonOwnerMember, { teamId, email: "new.hire@example.com" }),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        inviteUser(tx, nonOwnerMember, { teamId, email: "new.hire@example.com" }),
+      ),
     ).rejects.toThrow(NotAuthorizedError);
   });
 
@@ -115,16 +121,18 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, orgA.organizationId, orgA.teamId, "admin");
 
     await expect(
-      inviteUser(testDb.appDb, admin, {
-        teamId: orgB.teamId,
-        email: "new.hire@example.com",
-      }),
+      withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+        inviteUser(tx, admin, {
+          teamId: orgB.teamId,
+          email: "new.hire@example.com",
+        }),
+      ),
     ).rejects.toThrow(InvalidTeamAssignmentError);
   });
 
   it("rejects a duplicate active invitation for the same email in the same org, even targeting a different team", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
-    const { id: otherTeamId } = await insertTeam(testDb.appDb, {
+    const { id: otherTeamId } = await insertTeam(testDb.authDb, {
       organizationId,
       name: "Other",
       slug: `other-${randomUUID()}`,
@@ -133,10 +141,14 @@ describe("inviteUser", () => {
     vi.spyOn(email, "sendEmail").mockResolvedValue(undefined);
     const targetEmail = `dup-${randomUUID()}@example.com`;
 
-    await inviteUser(testDb.appDb, admin, { teamId, email: targetEmail });
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, { teamId, email: targetEmail }),
+    );
 
     await expect(
-      inviteUser(testDb.appDb, admin, { teamId: otherTeamId, email: targetEmail }),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        inviteUser(tx, admin, { teamId: otherTeamId, email: targetEmail }),
+      ),
     ).rejects.toThrow(DuplicateInvitationError);
   });
 
@@ -144,7 +156,7 @@ describe("inviteUser", () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     const existingEmail = `existing-${randomUUID()}@example.com`;
-    await insertUser(testDb.appDb, {
+    await insertUser(testDb.authDb, {
       organizationId,
       teamId,
       username: `existing-${randomUUID()}`,
@@ -155,7 +167,9 @@ describe("inviteUser", () => {
     });
 
     await expect(
-      inviteUser(testDb.appDb, admin, { teamId, email: existingEmail }),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        inviteUser(tx, admin, { teamId, email: existingEmail }),
+      ),
     ).rejects.toThrow(DuplicateUserError);
   });
 
@@ -164,7 +178,7 @@ describe("inviteUser", () => {
     const orgB = await makeOrgWithTeam(testDb);
     const admin = await makePersistedUser(testDb, orgA.organizationId, orgA.teamId, "admin");
     const sharedEmail = `shared-${randomUUID()}@example.com`;
-    await insertUser(testDb.appDb, {
+    await insertUser(testDb.authDb, {
       organizationId: orgB.organizationId,
       teamId: orgB.teamId,
       username: `shared-${randomUUID()}`,
@@ -175,10 +189,12 @@ describe("inviteUser", () => {
     });
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(testDb.appDb, admin, {
-      teamId: orgA.teamId,
-      email: sharedEmail,
-    });
+    const result = await withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+      inviteUser(tx, admin, {
+        teamId: orgA.teamId,
+        email: sharedEmail,
+      }),
+    );
 
     expect(result.id).toBeTruthy();
   });
@@ -188,7 +204,7 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     const targetEmail = `stale-${randomUUID()}@example.com`;
 
-    await insertInvitation(testDb.appDb, {
+    await insertInvitation(testDb.authDb, {
       organizationId,
       teamId,
       email: targetEmail,
@@ -200,7 +216,9 @@ describe("inviteUser", () => {
 
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(testDb.appDb, admin, { teamId, email: targetEmail });
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, { teamId, email: targetEmail }),
+    );
 
     expect(result.id).toBeTruthy();
   });
@@ -210,7 +228,7 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     const targetEmail = `revoked-${randomUUID()}@example.com`;
 
-    const { id: revokedInvId } = await insertInvitation(testDb.appDb, {
+    const { id: revokedInvId } = await insertInvitation(testDb.authDb, {
       organizationId,
       teamId,
       email: targetEmail,
@@ -219,11 +237,13 @@ describe("inviteUser", () => {
       invitedById: admin.id,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60),
     });
-    await markRevoked(testDb.appDb, revokedInvId);
+    await markRevoked(testDb.authDb, revokedInvId);
 
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(testDb.appDb, admin, { teamId, email: targetEmail });
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, { teamId, email: targetEmail }),
+    );
 
     expect(result.id).toBeTruthy();
   });
@@ -234,13 +254,17 @@ describe("inviteUser", () => {
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
     const before = Date.now();
 
-    await inviteUser(testDb.appDb, admin, {
-      teamId,
-      email: "new.hire@example.com",
-    });
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, {
+        teamId,
+        email: "new.hire@example.com",
+      }),
+    );
 
-    const rows = await testDb.appDb.execute<{ expires_at: string }>(
-      sql`select expires_at from identity_access.invitations where organization_id = ${organizationId}`,
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.execute<{ expires_at: string }>(
+        sql`select expires_at from identity_access.invitations where organization_id = ${organizationId}`,
+      ),
     );
     const expiresAt = new Date(rows[0]!.expires_at).getTime();
     const expectedMs = 168 * 60 * 60 * 1000;
@@ -253,10 +277,12 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     vi.spyOn(email, "sendEmail").mockRejectedValueOnce(new Error("smtp down"));
 
-    const result = await inviteUser(testDb.appDb, admin, {
-      teamId,
-      email: "new.hire@example.com",
-    });
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, {
+        teamId,
+        email: "new.hire@example.com",
+      }),
+    );
 
     expect(result.id).toBeTruthy();
   });
@@ -266,10 +292,12 @@ describe("inviteUser", () => {
     const admin = await makePersistedUser(testDb, organizationId, teamId, "admin");
     vi.spyOn(email, "sendEmail").mockResolvedValueOnce(undefined);
 
-    const result = await inviteUser(testDb.appDb, admin, {
-      teamId,
-      email: "new.hire@example.com",
-    });
+    const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      inviteUser(tx, admin, {
+        teamId,
+        email: "new.hire@example.com",
+      }),
+    );
 
     const rows = await queryAuditEvents(
       testDb,

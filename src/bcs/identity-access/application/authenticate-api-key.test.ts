@@ -12,17 +12,17 @@ async function makeUser(
   testDb: TestDb,
   role: "admin" | "member" = "member",
 ): Promise<UserSummary> {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
   const email = `user-${randomUUID()}@example.com`;
-  const { id } = await insertUser(testDb.appDb, {
+  const { id } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -47,12 +47,12 @@ describe("authenticateApiKey", () => {
 
   it("resolves the correct user, organization, and scopes for a valid key", async () => {
     const user = await makeUser(testDb, "member");
-    const { rawKey } = await createApiKey(testDb.appDb, user, {
+    const { rawKey } = await createApiKey(testDb.authDb, user, {
       name: "My IDE",
       scopes: ["prompts:read"],
     });
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
 
     expect(result?.user.id).toBe(user.id);
     expect(result?.user.orgId).toBe(user.orgId);
@@ -60,13 +60,13 @@ describe("authenticateApiKey", () => {
   });
 
   it("returns null for an unrecognized or malformed key, without throwing", async () => {
-    const result = await authenticateApiKey(testDb.appDb, "not-a-real-key");
+    const result = await authenticateApiKey(testDb.authDb, "not-a-real-key");
     expect(result).toBeNull();
   });
 
   it("returns null for a revoked key", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "My IDE",
       scopes: ["prompts:read"],
     });
@@ -74,80 +74,80 @@ describe("authenticateApiKey", () => {
     const { markRevoked, findByHash } = await import("../infrastructure/api-keys-repo");
     const { createHash } = await import("node:crypto");
     const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const row = await findByHash(testDb.appDb, keyHash);
-    await markRevoked(testDb.appDb, row!.id);
+    const row = await findByHash(testDb.authDb, keyHash);
+    await markRevoked(testDb.authDb, row!.id);
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result).toBeNull();
   });
 
   it("returns null for an expired key even while still active", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "My IDE",
       scopes: ["prompts:read"],
       expiresAt: new Date(Date.now() - 1000),
     });
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result).toBeNull();
   });
 
   it("returns null when the owning user has been deactivated", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "My IDE",
       scopes: ["prompts:read"],
     });
-    await updateUserRow(testDb.appDb, admin.id, { isActive: false });
+    await updateUserRow(testDb.authDb, admin.id, { isActive: false });
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result).toBeNull();
   });
 
   it("updates last_used_at on a successful authentication", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "My IDE",
       scopes: ["prompts:read"],
     });
 
-    await authenticateApiKey(testDb.appDb, rawKey);
+    await authenticateApiKey(testDb.authDb, rawKey);
 
     const { createHash } = await import("node:crypto");
     const { findByHash } = await import("../infrastructure/api-keys-repo");
     const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const row = await findByHash(testDb.appDb, keyHash);
+    const row = await findByHash(testDb.authDb, keyHash);
     expect(row?.lastUsedAt).toBeInstanceOf(Date);
   });
 
   it("does not update last_used_at on a failed authentication", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "My IDE",
       scopes: ["prompts:read"],
       expiresAt: new Date(Date.now() - 1000),
     });
 
-    await authenticateApiKey(testDb.appDb, rawKey);
+    await authenticateApiKey(testDb.authDb, rawKey);
 
     const { createHash } = await import("node:crypto");
     const { findByHash } = await import("../infrastructure/api-keys-repo");
     const keyHash = createHash("sha256").update(rawKey).digest("hex");
-    const row = await findByHash(testDb.appDb, keyHash);
+    const row = await findByHash(testDb.authDb, keyHash);
     expect(row?.lastUsedAt).toBeNull();
   });
 
   it("still authenticates with the originally-granted scope after the owner's role is downgraded (FR-003 is creation-time-only)", async () => {
     const admin = await makeUser(testDb, "admin");
-    const { rawKey } = await createApiKey(testDb.appDb, admin, {
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
       name: "CI job",
       scopes: ["prompts:write"],
     });
 
-    await updateUserRow(testDb.appDb, admin.id, { role: "member" });
+    await updateUserRow(testDb.authDb, admin.id, { role: "member" });
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result?.scopes).toEqual(["prompts:write"]);
   });
 });

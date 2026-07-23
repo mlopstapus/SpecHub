@@ -14,16 +14,16 @@ import {
 } from "./api-keys-repo";
 
 async function makeFixture(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: userId } = await insertUser(testDb.appDb, {
+  const { id: userId } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -49,7 +49,7 @@ describe("api-keys-repo", () => {
   it("inserts a key and returns the generated id", async () => {
     const { organizationId, userId } = await makeFixture(testDb);
 
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "My IDE",
@@ -65,7 +65,7 @@ describe("api-keys-repo", () => {
     const { organizationId, userId } = await makeFixture(testDb);
     const suppliedId = randomUUID();
 
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       id: suppliedId,
       organizationId,
       userId,
@@ -81,7 +81,7 @@ describe("api-keys-repo", () => {
   it("findByHash returns the matching row", async () => {
     const { organizationId, userId } = await makeFixture(testDb);
     const keyHash = `hash-${randomUUID()}`;
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "My IDE",
@@ -90,20 +90,20 @@ describe("api-keys-repo", () => {
       scopes: ["prompts:read"],
     });
 
-    const row = await findByHash(testDb.appDb, keyHash);
+    const row = await findByHash(testDb.authDb, keyHash);
 
     expect(row?.id).toBe(id);
   });
 
   it("findByHash returns undefined for no match", async () => {
-    const row = await findByHash(testDb.appDb, `nonexistent-${randomUUID()}`);
+    const row = await findByHash(testDb.authDb, `nonexistent-${randomUUID()}`);
     expect(row).toBeUndefined();
   });
 
   it("findByOrgAndId returns undefined when the id belongs to a different organization (M3)", async () => {
     const fixtureA = await makeFixture(testDb);
     const fixtureB = await makeFixture(testDb);
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       organizationId: fixtureA.organizationId,
       userId: fixtureA.userId,
       name: "My IDE",
@@ -112,7 +112,7 @@ describe("api-keys-repo", () => {
       scopes: ["prompts:read"],
     });
 
-    const row = await findByOrgAndId(testDb.appDb, fixtureB.organizationId, id);
+    const row = await findByOrgAndId(testDb.authDb, fixtureB.organizationId, id);
 
     expect(row).toBeUndefined();
   });
@@ -120,7 +120,7 @@ describe("api-keys-repo", () => {
   it("listByOrgAndUser returns only that user's keys, newest first", async () => {
     const { organizationId, userId } = await makeFixture(testDb);
     const otherFixture = await makeFixture(testDb);
-    await insert(testDb.appDb, {
+    await insert(testDb.authDb, {
       organizationId: otherFixture.organizationId,
       userId: otherFixture.userId,
       name: "Other user's key",
@@ -128,7 +128,7 @@ describe("api-keys-repo", () => {
       prefix: "sk_abc123",
       scopes: ["prompts:read"],
     });
-    const { id: firstId } = await insert(testDb.appDb, {
+    const { id: firstId } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "First",
@@ -136,7 +136,7 @@ describe("api-keys-repo", () => {
       prefix: "sk_abc123",
       scopes: ["prompts:read"],
     });
-    const { id: secondId } = await insert(testDb.appDb, {
+    const { id: secondId } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "Second",
@@ -145,7 +145,7 @@ describe("api-keys-repo", () => {
       scopes: ["prompts:read"],
     });
 
-    const rows = await listByOrgAndUser(testDb.appDb, organizationId, userId);
+    const rows = await listByOrgAndUser(testDb.authDb, organizationId, userId);
 
     expect(rows.map((r) => r.id).sort()).toEqual([firstId, secondId].sort());
     expect(rows[0]?.id).toBe(secondId);
@@ -153,7 +153,7 @@ describe("api-keys-repo", () => {
 
   it("updateLastUsedAt sets last_used_at", async () => {
     const { organizationId, userId } = await makeFixture(testDb);
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "My IDE",
@@ -162,15 +162,15 @@ describe("api-keys-repo", () => {
       scopes: ["prompts:read"],
     });
 
-    await updateLastUsedAt(testDb.appDb, id);
-    const row = await findByOrgAndId(testDb.appDb, organizationId, id);
+    await updateLastUsedAt(testDb.authDb, id);
+    const row = await findByOrgAndId(testDb.authDb, organizationId, id);
 
     expect(row?.lastUsedAt).toBeInstanceOf(Date);
   });
 
   it("markRevoked sets is_active to false", async () => {
     const { organizationId, userId } = await makeFixture(testDb);
-    const { id } = await insert(testDb.appDb, {
+    const { id } = await insert(testDb.authDb, {
       organizationId,
       userId,
       name: "My IDE",
@@ -179,8 +179,8 @@ describe("api-keys-repo", () => {
       scopes: ["prompts:read"],
     });
 
-    await markRevoked(testDb.appDb, id);
-    const row = await findByOrgAndId(testDb.appDb, organizationId, id);
+    await markRevoked(testDb.authDb, id);
+    const row = await findByOrgAndId(testDb.authDb, organizationId, id);
 
     expect(row?.isActive).toBe(false);
   });

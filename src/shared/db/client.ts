@@ -10,7 +10,7 @@ const PLACEHOLDER_MARKER = "REPLACE_ME";
  * overridden in tests.
  */
 export function getConnectionString(
-  name: "DATABASE_URL" | "MIGRATION_DATABASE_URL",
+  name: "DATABASE_URL" | "MIGRATION_DATABASE_URL" | "AUTH_DATABASE_URL",
   env: Record<string, string | undefined> = process.env,
 ): string {
   const value = env[name];
@@ -65,5 +65,31 @@ function getDb(): PostgresJsDatabase {
 export const db: PostgresJsDatabase = new Proxy({} as PostgresJsDatabase, {
   get(_target, prop, receiver) {
     return Reflect.get(getDb() as object, prop, receiver);
+  },
+});
+
+let lazyAuthDb: PostgresJsDatabase | undefined;
+
+function getAuthDb(): PostgresJsDatabase {
+  if (!lazyAuthDb) {
+    lazyAuthDb = createRoleClient(getConnectionString("AUTH_DATABASE_URL"), {
+      prepare: false,
+    });
+  }
+  return lazyAuthDb;
+}
+
+/**
+ * Connected via `skillcanon_auth` — a role scoped to `identity_access` only,
+ * unrestricted by organization there, but with no access to any other
+ * schema (011-tenant-isolation-rls). Used only by identity-access flows that
+ * must resolve an identity or bootstrap a tenant before any organization
+ * context exists: `login`, `authenticateSession`, `authenticateApiKey`,
+ * `acceptInvitation`, and `createOrganization`/`bootstrapOrganization`. Every
+ * other exposed function in this codebase expects the ordinary `db` above.
+ */
+export const authDb: PostgresJsDatabase = new Proxy({} as PostgresJsDatabase, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getAuthDb() as object, prop, receiver);
   },
 });

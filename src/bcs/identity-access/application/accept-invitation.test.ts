@@ -16,6 +16,9 @@ import { insert as insertInvitation, markRevoked } from "../infrastructure/invit
 import { acceptInvitation } from "./accept-invitation";
 
 async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
+  // schema (011-tenant-isolation-rls scopes it to identity_access only);
+  // skillcanon_app can already read every schema (0000_create_schemas.sql).
   const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
     sql`select action, resource_id from audit.audit_events where ${whereSql}`,
   );
@@ -23,16 +26,16 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
 }
 
 async function makeOrgTeamAdmin(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: adminId } = await insertUser(testDb.appDb, {
+  const { id: adminId } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `admin-${randomUUID()}`,
@@ -50,7 +53,7 @@ async function makeInvitation(
   overrides: { expiresAt?: Date; email?: string; role?: "admin" | "member" } = {},
 ) {
   const token = randomUUID();
-  const { id } = await insertInvitation(testDb.appDb, {
+  const { id } = await insertInvitation(testDb.authDb, {
     organizationId: fixture.organizationId,
     teamId: fixture.teamId,
     email: overrides.email ?? `new.hire-${randomUUID()}@example.com`,
@@ -77,7 +80,7 @@ describe("acceptInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { token } = await makeInvitation(testDb, fixture, { role: "admin" });
 
-    const { user } = await acceptInvitation(testDb.appDb, token, {
+    const { user } = await acceptInvitation(testDb.authDb, token, {
       username: `newhire-${randomUUID()}`,
       password: "correct horse battery staple",
     });
@@ -92,7 +95,7 @@ describe("acceptInvitation", () => {
     const orgB = await makeOrgTeamAdmin(testDb);
     const { token } = await makeInvitation(testDb, orgA);
 
-    const { user } = await acceptInvitation(testDb.appDb, token, {
+    const { user } = await acceptInvitation(testDb.authDb, token, {
       username: `newhire-${randomUUID()}`,
       password: "correct horse battery staple",
     });
@@ -105,13 +108,13 @@ describe("acceptInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { token } = await makeInvitation(testDb, fixture);
 
-    await acceptInvitation(testDb.appDb, token, {
+    await acceptInvitation(testDb.authDb, token, {
       username: `newhire-${randomUUID()}`,
       password: "correct horse battery staple",
     });
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `newhire2-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -125,7 +128,7 @@ describe("acceptInvitation", () => {
     });
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `newhire-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -135,10 +138,10 @@ describe("acceptInvitation", () => {
   it("rejects a revoked token", async () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id, token } = await makeInvitation(testDb, fixture);
-    await markRevoked(testDb.appDb, id);
+    await markRevoked(testDb.authDb, id);
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `newhire-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -147,7 +150,7 @@ describe("acceptInvitation", () => {
 
   it("rejects an unknown token", async () => {
     await expect(
-      acceptInvitation(testDb.appDb, "not-a-real-token", {
+      acceptInvitation(testDb.authDb, "not-a-real-token", {
         username: `newhire-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -157,7 +160,7 @@ describe("acceptInvitation", () => {
   it("rejects a username collision without consuming the token — a retry with a different username succeeds", async () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const takenUsername = `taken-${randomUUID()}`;
-    await insertUser(testDb.appDb, {
+    await insertUser(testDb.authDb, {
       organizationId: fixture.organizationId,
       teamId: fixture.teamId,
       username: takenUsername,
@@ -169,13 +172,13 @@ describe("acceptInvitation", () => {
     const { token } = await makeInvitation(testDb, fixture);
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: takenUsername,
         password: "correct horse battery staple",
       }),
     ).rejects.toThrow(DuplicateUserError);
 
-    const { user } = await acceptInvitation(testDb.appDb, token, {
+    const { user } = await acceptInvitation(testDb.authDb, token, {
       username: `available-${randomUUID()}`,
       password: "correct horse battery staple",
     });
@@ -187,7 +190,7 @@ describe("acceptInvitation", () => {
     const { token } = await makeInvitation(testDb, fixture);
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `newhire-${randomUUID()}`,
         password: "short1",
       }),
@@ -210,11 +213,11 @@ describe("acceptInvitation", () => {
     const { token } = await makeInvitation(testDb, fixture);
 
     const results = await Promise.allSettled([
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `race-a-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `race-b-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -230,7 +233,7 @@ describe("acceptInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id: invitationId, token } = await makeInvitation(testDb, fixture);
 
-    await acceptInvitation(testDb.appDb, token, {
+    await acceptInvitation(testDb.authDb, token, {
       username: `newhire-${randomUUID()}`,
       password: "correct horse battery staple",
     });

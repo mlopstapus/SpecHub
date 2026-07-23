@@ -14,7 +14,7 @@ Postgres table `identity_access.organizations`. The tenant-root aggregate — ca
 | `created_at` | `timestamptz` | `not null`, `default now()` | Standard column (`shared/db/columns.ts`'s `timestamps()`) |
 | `updated_at` | `timestamptz` | `not null`, `default now()` | Standard column; no update path exists yet (FR-009), so this never actually changes post-insert until a future feature adds one |
 
-**Row-Level Security**: Not applied to this table — see plan.md's Constitution Check / Complexity Tracking. There is no `organization_id` column to scope a policy against; this table defines the tenant boundary rather than living inside one.
+**Row-Level Security**: *Superseded by `011-tenant-isolation-rls`* — this table now has RLS enabled, with the policy matching the row's own `id` against the session-scoped `app.current_org_id` (rather than an `organization_id` column, which this table still has none of). See `specs/011-tenant-isolation-rls/data-model.md` for the exact policy shape and the `skillcanon_auth` role that legitimately bypasses it for credential-resolution/bootstrap operations. The original reasoning below (this table defining the tenant boundary rather than living inside one) is why the policy predicate differs in shape from every other table's, not why RLS was skipped.
 
 **Invariants**:
 - Self-hosted mode (per `isSelfHosted()`, research.md §1): at most one row may ever exist. Enforced in the application layer (`createOrganization`), serialized against concurrent attempts via a Postgres advisory lock (research.md §3) — not a DB constraint, since the same table legitimately holds many rows in SaaS mode.

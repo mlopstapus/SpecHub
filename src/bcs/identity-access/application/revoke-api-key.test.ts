@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import * as auditCompliance from "@/bcs/audit-compliance";
 import { NotAuthorizedError, type UserSummary } from "../domain/user";
 import { ApiKeyNotFoundError } from "../domain/api-key";
@@ -13,6 +14,9 @@ import { authenticateApiKey } from "./authenticate-api-key";
 import { revokeApiKey } from "./revoke-api-key";
 
 async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
+  // schema (011-tenant-isolation-rls scopes it to identity_access only);
+  // skillcanon_app can already read every schema (0000_create_schemas.sql).
   const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
     sql`select action, resource_id from audit.audit_events where ${whereSql}`,
   );
@@ -20,11 +24,11 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
 }
 
 async function makeOrgWithTeam(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
@@ -39,7 +43,7 @@ async function makeUser(
   role: "admin" | "member" = "member",
 ): Promise<UserSummary> {
   const email = `user-${randomUUID()}@example.com`;
-  const { id } = await insertUser(testDb.appDb, {
+  const { id } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -69,14 +73,13 @@ describe("revokeApiKey", () => {
   it("allows a key's owner to revoke their own key", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const owner = await makeUser(testDb, organizationId, teamId, "member");
-    const { id, rawKey } = await createApiKey(testDb.appDb, owner, {
-      name: "My IDE",
-      scopes: ["prompts:read"],
-    });
+    const { id, rawKey } = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      createApiKey(tx, owner, { name: "My IDE", scopes: ["prompts:read"] }),
+    );
 
-    await revokeApiKey(testDb.appDb, owner, id);
+    await withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, owner, id));
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result).toBeNull();
   });
 
@@ -84,14 +87,13 @@ describe("revokeApiKey", () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const owner = await makeUser(testDb, organizationId, teamId, "member");
     const admin = await makeUser(testDb, organizationId, teamId, "admin");
-    const { id, rawKey } = await createApiKey(testDb.appDb, owner, {
-      name: "My IDE",
-      scopes: ["prompts:read"],
-    });
+    const { id, rawKey } = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      createApiKey(tx, owner, { name: "My IDE", scopes: ["prompts:read"] }),
+    );
 
-    await revokeApiKey(testDb.appDb, admin, id);
+    await withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, admin, id));
 
-    const result = await authenticateApiKey(testDb.appDb, rawKey);
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
     expect(result).toBeNull();
   });
 
@@ -99,24 +101,26 @@ describe("revokeApiKey", () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const owner = await makeUser(testDb, organizationId, teamId, "member");
     const otherMember = await makeUser(testDb, organizationId, teamId, "member");
-    const { id } = await createApiKey(testDb.appDb, owner, {
-      name: "My IDE",
-      scopes: ["prompts:read"],
-    });
+    const { id } = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      createApiKey(tx, owner, { name: "My IDE", scopes: ["prompts:read"] }),
+    );
 
-    await expect(revokeApiKey(testDb.appDb, otherMember, id)).rejects.toThrow(NotAuthorizedError);
+    await expect(
+      withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, otherMember, id)),
+    ).rejects.toThrow(NotAuthorizedError);
   });
 
   it("is a no-op (no error, no additional audit event) when revoking an already-revoked key", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const owner = await makeUser(testDb, organizationId, teamId, "member");
-    const { id } = await createApiKey(testDb.appDb, owner, {
-      name: "My IDE",
-      scopes: ["prompts:read"],
-    });
-    await revokeApiKey(testDb.appDb, owner, id);
+    const { id } = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      createApiKey(tx, owner, { name: "My IDE", scopes: ["prompts:read"] }),
+    );
+    await withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, owner, id));
 
-    await expect(revokeApiKey(testDb.appDb, owner, id)).resolves.toBeUndefined();
+    await expect(
+      withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, owner, id)),
+    ).resolves.toBeUndefined();
 
     const rows = await queryAuditEvents(
       testDb,
@@ -130,20 +134,21 @@ describe("revokeApiKey", () => {
     const admin = await makeUser(testDb, organizationId, teamId, "admin");
 
     await expect(
-      revokeApiKey(testDb.appDb, admin, randomUUID()),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        revokeApiKey(tx, admin, randomUUID()),
+      ),
     ).rejects.toThrow(ApiKeyNotFoundError);
   });
 
   it("records exactly one api_key.revoked audit event for the real revoke", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const owner = await makeUser(testDb, organizationId, teamId, "member");
-    const { id } = await createApiKey(testDb.appDb, owner, {
-      name: "My IDE",
-      scopes: ["prompts:read"],
-    });
+    const { id } = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      createApiKey(tx, owner, { name: "My IDE", scopes: ["prompts:read"] }),
+    );
     const recordSpy = vi.spyOn(auditCompliance, "record");
 
-    await revokeApiKey(testDb.appDb, owner, id);
+    await withTenantContext(testDb.appDb, organizationId, (tx) => revokeApiKey(tx, owner, id));
 
     const revokeCalls = recordSpy.mock.calls.filter(
       (call) => call[1].action === "api_key.revoked",

@@ -31,7 +31,7 @@ describe("bootstrapOrganization", () => {
     const stubUserId = randomUUID();
 
     const result = await bootstrapOrganization(
-      testDb.appDb,
+      testDb.authDb,
       { name: "Acme", slug: `acme-${randomUUID()}` },
       async (_tx, organizationId) => {
         receivedOrganizationId = organizationId;
@@ -44,7 +44,7 @@ describe("bootstrapOrganization", () => {
     expect(result.teamId).toBe(stubTeamId);
     expect(result.userId).toBe(stubUserId);
 
-    const summary = await getOrganization(testDb.appDb, result.organizationId);
+    const summary = await getOrganization(testDb.authDb, result.organizationId);
     expect(summary.name).toBe("Acme");
   });
 
@@ -53,7 +53,7 @@ describe("bootstrapOrganization", () => {
 
     await expect(
       bootstrapOrganization(
-        testDb.appDb,
+        testDb.authDb,
         { name: "Broken Co", slug },
         async () => {
           throw new Error("team/admin provisioning failed");
@@ -61,7 +61,7 @@ describe("bootstrapOrganization", () => {
       ),
     ).rejects.toThrow("team/admin provisioning failed");
 
-    const rows = await testDb.appDb
+    const rows = await testDb.authDb
       .select()
       .from(organizations)
       .where(eq(organizations.slug, slug));

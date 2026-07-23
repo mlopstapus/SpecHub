@@ -53,6 +53,38 @@ export async function assertCrossTenantDenied(opts: {
 
 Every BC epic's own `tenant-isolation-tests` feature calls this helper once per resource type it owns, satisfying tenet M3.
 
+**Delivered** in `011-tenant-isolation-rls` as `src/shared/testing/tenant-isolation.ts` — the real signature takes plain `string` organization/resource ids (no `OrganizationId` branded type exists in this codebase), and denial means "throws, or resolves to a falsy/empty result" (covers both a thrown not-found error and an empty list). Usage example, combining an app-layer check with an RLS-alone check in the same call:
+
+```ts
+import { withTenantContext } from "@/shared/db/tenant-context";
+import { assertCrossTenantDenied } from "@/shared/testing/tenant-isolation";
+import { getUser } from "@/bcs/identity-access";
+
+// App-layer denial (M1): the function's own organizationId check.
+await assertCrossTenantDenied({
+  actingAsOrg: orgA.id,
+  resourceOwnedByOrg: orgB.id,
+  resourceId: userInOrgB.id,
+  fetchResourceById: (id) =>
+    withTenantContext(testDb.appDb, orgA.id, (tx) => getUser(tx, id, orgA.id)),
+});
+
+// RLS-alone denial (M2 backstop, FR-007): no app-layer filter in the query
+// at all — only the session-scoped RLS policy stands between orgA's
+// connection and orgB's row.
+await assertCrossTenantDenied({
+  actingAsOrg: orgA.id,
+  resourceOwnedByOrg: orgB.id,
+  resourceId: userInOrgB.id,
+  fetchResourceById: (id) =>
+    withTenantContext(testDb.appDb, orgA.id, (tx) =>
+      tx.select().from(users).where(eq(users.id, id)),
+    ),
+});
+```
+
+See `specs/011-tenant-isolation-rls/contracts/tenant-isolation-test-helper.md` for the full contract.
+
 ## Characterization tests for the Python port
 
 For behavior being ported from the current Python implementation (governance resolution, prompt expansion): run a fixed set of representative inputs through the current Python service, record the outputs as fixtures, then assert the new TypeScript implementation produces identical outputs before considering that piece of the port done. These fixtures live alongside the new implementation's test file, not in a separate "legacy" folder.

@@ -16,6 +16,9 @@ import { login } from "./login";
  * reaching into another BC's infrastructure/ directly.
  */
 async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
+  // schema (011-tenant-isolation-rls scopes it to identity_access only);
+  // skillcanon_app can already read every schema (0000_create_schemas.sql).
   const result = await testDb.appDb.execute<{
     action: string;
     actor_user_id: string | null;
@@ -29,17 +32,17 @@ async function makeOrgTeamUser(
   testDb: TestDb,
   overrides: { isActive?: boolean } = {},
 ) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
   const email = `jane-${randomUUID()}@example.com`;
-  const { id: userId } = await insertValidatedUser(testDb.appDb, {
+  const { id: userId } = await insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `jdoe-${randomUUID()}`,
@@ -49,7 +52,7 @@ async function makeOrgTeamUser(
     role: "admin",
   });
   if (overrides.isActive === false) {
-    await updateUserRow(testDb.appDb, userId, { isActive: false });
+    await updateUserRow(testDb.authDb, userId, { isActive: false });
   }
   return { organizationId, teamId, userId, email };
 }
@@ -78,7 +81,7 @@ describe("login", () => {
   it("returns user + cookie for correct credentials, cookie flags match convention", async () => {
     const { userId, organizationId, teamId, email } = await makeOrgTeamUser(testDb);
 
-    const result = await login(testDb.appDb, email, "correct-horse-battery");
+    const result = await login(testDb.authDb, email, "correct-horse-battery");
 
     expect(result).not.toBeNull();
     expect(result?.user).toEqual({
@@ -97,14 +100,14 @@ describe("login", () => {
   it("returns null for a wrong password", async () => {
     const { email } = await makeOrgTeamUser(testDb);
 
-    const result = await login(testDb.appDb, email, "totally-wrong-password");
+    const result = await login(testDb.authDb, email, "totally-wrong-password");
 
     expect(result).toBeNull();
   });
 
   it("returns null (same shape as wrong password) for an unknown email", async () => {
     const result = await login(
-      testDb.appDb,
+      testDb.authDb,
       `nobody-${randomUUID()}@example.com`,
       "whatever-password",
     );
@@ -115,7 +118,7 @@ describe("login", () => {
   it("returns null for a deactivated user with correct password", async () => {
     const { email } = await makeOrgTeamUser(testDb, { isActive: false });
 
-    const result = await login(testDb.appDb, email, "correct-horse-battery");
+    const result = await login(testDb.authDb, email, "correct-horse-battery");
 
     expect(result).toBeNull();
   });
@@ -123,7 +126,7 @@ describe("login", () => {
   it("writes a user.login audit event on success", async () => {
     const { userId, organizationId, email } = await makeOrgTeamUser(testDb);
 
-    await login(testDb.appDb, email, "correct-horse-battery");
+    await login(testDb.authDb, email, "correct-horse-battery");
 
     const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
@@ -134,7 +137,7 @@ describe("login", () => {
   it("writes a user.login_failed audit event for a failed attempt against a real account", async () => {
     const { userId, organizationId, email } = await makeOrgTeamUser(testDb);
 
-    await login(testDb.appDb, email, "wrong-password");
+    await login(testDb.authDb, email, "wrong-password");
 
     const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
@@ -145,7 +148,7 @@ describe("login", () => {
   it("writes a user.login_failed audit event with null actor/org for an unknown email", async () => {
     const email = `nobody-${randomUUID()}@example.com`;
 
-    await login(testDb.appDb, email, "whatever-password");
+    await login(testDb.authDb, email, "whatever-password");
 
     const rows = await queryAuditEvents(testDb, sql`action = 'user.login_failed'`);
     const match = rows.find(
@@ -158,7 +161,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     const password = `super-secret-${randomUUID()}`;
 
-    await login(testDb.appDb, email, password);
+    await login(testDb.authDb, email, password);
 
     const rows = await queryAuditEvents(testDb, sql`true`);
     const serialized = JSON.stringify(rows);
@@ -169,7 +172,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     vi.spyOn(auditCompliance, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
 
-    await expect(login(testDb.appDb, email, "correct-horse-battery")).rejects.toThrow(
+    await expect(login(testDb.authDb, email, "correct-horse-battery")).rejects.toThrow(
       "audit store unavailable",
     );
   });
@@ -178,7 +181,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     vi.spyOn(auditCompliance, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
 
-    await expect(login(testDb.appDb, email, "wrong-password")).rejects.toThrow(
+    await expect(login(testDb.authDb, email, "wrong-password")).rejects.toThrow(
       "audit store unavailable",
     );
   });
@@ -187,7 +190,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     vi.stubEnv("JWT_SECRET", "");
 
-    await expect(login(testDb.appDb, email, "correct-horse-battery")).rejects.toThrow(
+    await expect(login(testDb.authDb, email, "correct-horse-battery")).rejects.toThrow(
       /missing/i,
     );
   });
@@ -196,7 +199,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     vi.stubEnv("JWT_SECRET", "REPLACE_ME_JWT_SECRET");
 
-    await expect(login(testDb.appDb, email, "correct-horse-battery")).rejects.toThrow(
+    await expect(login(testDb.authDb, email, "correct-horse-battery")).rejects.toThrow(
       /placeholder/i,
     );
   });
@@ -205,7 +208,7 @@ describe("login", () => {
     const { email } = await makeOrgTeamUser(testDb);
     vi.stubEnv("JWT_SECRET", "a-different-real-secret");
 
-    const result = await login(testDb.appDb, email, "correct-horse-battery");
+    const result = await login(testDb.authDb, email, "correct-horse-battery");
 
     expect(result).not.toBeNull();
   });
