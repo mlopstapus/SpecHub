@@ -30,18 +30,30 @@ interface SessionCookieDescriptor {
 
 ```ts
 // src/bcs/audit-compliance/domain/audit-event.ts
+// General read/write shape — reused by every future BC that calls record(),
+// not specific to this feature. actorApiKeyId/before/after are typed loosely
+// (string | null / unknown | null) because a future non-auth mutation will
+// populate them; this feature's own call sites (below) simply always pass
+// null for the fields an auth event has no value for.
 interface AuditEvent {
-  id: string;                      // uuid, generated
-  organizationId: string | null;    // null only for a failed login against an unknown email (no org resolvable)
-  actorUserId: string | null;        // set for success and for failure-against-a-real-account; null for failure-against-unknown-email
-  actorApiKeyId: null;                // always null for this feature — no API-key-authenticated action writes these events
-  action: string;                     // "user.login" | "user.login_failed" | "user.logout"
-  resourceType: "user";
-  resourceId: string | null;          // the user's id when resolvable, else null (unknown-email failure)
-  before: null;                       // no prior-state concept for an auth event
-  after: null;                        // no new-state concept for an auth event — see redaction note below
-  createdAt: string;                  // iso, set by DB default
+  id: string;                        // uuid, generated
+  organizationId: string | null;      // not-null for every table by convention (context/database-conventions.md) except this one case: FR-011's failed-login-against-unknown-email, where no org is resolvable at all
+  actorUserId: string | null;
+  actorApiKeyId: string | null;
+  action: string;                      // "resource.verb", e.g. "user.login"
+  resourceType: string;
+  resourceId: string | null;
+  before: unknown | null;
+  after: unknown | null;
+  createdAt: string;                   // iso, set by DB default
 }
+
+// This feature's own call sites (login/authenticateSession/logout) only ever
+// produce these three concrete shapes of the general AuditEvent above —
+// resourceType is always "user", actorApiKeyId/before/after are always null:
+type LoginSucceededEvent = { action: "user.login"; resourceType: "user"; actorApiKeyId: null; before: null; after: null; /* + organizationId, actorUserId, resourceId all non-null */ };
+type LoginFailedEvent = { action: "user.login_failed"; resourceType: "user"; actorApiKeyId: null; before: null; after: null; /* organizationId/actorUserId/resourceId all null together (unknown email) or all set together (known account, wrong password/deactivated) — never a mix */ };
+type LogoutEvent = { action: "user.logout"; resourceType: "user"; actorApiKeyId: null; before: null; after: null; /* + organizationId, actorUserId, resourceId all non-null */ };
 ```
 
 Drizzle table (`src/bcs/audit-compliance/infrastructure/schema.ts`), matching `bcs/audit-compliance/CONTRACT.md`'s shape and `backlog/003-audit-compliance/001`'s column list exactly:
