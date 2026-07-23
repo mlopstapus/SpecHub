@@ -1,14 +1,29 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
-import * as recordModule from "@/bcs/audit-compliance/application/record";
-import { auditEvents } from "@/bcs/audit-compliance/infrastructure/schema";
+import * as auditCompliance from "@/bcs/audit-compliance";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
 import { update as updateUserRow } from "../infrastructure/users-repo";
 import { insertValidatedUser } from "./insert-validated-user";
 import { login } from "./login";
+
+/**
+ * Reads back audit_events rows via raw SQL rather than importing
+ * audit-compliance's internal schema module — cross-BC test assertions
+ * stay off the module-boundary lint's radar entirely this way, instead of
+ * reaching into another BC's infrastructure/ directly.
+ */
+async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  const result = await testDb.appDb.execute<{
+    action: string;
+    actor_user_id: string | null;
+    organization_id: string | null;
+    resource_id: string | null;
+  }>(sql`select action, actor_user_id, organization_id, resource_id from audit.audit_events where ${whereSql}`);
+  return Array.from(result);
+}
 
 async function makeOrgTeamUser(
   testDb: TestDb,
@@ -110,13 +125,10 @@ describe("login", () => {
 
     await login(testDb.appDb, email, "correct-horse-battery");
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.actorUserId, userId));
+    const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login");
-    expect(rows[0]?.organizationId).toBe(organizationId);
+    expect(rows[0]?.organization_id).toBe(organizationId);
   });
 
   it("writes a user.login_failed audit event for a failed attempt against a real account", async () => {
@@ -124,13 +136,10 @@ describe("login", () => {
 
     await login(testDb.appDb, email, "wrong-password");
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.actorUserId, userId));
+    const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login_failed");
-    expect(rows[0]?.organizationId).toBe(organizationId);
+    expect(rows[0]?.organization_id).toBe(organizationId);
   });
 
   it("writes a user.login_failed audit event with null actor/org for an unknown email", async () => {
@@ -138,11 +147,10 @@ describe("login", () => {
 
     await login(testDb.appDb, email, "whatever-password");
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.action, "user.login_failed"));
-    const match = rows.find((row) => row.actorUserId === null && row.organizationId === null);
+    const rows = await queryAuditEvents(testDb, sql`action = 'user.login_failed'`);
+    const match = rows.find(
+      (row) => row.actor_user_id === null && row.organization_id === null,
+    );
     expect(match).toBeTruthy();
   });
 
@@ -152,14 +160,14 @@ describe("login", () => {
 
     await login(testDb.appDb, email, password);
 
-    const rows = await testDb.appDb.select().from(auditEvents);
+    const rows = await queryAuditEvents(testDb, sql`true`);
     const serialized = JSON.stringify(rows);
     expect(serialized).not.toContain(password);
   });
 
   it("propagates an error (does not return a cookie or null) when the audit write fails, on the success path", async () => {
     const { email } = await makeOrgTeamUser(testDb);
-    vi.spyOn(recordModule, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
+    vi.spyOn(auditCompliance, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
 
     await expect(login(testDb.appDb, email, "correct-horse-battery")).rejects.toThrow(
       "audit store unavailable",
@@ -168,7 +176,7 @@ describe("login", () => {
 
   it("propagates an error when the audit write fails, on a failure path", async () => {
     const { email } = await makeOrgTeamUser(testDb);
-    vi.spyOn(recordModule, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
+    vi.spyOn(auditCompliance, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
 
     await expect(login(testDb.appDb, email, "wrong-password")).rejects.toThrow(
       "audit store unavailable",

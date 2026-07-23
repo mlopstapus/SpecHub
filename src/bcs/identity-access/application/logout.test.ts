@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
-import * as recordModule from "@/bcs/audit-compliance/application/record";
-import { auditEvents } from "@/bcs/audit-compliance/infrastructure/schema";
+import * as auditCompliance from "@/bcs/audit-compliance";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
 import { insertValidatedUser } from "./insert-validated-user";
@@ -60,10 +59,10 @@ describe("logout", () => {
 
     await logout(testDb.appDb, userId);
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.actorUserId, userId));
+    const result = await testDb.appDb.execute<{ action: string }>(
+      sql`select action from audit.audit_events where actor_user_id = ${userId}`,
+    );
+    const rows = Array.from(result);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.logout");
   });
@@ -77,7 +76,9 @@ describe("logout", () => {
 
   it("throws and returns no cookie when the audit write fails", async () => {
     const userId = await makeUser(testDb);
-    vi.spyOn(recordModule, "record").mockRejectedValueOnce(new Error("audit store unavailable"));
+    vi.spyOn(auditCompliance, "record").mockRejectedValueOnce(
+      new Error("audit store unavailable"),
+    );
 
     await expect(logout(testDb.appDb, userId)).rejects.toThrow("audit store unavailable");
   });

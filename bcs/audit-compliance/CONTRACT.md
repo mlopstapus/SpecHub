@@ -11,7 +11,7 @@ Owns the immutable `AuditEvent` log. Every mutating command in every other conte
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `record(event)` | Append one audit event; must be called within the same DB transaction as the mutation | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements |
+| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Redacts known-sensitive fields (`password_hash`, `key_hash`, raw tokens) from `before`/`after` before storage. First real caller: Identity & Access's `login`/`logout` (008-jwt-session-auth) | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements |
 | `list(orgId, filters, { requestingUserId })` | Paginated query, filtered by the entitlement-resolved retention window | Distribution (audit log UI) |
 | `export(orgId, format)` | Bulk export (Enterprise-gated via entitlement) | Distribution |
 
@@ -27,10 +27,11 @@ None directly — other contexts call `record()` inline rather than publishing e
 
 ```ts
 interface AuditEvent {
-  id: string; orgId: string;
+  id: string;
+  orgId: string | null; // null only when no organization is resolvable at all (e.g. a failed login against an email matching no account in any org)
   actorUserId: string | null; actorApiKeyId: string | null; // one of these, or neither for system actions
-  action: string;        // e.g. "policy.updated", "apikey.created"
-  resourceType: string; resourceId: string;
+  action: string;        // e.g. "policy.updated", "apikey.created", "user.login"
+  resourceType: string; resourceId: string | null; // resourceId null alongside orgId in the same unresolvable case above
   before: unknown | null; after: unknown | null; // jsonb diff, redacted of secrets
   createdAt: string;
 }

@@ -1,7 +1,7 @@
 # Epic 002: Identity & Access
 
 **Priority:** 2
-**Status:** not-started
+**Status:** in-progress
 **Goal:** Port tenancy, team hierarchy, users, auth, invitations, and API keys from the current Python backend into the new TS bounded context — establishing the Organization tenant root that every other context depends on.
 
 ## Overview
@@ -13,7 +13,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [X] [001 - Organization Tenant Model](archive/001-organization-tenant-model.md)
 - [x] [002 - Team Hierarchy](archive/002-team-hierarchy.md)
 - [x] [003 - User Accounts & Registration](archive/003-user-accounts-and-registration.md)
-- [ ] [004 - JWT Session Auth](004-jwt-session-auth.md)
+- [X] [004 - JWT Session Auth](archive/004-jwt-session-auth.md)
 - [ ] [005 - Invitations](005-invitations.md)
 - [ ] [006 - API Keys](006-api-keys.md)
 - [ ] [007 - Tenant Isolation Tests & RLS](007-tenant-isolation-tests-and-rls.md)
