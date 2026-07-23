@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
+import { insertValidatedUser } from "./insert-validated-user";
 import { updateTeam } from "./update-team";
 import { teams } from "../infrastructure/schema";
 
@@ -41,7 +42,20 @@ describe("updateTeam", () => {
         parentTeamId: parent.id,
       }),
     );
-    const newOwnerId = randomUUID();
+    // `owner_id` FK's referenced table (`identity_access.users`) didn't
+    // exist when this test was originally written — a real user row is now
+    // required (007-user-accounts-registration completes the FK).
+    const { id: newOwnerId } = await testDb.appDb.transaction((tx) =>
+      insertValidatedUser(tx, {
+        organizationId: org.id,
+        teamId: child.id,
+        username: `owner-${randomUUID()}`,
+        displayName: "New Owner",
+        email: `owner-${randomUUID()}@example.com`,
+        password: "password123",
+        role: "member",
+      }),
+    );
 
     await testDb.appDb.transaction((tx) =>
       updateTeam(tx, child.id, {

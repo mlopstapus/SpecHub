@@ -12,13 +12,14 @@ Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
 | `getOrganization(organizationId)` | Org record incl. `planId` pointer | All contexts |
-| `getUser(userId)` | User record (id, orgId, teamId, role) | All contexts |
+| `getUser(userId)` | User record (id, orgId, teamId, role, email) | All contexts |
 | `getTeamChain(teamId)` | Ordered list: team → parent → ... → root | Governance |
 | `authenticateSession(request)` | Resolves the calling user from a JWT carried in an httpOnly cookie (web UI) | Distribution |
 | `authenticateApiKey(rawKey)` | Resolves the calling user + scopes from a bearer key | Distribution |
-| `bootstrapOrganization` | Creates the tenant-root Organization plus (via an injected `provisionTeamAndAdmin` callback) the root Team and admin User, atomically — self-hosted first-run only | Distribution (route handlers) |
+| `bootstrapOrganization` | Creates the tenant-root Organization plus (via the real `provisionTeamAndAdmin` callback) the root Team and admin User, atomically — self-hosted first-run only | Distribution (route handlers) |
+| `registerFirstRunAdmin` | First-run registration composition: checks the entitlement gate, then calls `bootstrapOrganization` with the real `provisionTeamAndAdmin` | Distribution (route handlers) |
 | `updateTeam`, `reparentTeam`, `insertTeamBetween`, `listSubTeams` | Team hierarchy CRUD/reorganization — enforce same-organization and no-cycle invariants regardless of caller | Distribution (route handlers) |
-| `createTeam`, `createUser`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write operations | Distribution (route handlers) |
+| `createTeam`, `createUser`, `updateUser`, `deactivateUser`, `listUsers`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write/read operations — `createUser`/`updateUser`/`deactivateUser` are admin-only (or self-or-admin for a user's own non-privileged fields); `listUsers` is org-scoped, no role restriction | Distribution (route handlers) |
 
 ## Events Published
 
