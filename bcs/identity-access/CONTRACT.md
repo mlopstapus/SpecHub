@@ -16,6 +16,7 @@ Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within 
 | `getTeamChain(teamId)` | Ordered list: team → parent → ... → root | Governance |
 | `authenticateSession(request)` | Resolves the calling user from a JWT carried in an httpOnly cookie (web UI) | Distribution |
 | `authenticateApiKey(rawKey)` | Resolves the calling user + scopes from a bearer key | Distribution |
+| `bootstrapOrganization` | Creates the tenant-root Organization plus (via an injected `provisionTeamAndAdmin` callback) the root Team and admin User, atomically — self-hosted first-run only | Distribution (route handlers) |
 | `createTeam`, `createUser`, `inviteUser`, `acceptInvitation`, `createApiKey`, `revokeApiKey` | Standard write operations | Distribution (route handlers) |
 
 ## Events Published
