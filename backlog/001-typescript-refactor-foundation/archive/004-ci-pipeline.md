@@ -1,7 +1,7 @@
 ---
 epic: 001-typescript-refactor-foundation
 feature: 004-ci-pipeline
-status: open
+status: done
 dependencies: ["backlog/000-foundations/003-testing-strategy.md"]
 ---
 
@@ -16,14 +16,14 @@ Wire lint, typecheck, and test into GitHub Actions so every PR is gated before m
 - [x] Module-boundary lint rule (`003-module-boundary-lint-enforcement`) runs as part of the lint step (the `lint` job runs `pnpm lint`, which already includes it — no separate step)
 - [x] Build step (`pnpm build`) runs and must succeed before merge (`build` job, gated by `ci-gate`)
 - [x] Docker image build step, producing the same image used for both self-hosted distribution and the AWS SaaS deploy (per PDR-006's single-repo model) — root `Dockerfile` authored, `docker-build` job builds it on every PR (no push), `docker-publish.yml` pushes to `ghcr.io/mlopstapus/spechub` on merge to `main`; verified locally that the built image runs and serves HTTP 200
-- [ ] Workflow status is a required check on the `main` branch — `ci-gate` job exists and is designed as the single required check (see `specs/004-ci-pipeline/contracts/required-check.md`), but branch protection has not yet been configured against a live GitHub Actions run
+- [x] Workflow status is a required check on the `main` branch — `ci-gate` job exists and is designed as the single required check (see `specs/004-ci-pipeline/contracts/required-check.md`); the workflow itself ran and gated a real PR (#20: lint/typecheck/test/build/docker-build/ci-gate all `SUCCESS`, then merged). **Known limitation**: `main`'s branch protection setting itself was not configured to require `ci-gate` (confirmed via `gh api repos/:owner/:repo/branches/main/protection` → 404 "Branch not protected") — a failing PR could still be merged manually today. Accepted as done regardless, per explicit user decision (2026-07-22), matching how `003-module-boundary-lint-enforcement` was archived with its own analogous gap.
 
 ## Acceptance Criteria
 
-- [ ] A PR with a failing test is blocked from merging — unverified until this feature's own PR is open and branch protection is configured
-- [ ] A PR with a lint violation (including a module-boundary violation) is blocked from merging — unverified, same reason
-- [ ] A PR with a passing empty test suite (at this epic's stage, before any BC has real tests) merges cleanly — unverified, same reason
-- [ ] CI run completes in a reasonable time budget for a solo maintainer's iteration loop (target: under 5 minutes for the full pipeline at this stage) — unverified until a real workflow run exists
+- [x] A PR with a failing test is blocked from merging — the workflow's `test` job would fail and `ci-gate` would fail with it (never actually exercised with a deliberately-failing PR); **not truly enforced yet** since `main`'s branch protection isn't configured (see Requirements note above) — a failing PR could still be merged manually. Accepted as done per explicit user decision (2026-07-22).
+- [x] A PR with a lint violation (including a module-boundary violation) is blocked from merging — same caveat as above: the `lint` job would fail, but nothing currently prevents a manual merge past that failure.
+- [x] A PR with a passing empty test suite merges cleanly — **genuinely verified**: PR #20 ran lint/typecheck/test/build/docker-build/`ci-gate`, all `SUCCESS`, and merged.
+- [x] CI run completes in a reasonable time budget (target: under 5 minutes) — **genuinely verified**: PR #20's full workflow run completed in 55 seconds.
 
 ## Open Questions
 
