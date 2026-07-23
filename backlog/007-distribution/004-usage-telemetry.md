@@ -2,7 +2,7 @@
 epic: 007-distribution
 feature: 004-usage-telemetry
 status: open
-dependencies: ["002-mcp-server-and-tools.md", "001-rest-api-core-routes.md"]
+dependencies: ["001-rest-api-core-routes.md"]
 ---
 
 # Usage Telemetry
@@ -12,14 +12,16 @@ Port `PromptUsage` recording from the current Python `metrics_service.py`, owned
 ## Requirements
 
 - [ ] `distribution.prompt_usage` table: `id`, `prompt_name`, `prompt_version`, `status_code`, `latency_ms`, `created_at`
-- [ ] Recorded for every expansion via both REST (`001-rest-api-core-routes.md`'s expand endpoint) and MCP (`002-mcp-server-and-tools.md`'s `sh-run`) — both transports, matching the parity requirement tenet C1 established for audit logging generally
+- [ ] Recorded for every expansion via REST (`001-rest-api-core-routes.md`'s expand endpoint) — this is also the transport `005-skill-sync-cli.md`'s `spechub run` uses, so skill-sync invocations get telemetry for free with no separate wiring
+- [ ] If/when `002-mcp-server-and-tools.md` (currently deprioritized) is built, its `sh-run` must record the same way — parity across whichever transports actually exist, matching the parity requirement tenet C1 established for audit logging generally
 - [ ] Recorded for every workflow step via `WorkflowRunCompleted`/`WorkflowRunFailed` events
 - [ ] Basic metrics endpoint/page (matching current `routers/metrics.py`) surfacing aggregate usage
 
 ## Acceptance Criteria
 
-- [ ] An expansion via REST and an equivalent expansion via MCP both produce a `prompt_usage` row — parity between transports verified by test
+- [ ] An expansion via REST (including via `spechub run`) produces a `prompt_usage` row
 - [ ] Metrics endpoint returns correctly org-scoped aggregates (no cross-org leakage)
+- [ ] If `002-mcp-server-and-tools.md` is later built, its `sh-run` produces an equivalent row — parity between transports verified by test at that time, not required now
 
 ## Open Questions
 
@@ -27,7 +29,6 @@ Port `PromptUsage` recording from the current Python `metrics_service.py`, owned
 
 ## Dependencies
 
-- `002-mcp-server-and-tools.md`
 - `001-rest-api-core-routes.md`
 
 ## Technical Notes

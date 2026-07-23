@@ -1,11 +1,11 @@
 # Architecture: SpecHub
 
-**Last updated:** 2026-07-20
+**Last updated:** 2026-07-23
 **Status:** Proposed
 
 ## Overview
 
-SpecHub is a prompt registry with hierarchical governance, distributed to AI coding tools via MCP. IDEs connect directly to a SpecHub instance and pull governed, versioned prompt templates — SpecHub never calls an LLM itself. This document covers the target architecture for a full rewrite: unifying the current split Python/FastAPI + Next.js codebase into a single TypeScript application, and building in multi-tenancy, entitlements, and audit logging from day one to support a Free (self-hosted) / Paid (managed SaaS) business model without a later re-architecture.
+SpecHub is a prompt registry with hierarchical governance, distributed to AI coding tools as native Skills (Claude Code, day one) backed by live REST calls, with MCP kept as a deprioritized secondary protocol ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)). IDEs connect directly to a SpecHub instance and pull governed, versioned prompt templates — SpecHub never calls an LLM itself. This document covers the target architecture for a full rewrite: unifying the current split Python/FastAPI + Next.js codebase into a single TypeScript application, and building in multi-tenancy, entitlements, and audit logging from day one to support a Free (self-hosted) / Paid (managed SaaS) business model without a later re-architecture.
 
 ## Architectural Style
 
@@ -21,14 +21,14 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 | Workflow Orchestration | Multi-step prompt chains | [Contract](../bcs/workflow-orchestration/CONTRACT.md) | [Ownership](../bcs/workflow-orchestration/OWNERSHIP.md) |
 | Billing & Entitlements | Stripe subscriptions, plan defaults, per-org entitlement flags/limits | [Contract](../bcs/billing-entitlements/CONTRACT.md) | [Ownership](../bcs/billing-entitlements/OWNERSHIP.md) |
 | Audit & Compliance | Immutable audit log, retention/export | [Contract](../bcs/audit-compliance/CONTRACT.md) | [Ownership](../bcs/audit-compliance/OWNERSHIP.md) |
-| Distribution | REST API, MCP protocol server, UI composition — the external boundary | [Contract](../bcs/distribution/CONTRACT.md) | [Ownership](../bcs/distribution/OWNERSHIP.md) |
+| Distribution | REST API, Skill Sync CLI (Claude Code), UI composition, MCP protocol server (deprioritized) — the external boundary | [Contract](../bcs/distribution/CONTRACT.md) | [Ownership](../bcs/distribution/OWNERSHIP.md) |
 
 **Context map:**
 - Identity & Access is a shared-identifier source for everyone (`organizationId`/`userId`/`teamId` as opaque IDs) — no context reads its tables directly, only its contract functions.
 - Prompt Registry → Governance and Workflow Orchestration → Prompt Registry are **customer/supplier** relationships, synchronous, read-heavy.
 - Every context → Billing & Entitlements is **customer/supplier**; Billing is the sole **anti-corruption layer** in front of Stripe — no other context imports the Stripe SDK.
 - Every context → Audit & Compliance is **customer/supplier**, write-only, transactional (not eventually consistent — see [PDR-005](../docs/pdr/005-audit-logging-core-infrastructure.md)).
-- Distribution is a **conformist consumer** of all six other contexts — it has no domain rules of its own, only composition and protocol translation (REST/MCP).
+- Distribution is a **conformist consumer** of all six other contexts — it has no domain rules of its own, only composition and protocol translation. The primary path is REST — both directly and via the Skill Sync CLI's live calls to the expand route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)); MCP is a deprioritized secondary protocol.
 
 ## Data Architecture
 
@@ -45,7 +45,7 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 
 **Consistency:** strong consistency throughout — one Postgres database, transactional guarantees used deliberately for audit-write atomicity (see PDR-005) and read-fresh (never cached) governance resolution.
 
-**Read/write pattern:** read-heavy overall; the hot path is prompt/workflow expansion (`sh-run`, `sh-workflow-run`), which fans out into a Governance resolution call plus recursive prompt-inclusion lookups per request. No caching layer at launch — flagged as a future optimization if expansion latency becomes a problem, not built preemptively.
+**Read/write pattern:** read-heavy overall; the hot path is prompt/workflow expansion — via the REST expand route directly, via the Skill Sync CLI's live call to that same route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)), or via MCP's `sh-run`/`sh-workflow-run` if that path is ever built — which fans out into a Governance resolution call plus recursive prompt-inclusion lookups per request. No caching layer at launch — flagged as a future optimization if expansion latency becomes a problem, not built preemptively. Every path resolves live, never cached, so a policy change takes effect on the very next call regardless of which transport made it.
 
 **Cross-context data flow:** synchronous in-process calls per each BC's CONTRACT.md — see [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md) for why events/a queue were rejected.
 
@@ -66,6 +66,8 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 - [PDR-007: Synchronous in-process calls between contexts, not events/queue](../docs/pdr/007-synchronous-in-process-contexts.md)
 - [PDR-008: MCP session state in-memory per process, pinned by ALB sticky sessions](../docs/pdr/008-mcp-session-state-in-memory.md)
 - [PDR-009: AWS as the managed SaaS hosting platform](../docs/pdr/009-aws-hosting-platform.md)
+- [PDR-010: Skill-based prompt distribution via live REST resolution, not MCP](../docs/pdr/010-skill-based-distribution-not-mcp.md)
+- [PDR-011: Project linking and roster sync via CLI, SessionStart hook, and hash-based drift detection](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)
 
 ## Failure Model
 
@@ -79,7 +81,8 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 
 ## Integrations
 
-- **MCP clients** (Claude Code, Windsurf, Copilot, any MCP-compatible tool) — Streamable HTTP, bearer-authenticated via API key, tool surface unchanged from today (`sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run`).
+- **Claude Code** (primary, day one) — the `spechub` CLI links a repo to a SpecHub project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/007-distribution/005-skill-sync-cli.md`.
+- **MCP clients** (Windsurf, Copilot, any MCP-compatible tool) — deprioritized (see PDR-010); if built, Streamable HTTP, bearer-authenticated via API key, tool surface `sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run` unchanged from today's plan.
 - **Stripe** — subscriptions, checkout, billing portal, webhooks; isolated entirely behind Billing & Entitlements ([PDR-006](../docs/pdr/006-single-repo-plan-gated.md)).
 
 ## Non-Functional Properties
@@ -119,3 +122,5 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 - **Availability and performance targets**: no formal SLO/SLA set yet for the SaaS tier — matters once Enterprise deals start asking for uptime commitments.
 - **Entitlement key catalog**: the initial Free/Paid default values for each entitlement key (`maxTeams`, `auditRetentionDays`, `seatLimit`, etc.) haven't been set — deliberately deferred per the decision not to lock in tier specifics yet (see [PDR-004](../docs/pdr/004-entitlements-as-data.md)).
 - **Existing `docs/architecture.md`** describes the current Python-era system and will be stale once this rewrite lands — recommend replacing it with a pointer to this document once implementation is underway, rather than maintaining two architecture docs in parallel.
+- **Skill Sync CLI beyond Claude Code**: the roster-sync mechanism ([PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)) is designed to be pluggable per IDE but only the Claude Code adapter is being built now — Copilot/Codex parity is unscheduled.
+- **MCP's actual fate**: deprioritized per [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), not cancelled — whether it's ever built depends on whether a real non-skill-capable MCP client or a workflow-orchestration need for `sh-workflow-run` materializes.

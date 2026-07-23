@@ -11,8 +11,8 @@ This is the first bounded-context port and the epic every other epic depends on 
 ## Features
 
 - [X] [001 - Organization Tenant Model](archive/001-organization-tenant-model.md)
-- [x] [002 - Team Hierarchy](002-team-hierarchy.md)
-- [ ] [003 - User Accounts & Registration](003-user-accounts-and-registration.md)
+- [x] [002 - Team Hierarchy](archive/002-team-hierarchy.md)
+- [x] [003 - User Accounts & Registration](archive/003-user-accounts-and-registration.md)
 - [ ] [004 - JWT Session Auth](004-jwt-session-auth.md)
 - [ ] [005 - Invitations](005-invitations.md)
 - [ ] [006 - API Keys](006-api-keys.md)

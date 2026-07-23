@@ -58,3 +58,6 @@ coverage.xml
 .vscode/
 .cursorignore
 .cursorindexingignore
+
+# Brainstorming companion
+.superpowers/

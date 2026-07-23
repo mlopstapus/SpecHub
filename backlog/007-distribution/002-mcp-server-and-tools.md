@@ -7,6 +7,8 @@ dependencies: ["backlog/002-identity-access/EPIC.md", "backlog/004-governance/EP
 
 # MCP Server & Tools
 
+**Deprioritized as of the skill-sync design (`005-skill-sync-cli.md`)** — see Technical Notes. Left `status: open` because it's still valid future work if a non-skill-capable MCP client shows up wanting programmatic access, just no longer the next thing to build in this epic.
+
 Port the MCP server and all six tools from the current Python `mcp/server.py`, `mcp/session.py`, `mcp/tools.py`, using the official `@modelcontextprotocol/sdk` TS SDK running in-process in the Next.js app, per the architecture's assumption. This is a strict compatibility port — tool names and argument shapes are a public contract every connected IDE's config already depends on.
 
 ## Requirements
@@ -35,3 +37,5 @@ Port the MCP server and all six tools from the current Python `mcp/server.py`, `
 ## Technical Notes
 
 Per `bcs/distribution/CONTRACT.md`'s Breaking Change Policy, any deviation in tool name or argument shape from the current implementation is a breaking change to every user's existing MCP config — treat this feature as a strict compatibility port, not a redesign opportunity, even where the new architecture might suggest a cleaner tool shape. Directly closes the tenet C1 and S3 gaps the tenets document explicitly calls out by name.
+
+**Deprioritization rationale:** `005-skill-sync-cli.md` makes governed prompts show up as native Claude Code skills via a plain REST call (`/prompts/expand/{name}`, already planned in `001-rest-api-core-routes.md`) instead of requiring the IDE to be configured as an MCP client. The reliability problem this was meant to solve — an agent deciding to call the right tool — turned out to be about invocation UX, not transport: a Skill is matched deterministically by name/description, an MCP tool call is not. For an IDE that doesn't support skills, standing up an MCP server doesn't obviously help either, since the same tool-selection reliability problem remains. This feature stays on the backlog for if/when a concrete non-skill-capable MCP client actually needs programmatic access (or for `sh-workflow-run`'s multi-step orchestration, which `005` does not attempt to replace), but `005-skill-sync-cli.md` is the priority now.

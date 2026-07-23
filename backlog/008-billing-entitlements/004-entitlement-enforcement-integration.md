@@ -13,6 +13,7 @@ Go back through every bounded context and wire real `resolveEntitlements()` call
 
 - [ ] `003-audit-compliance/002-audit-query-and-retention.md`'s hardcoded Free-tier retention/export gating replaced with a real `resolveEntitlements(orgId).auditRetentionDays` / export-flag call
 - [ ] `002-identity-access`'s team/API-key creation checked against `maxTeams`/`maxApiKeys` entitlements where those limits exist per `context/entitlements.md`
+- [ ] `002-identity-access/003-user-accounts-and-registration.md`'s `registerFirstRunAdmin` hardcoded-`true` `coreFeaturesEnabled` stand-in (`src/bcs/identity-access/application/entitlement-gate.ts`) replaced with a real `requireEntitlement(orgId, "coreFeaturesEnabled")` call
 - [ ] Audit sweep of all prior epics for any other hardcoded-default stand-ins introduced along the way, replaced with real entitlement calls
 - [ ] Self-hosted mode continues to use the hardcoded Free-tier path unchanged (this feature only affects the SaaS/live-entitlement path)
 
