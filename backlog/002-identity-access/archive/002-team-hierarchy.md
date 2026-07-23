@@ -1,7 +1,7 @@
 ---
 epic: 002-identity-access
 feature: 002-team-hierarchy
-status: open
+status: done
 dependencies: ["001-organization-tenant-model.md"]
 ---
 
@@ -23,7 +23,7 @@ Port the recursive team hierarchy (`teams.parent_team_id`, `sub_teams`, `get_tea
 - [X] `getTeamChain` output matches the current Python implementation's output for an equivalent multi-level hierarchy fixture, verified by a characterization test
 - [X] Attempting to set `parent_team_id` to a team in a different organization is rejected
 - [X] Attempting to create a cycle (A's parent is B, B's parent is A) is rejected
-- [ ] `TeamReparented` event fires on successful reparent (consumed by Audit per `bcs/governance/CONTRACT.md`'s note that Governance itself doesn't need to react, but Audit does) — **blocked on `backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md`**, not yet built; per PDR-007 there is no event bus in this system, so this is really "team reparents get an audit-log row once the audit write path exists" (already tracked in that backlog item's retrofit requirement, which explicitly lists team creation/reparenting) — leaving unchecked per this repo's partial-completion convention rather than force-completing
+- [X] `TeamReparented` event fires on successful reparent (consumed by Audit per `bcs/governance/CONTRACT.md`'s note that Governance itself doesn't need to react, but Audit does) — **exception, marked done by explicit user decision 2026-07-22 despite this criterion not being independently implemented**: per PDR-007 there is no event bus in this system, so this is really "team reparents get an audit-log row once the audit write path exists," which requires `backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md`, not yet built. That item's retrofit requirement already explicitly lists team creation/reparenting. Same "mark done anyway, forward-track the gap" call already made for `001-organization-tenant-model.md`'s equivalent bootstrap-completeness criterion — see `[[project_epic_002_progress]]` memory.
 
 ## Open Questions
 
