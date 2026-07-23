@@ -33,3 +33,5 @@ Implement `context/design-system.md`'s palette, type scale, spacing, and compone
 ## Technical Notes
 
 Per CLAUDE.md, the app already pins `shadcn`/Tailwind conventions carried forward from `007-distribution/003-web-ui-shell-and-core-pages.md` — this feature retheme's that system, it doesn't replace the component library. Land this first; every other feature in this epic depends on it.
+
+**Forward-pull note (2026-07-23)**: `003-audit-compliance/003-audit-log-ui.md` already applied one page's worth of real tokens ahead of this feature (dark palette, Bricolage Grotesque/Hanken Grotesk/Spline Sans Mono fonts, spacing) taken directly from the Claude design mockup `SkillCanon Audit.dc.html`, scoped/hardcoded locally to that page rather than through a shared system — because `context/design-system.md` doesn't exist yet and the audit-log UI couldn't wait. When this feature builds the real token system, extract those same values as the actual source (they're already validated, shipped, real design decisions) rather than re-deriving the palette from scratch, and repoint the audit-log page at the shared tokens, deleting its local copy.

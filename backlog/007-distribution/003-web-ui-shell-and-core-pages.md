@@ -34,3 +34,5 @@ Rebuild the frontend (currently `frontend/src/app/*`) against the new REST API, 
 ## Technical Notes
 
 This is the largest UI feature in the backlog — during implementation, consider whether it's worth splitting into per-resource sub-tasks (mirroring `001-rest-api-core-routes.md`'s note) even though it's tracked as one feature file here.
+
+**Forward-pull note (2026-07-23)**: `003-audit-compliance/003-audit-log-ui.md` already built a minimal, audit-log-scoped standalone shell (nav + page chrome) ahead of this feature, so the real audit trail UI could exist by the end of epic 003 rather than waiting on this one. When this feature builds the real app shell, absorb/generalize that nav (it was lifted from the same Claude design mockup, `SkillCanon Audit.dc.html`) into the shell built here and delete the standalone copy — don't maintain two shell implementations side by side. Same applies to the minimal session-auth-in-Next.js-middleware wiring that feature added first: reuse/generalize it here rather than building a second one.

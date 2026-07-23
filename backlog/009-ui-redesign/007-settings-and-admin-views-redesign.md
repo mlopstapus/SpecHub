@@ -37,3 +37,5 @@ Apply the Claude design mockups to every settings surface: API keys, org/team ma
 ## Technical Notes
 
 Per tenet D1, each settings sub-page's content is still owned by its originating bounded context (identity-access for api-keys/org-team, audit-compliance for audit-log, billing-entitlements for billing) even though this feature restyles all of them together for consistency — coordinate with those BCs' `OWNERSHIP.md` files rather than moving ownership.
+
+**Forward-pull note (2026-07-23)**: `settings/audit-log`'s visual redesign was already done, ahead of schedule, directly against the same Claude design mockup (`SkillCanon Audit.dc.html`) this feature would otherwise draw from — see `003-audit-compliance/003-audit-log-ui.md`. Don't redo that page's styling from scratch; instead verify it still matches the mockup (functional changes landed between epic 003 and this epic may have drifted it) and repoint it at this epic's shared token system per `001-design-tokens-and-theming.md`'s own forward-pull note, reconciling rather than re-designing.
