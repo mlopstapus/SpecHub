@@ -1,7 +1,7 @@
 # Epic 000: Foundations
 
 **Priority:** 0
-**Status:** done
+**Status:** in-progress
 **Goal:** Establish the decisions and written conventions every subsequent epic builds on, so implementation doesn't stall on undecided questions mid-feature.
 
 ## Overview
@@ -21,6 +21,7 @@ None of epic 001 (TypeScript Refactor Foundation) should start until items 001, 
 - [x] [007 - Entitlement Catalog](archive/007-entitlement-catalog.md) → `context/entitlements.md`
 - [x] [008 - Third-Party Service Selection](archive/008-third-party-services.md) → `context/third-party-services.md`
 - [x] [009 - Feature Gating & Flags](archive/009-feature-gating-and-flags.md) → `context/feature-gating.md`
+- [ ] [010 - Design System](010-design-system.md) → `context/design-system.md`
 
 *Completed items are moved to `archive/` and checked off here.*
 
@@ -30,4 +31,4 @@ None — this is the starting point. Draws on `context/architecture.md` and `spe
 
 ## Notes
 
-Items 001–003 block epic 001. Items 004–009 can happen in parallel with epic 001 but must land before the epic that needs them (006 before 002-identity-access; 007, 008, and 009 before 008-billing-entitlements; 009 also blocks any feature work in any epic per tenet G1 — every feature ships gated).
+Items 001–003 block epic 001. Items 004–009 can happen in parallel with epic 001 but must land before the epic that needs them (006 before 002-identity-access; 007, 008, and 009 before 008-billing-entitlements; 009 also blocks any feature work in any epic per tenet G1 — every feature ships gated). Item 010 was added once `009-ui-redesign` was scoped — it only needs to land before that epic's `001-design-tokens-and-theming.md`, not before anything else in the backlog; extract palette/typography from the mockups already produced in Claude design rather than deciding brand direction from scratch.
