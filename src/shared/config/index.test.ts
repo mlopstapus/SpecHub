@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getJwtExpiryHours, getJwtSecret } from "./index";
+import {
+  getAppBaseUrl,
+  getInvitationExpiryHours,
+  getJwtExpiryHours,
+  getJwtSecret,
+  getSmtpConfig,
+} from "./index";
 
 describe("getJwtSecret", () => {
   it("throws when the env var is missing", () => {
@@ -35,5 +41,70 @@ describe("getJwtExpiryHours", () => {
   it("throws for a non-positive value", () => {
     expect(() => getJwtExpiryHours({ JWT_EXPIRY_HOURS: "0" })).toThrow();
     expect(() => getJwtExpiryHours({ JWT_EXPIRY_HOURS: "-1" })).toThrow();
+  });
+});
+
+describe("getInvitationExpiryHours", () => {
+  it("defaults to 168 (7 days) when unset", () => {
+    expect(getInvitationExpiryHours({})).toBe(168);
+  });
+
+  it("returns a configured positive value", () => {
+    expect(getInvitationExpiryHours({ INVITATION_EXPIRY_HOURS: "72" })).toBe(72);
+  });
+
+  it("throws for a non-positive value", () => {
+    expect(() =>
+      getInvitationExpiryHours({ INVITATION_EXPIRY_HOURS: "0" }),
+    ).toThrow();
+    expect(() =>
+      getInvitationExpiryHours({ INVITATION_EXPIRY_HOURS: "-5" }),
+    ).toThrow();
+  });
+});
+
+describe("getAppBaseUrl", () => {
+  it("defaults to http://localhost:3000 when unset", () => {
+    expect(getAppBaseUrl({})).toBe("http://localhost:3000");
+  });
+
+  it("returns a configured value", () => {
+    expect(getAppBaseUrl({ APP_BASE_URL: "https://app.example.com" })).toBe(
+      "https://app.example.com",
+    );
+  });
+});
+
+describe("getSmtpConfig", () => {
+  it("returns null when SMTP_HOST is unset", () => {
+    expect(getSmtpConfig({})).toBeNull();
+  });
+
+  it("returns the full config when SMTP_HOST is set", () => {
+    expect(
+      getSmtpConfig({
+        SMTP_HOST: "smtp.example.com",
+        SMTP_PORT: "2525",
+        SMTP_USER: "user",
+        SMTP_PASS: "pass",
+        SMTP_FROM: "SkillCanon <no-reply@example.com>",
+      }),
+    ).toEqual({
+      host: "smtp.example.com",
+      port: 2525,
+      user: "user",
+      pass: "pass",
+      from: "SkillCanon <no-reply@example.com>",
+    });
+  });
+
+  it("defaults port to 587 and from to a generic address when unset", () => {
+    expect(getSmtpConfig({ SMTP_HOST: "smtp.example.com" })).toEqual({
+      host: "smtp.example.com",
+      port: 587,
+      user: undefined,
+      pass: undefined,
+      from: "no-reply@example.com",
+    });
   });
 });

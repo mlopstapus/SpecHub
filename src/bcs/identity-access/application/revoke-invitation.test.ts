@@ -1,0 +1,205 @@
+import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import type { UserSummary } from "../domain/user";
+import { NotAuthorizedError } from "../domain/user";
+import { InvitationAlreadyAcceptedError, InvitationNotFoundError, InvitationRevokedError } from "../domain/invitation";
+import { insert as insertOrg } from "../infrastructure/organizations-repo";
+import { insert as insertTeam } from "../infrastructure/teams-repo";
+import { insert as insertUser } from "../infrastructure/users-repo";
+import { insert as insertInvitation } from "../infrastructure/invitations-repo";
+import { acceptInvitation } from "./accept-invitation";
+import { revokeInvitation } from "./revoke-invitation";
+
+async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
+    sql`select action, resource_id from audit.audit_events where ${whereSql}`,
+  );
+  return Array.from(result);
+}
+
+async function makeOrgTeamAdmin(testDb: TestDb) {
+  const { id: organizationId } = await insertOrg(testDb.appDb, {
+    name: "Acme",
+    slug: `acme-${randomUUID()}`,
+  });
+  const { id: teamId } = await insertTeam(testDb.appDb, {
+    organizationId,
+    name: "Root",
+    slug: `root-${randomUUID()}`,
+  });
+  const { id: adminId } = await insertUser(testDb.appDb, {
+    organizationId,
+    teamId,
+    username: `admin-${randomUUID()}`,
+    displayName: "Admin",
+    email: `admin-${randomUUID()}@example.com`,
+    passwordHash: "hash",
+    role: "admin",
+  });
+  const admin: UserSummary = {
+    id: adminId,
+    orgId: organizationId,
+    teamId,
+    role: "admin",
+    email: "admin@example.com",
+  };
+  return { organizationId, teamId, admin };
+}
+
+async function makePendingInvitation(
+  testDb: TestDb,
+  fixture: { organizationId: string; teamId: string; admin: UserSummary },
+) {
+  const token = randomUUID();
+  const { id } = await insertInvitation(testDb.appDb, {
+    organizationId: fixture.organizationId,
+    teamId: fixture.teamId,
+    email: `new.hire-${randomUUID()}@example.com`,
+    role: "member",
+    token,
+    invitedById: fixture.admin.id,
+    expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+  });
+  return { id, token };
+}
+
+describe("revokeInvitation", () => {
+  let testDb: TestDb;
+
+  beforeAll(async () => {
+    testDb = await startTestDb();
+  }, 120_000);
+
+  afterAll(async () => {
+    await testDb.teardown();
+  });
+
+  it("allows an org admin to revoke a pending invitation, after which acceptance throws InvitationRevokedError", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const { id, token } = await makePendingInvitation(testDb, fixture);
+
+    await revokeInvitation(testDb.appDb, fixture.admin, id);
+
+    await expect(
+      acceptInvitation(testDb.appDb, token, {
+        username: `newhire-${randomUUID()}`,
+        password: "correct horse battery staple",
+      }),
+    ).rejects.toThrow(InvitationRevokedError);
+  });
+
+  it("allows the target team's owner (non-admin) to revoke", async () => {
+    const { organizationId } = await makeOrgTeamAdmin(testDb);
+    const ownerBootstrap = await insertUser(testDb.appDb, {
+      organizationId,
+      teamId: (await insertTeam(testDb.appDb, {
+        organizationId,
+        name: "Bootstrap",
+        slug: `bootstrap-${randomUUID()}`,
+      })).id,
+      username: `owner-${randomUUID()}`,
+      displayName: "Owner",
+      email: `owner-${randomUUID()}@example.com`,
+      passwordHash: "hash",
+      role: "member",
+    });
+    const { id: teamId } = await insertTeam(testDb.appDb, {
+      organizationId,
+      name: "Owned",
+      slug: `owned-${randomUUID()}`,
+      ownerId: ownerBootstrap.id,
+    });
+    const owner: UserSummary = {
+      id: ownerBootstrap.id,
+      orgId: organizationId,
+      teamId,
+      role: "member",
+      email: "owner@example.com",
+    };
+    const { id: invitationId } = await makePendingInvitation(testDb, {
+      organizationId,
+      teamId,
+      admin: owner,
+    });
+
+    await expect(
+      revokeInvitation(testDb.appDb, owner, invitationId),
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects a caller who is neither an admin nor the team's owner", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const { id } = await makePendingInvitation(testDb, fixture);
+    const nonOwnerMember: UserSummary = {
+      id: randomUUID(),
+      orgId: fixture.organizationId,
+      teamId: fixture.teamId,
+      role: "member",
+      email: "member@example.com",
+    };
+
+    await expect(revokeInvitation(testDb.appDb, nonOwnerMember, id)).rejects.toThrow(
+      NotAuthorizedError,
+    );
+  });
+
+  it("rejects revoking an already-accepted invitation and does not alter the resulting account", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const { id, token } = await makePendingInvitation(testDb, fixture);
+    const { user } = await acceptInvitation(testDb.appDb, token, {
+      username: `newhire-${randomUUID()}`,
+      password: "correct horse battery staple",
+    });
+
+    await expect(revokeInvitation(testDb.appDb, fixture.admin, id)).rejects.toThrow(
+      InvitationAlreadyAcceptedError,
+    );
+
+    const rows = await testDb.appDb.execute<{ is_active: boolean }>(
+      sql`select is_active from identity_access.users where id = ${user.id}`,
+    );
+    expect(rows[0]?.is_active).toBe(true);
+  });
+
+  it("is a no-op when revoking an already-revoked invitation — resolves without error and writes no additional audit event", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const { id } = await makePendingInvitation(testDb, fixture);
+
+    await revokeInvitation(testDb.appDb, fixture.admin, id);
+    await expect(revokeInvitation(testDb.appDb, fixture.admin, id)).resolves.toBeUndefined();
+
+    const rows = await queryAuditEvents(
+      testDb,
+      sql`action = 'invitation.revoked' and resource_id = ${id}`,
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("rejects revoking a nonexistent or wrong-organization id", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const other = await makeOrgTeamAdmin(testDb);
+    const { id: otherInvitationId } = await makePendingInvitation(testDb, other);
+
+    await expect(
+      revokeInvitation(testDb.appDb, fixture.admin, randomUUID()),
+    ).rejects.toThrow(InvitationNotFoundError);
+    await expect(
+      revokeInvitation(testDb.appDb, fixture.admin, otherInvitationId),
+    ).rejects.toThrow(InvitationNotFoundError);
+  });
+
+  it("records exactly one invitation.revoked audit event for the real revoke", async () => {
+    const fixture = await makeOrgTeamAdmin(testDb);
+    const { id } = await makePendingInvitation(testDb, fixture);
+
+    await revokeInvitation(testDb.appDb, fixture.admin, id);
+
+    const rows = await queryAuditEvents(
+      testDb,
+      sql`action = 'invitation.revoked' and resource_id = ${id}`,
+    );
+    expect(rows).toHaveLength(1);
+  });
+});

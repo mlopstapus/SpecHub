@@ -22,3 +22,13 @@ export { login } from "./application/login";
 export { authenticateSession } from "./application/authenticate-session";
 export { logout } from "./application/logout";
 export type { SessionCookieDescriptor } from "./domain/session";
+export { inviteUser } from "./application/invite-user";
+export { acceptInvitation } from "./application/accept-invitation";
+export { revokeInvitation } from "./application/revoke-invitation";
+export { listInvitations } from "./application/list-invitations";
+export type {
+  Invitation,
+  InvitationSummary,
+  InvitationRole,
+  InvitationState,
+} from "./domain/invitation";

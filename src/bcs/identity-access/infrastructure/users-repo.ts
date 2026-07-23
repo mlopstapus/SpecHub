@@ -5,6 +5,8 @@ import { users } from "./schema";
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
 export interface InsertUserParams {
+  /** Optional client-generated id — lets a caller know the row's id before the insert commits, for use in the same transaction's audit event (009-invitations). Omit to let the column default apply. */
+  id?: string;
   organizationId: string;
   teamId: string;
   username: string;
@@ -30,6 +32,7 @@ export async function insert(
   const [row] = await tx
     .insert(users)
     .values({
+      ...(params.id ? { id: params.id } : {}),
       organizationId: params.organizationId,
       teamId: params.teamId,
       username: params.username,

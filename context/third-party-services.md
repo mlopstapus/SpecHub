@@ -21,3 +21,9 @@
 ## Deliverable status
 
 Email provider (with self-host SMTP fallback) and Sentry project/environment setup are settled. This unblocks the invitation feature in `002-identity-access` and the billing notification features in `008-billing-entitlements`.
+
+## Implementation status (updated 2026-07-23, `009-invitations`)
+
+- **SMTP self-host path: implemented.** `src/shared/email` (`sendEmail`) sends via `nodemailer` when `SMTP_HOST` is configured; when unset, delivery is skipped with a structured log line (via `src/shared/logging`) containing the full message — this *is* the "skipped with a clear log line, not a crash" behavior decided above, not a stub.
+- **SES managed-SaaS path: not yet implemented.** No SaaS/AWS-credentialed deployment surface exists in this codebase yet to build or verify an SES integration against (no `AWS_REGION`/SES config anywhere, per `009-invitations`'s plan.md Complexity Tracking). Tracked here rather than on a specific backlog item, since this document's originating foundations item (`backlog/000-foundations/008-third-party-services.md`) is already archived/done. Whichever future item stands up the managed-SaaS deployment (see `context/deployment.md`) should implement the SES half of `sendEmail` at that point — the interface (`sendEmail({ to, subject, text })`) already accommodates a second real implementation without callers changing.
+- The `sendEmail(to, template, data)` shape originally sketched above was simplified to `sendEmail({ to, subject, text })` during implementation — no templating engine exists yet in this codebase, so callers (e.g. `inviteUser`) compose the subject/body text directly rather than passing a template name.
