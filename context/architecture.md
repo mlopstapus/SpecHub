@@ -9,19 +9,19 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 
 ## Architectural Style
 
-**Modular monolith**: a single Next.js/TypeScript application (pnpm-managed), internally organized into seven bounded contexts (`/bcs/`) that communicate via synchronous in-process function calls, backed by one PostgreSQL database (per-context Postgres schemas for physical ownership clarity). Chosen over microservices or an event-driven architecture because the team is one person, the domain's hardest problems (governance resolution, audit completeness) need strong consistency rather than eventual consistency, and the operational simplicity of one deployable directly serves both the self-hosted OSS use case and a solo-maintained SaaS running on AWS. See [PDR-001](../docs/pdr/001-typescript-unification.md), [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md), and [PDR-009](../docs/pdr/009-aws-hosting-platform.md).
+**Modular monolith**: a single Next.js/TypeScript application (pnpm-managed), internally organized into seven bounded contexts (`src/bcs/`) that communicate via synchronous in-process function calls, backed by one PostgreSQL database (per-context Postgres schemas for physical ownership clarity). Chosen over microservices or an event-driven architecture because the team is one person, the domain's hardest problems (governance resolution, audit completeness) need strong consistency rather than eventual consistency, and the operational simplicity of one deployable directly serves both the self-hosted OSS use case and a solo-maintained SaaS running on AWS. See [PDR-001](../docs/pdr/001-typescript-unification.md), [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md), and [PDR-009](../docs/pdr/009-aws-hosting-platform.md).
 
 ## Bounded Contexts
 
 | Context | Responsibility | Contract | Ownership |
 |---|---|---|---|
-| Identity & Access | Tenancy (Organization), Team hierarchy, users, auth, API keys, invitations | [Contract](../bcs/identity-access/CONTRACT.md) | [Ownership](../bcs/identity-access/OWNERSHIP.md) |
-| Governance | Policy/Objective hierarchical resolution — core domain | [Contract](../bcs/governance/CONTRACT.md) | [Ownership](../bcs/governance/OWNERSHIP.md) |
-| Prompt Registry | Projects, prompts, versions, sharing, template expansion — core domain | [Contract](../bcs/prompt-registry/CONTRACT.md) | [Ownership](../bcs/prompt-registry/OWNERSHIP.md) |
-| Workflow Orchestration | Multi-step prompt chains | [Contract](../bcs/workflow-orchestration/CONTRACT.md) | [Ownership](../bcs/workflow-orchestration/OWNERSHIP.md) |
-| Billing & Entitlements | Stripe subscriptions, plan defaults, per-org entitlement flags/limits | [Contract](../bcs/billing-entitlements/CONTRACT.md) | [Ownership](../bcs/billing-entitlements/OWNERSHIP.md) |
-| Audit & Compliance | Immutable audit log, retention/export | [Contract](../bcs/audit-compliance/CONTRACT.md) | [Ownership](../bcs/audit-compliance/OWNERSHIP.md) |
-| Distribution | REST API, Skill Sync CLI (Claude Code), UI composition, MCP protocol server (deprioritized) — the external boundary | [Contract](../bcs/distribution/CONTRACT.md) | [Ownership](../bcs/distribution/OWNERSHIP.md) |
+| Identity & Access | Tenancy (Organization), Team hierarchy, users, auth, API keys, invitations | [Contract](../src/bcs/identity-access/CONTRACT.md) | [Ownership](../src/bcs/identity-access/OWNERSHIP.md) |
+| Governance | Policy/Objective hierarchical resolution — core domain | [Contract](../src/bcs/governance/CONTRACT.md) | [Ownership](../src/bcs/governance/OWNERSHIP.md) |
+| Prompt Registry | Projects, prompts, versions, sharing, template expansion — core domain | [Contract](../src/bcs/prompt-registry/CONTRACT.md) | [Ownership](../src/bcs/prompt-registry/OWNERSHIP.md) |
+| Workflow Orchestration | Multi-step prompt chains | [Contract](../src/bcs/workflow-orchestration/CONTRACT.md) | [Ownership](../src/bcs/workflow-orchestration/OWNERSHIP.md) |
+| Billing & Entitlements | Stripe subscriptions, plan defaults, per-org entitlement flags/limits | [Contract](../src/bcs/billing-entitlements/CONTRACT.md) | [Ownership](../src/bcs/billing-entitlements/OWNERSHIP.md) |
+| Audit & Compliance | Immutable audit log, retention/export | [Contract](../src/bcs/audit-compliance/CONTRACT.md) | [Ownership](../src/bcs/audit-compliance/OWNERSHIP.md) |
+| Distribution | REST API, Skill Sync CLI (Claude Code), UI composition, MCP protocol server (deprioritized) — the external boundary | [Contract](../src/bcs/distribution/CONTRACT.md) | [Ownership](../src/bcs/distribution/OWNERSHIP.md) |
 
 **Context map:**
 - Identity & Access is a shared-identifier source for everyone (`organizationId`/`userId`/`teamId` as opaque IDs) — no context reads its tables directly, only its contract functions.

@@ -16,6 +16,8 @@ src/
     (app)/**                    # UI routes
   bcs/
     identity-access/
+      CONTRACT.md                # public API surface, data contracts, events — governance doc, no code
+      OWNERSHIP.md                # folder/DB ownership — governance doc, no code
       index.ts                  # barrel — only what CONTRACT.md lists is exported
       domain/                   # entities, value objects, invariants (tenet D2)
       application/               # use-case/service functions the barrel re-exports

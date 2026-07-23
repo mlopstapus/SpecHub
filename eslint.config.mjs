@@ -24,7 +24,7 @@ const eslintConfig = [
                 to: { element: { type: "bc", fileInternalPath: "!index.ts" } },
               },
               message:
-                "{{to.element.captured.category}} is a bounded-context boundary — import via its barrel (src/bcs/{{to.element.captured.category}}/index.ts) or see bcs/{{to.element.captured.category}}/CONTRACT.md",
+                "{{to.element.captured.category}} is a bounded-context boundary — import via its barrel (src/bcs/{{to.element.captured.category}}/index.ts) or see src/bcs/{{to.element.captured.category}}/CONTRACT.md",
             },
             {
               allow: {
