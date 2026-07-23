@@ -7,7 +7,7 @@ deliverable: context/entitlements.md
 
 # Entitlement Catalog
 
-PDR-004 established entitlements as per-org data rather than a hardcoded tier enum, deliberately deferring the actual Free/Paid default values so pricing/packaging could stay flexible. `008-billing-entitlements` can't be built without at least an initial catalog — the schema needs to know what keys exist even if the values are expected to change.
+PDR-004 established entitlements as per-org data rather than a hardcoded tier enum, deliberately deferring the actual Free/Paid default values so pricing/packaging could stay flexible. `009-billing-entitlements` can't be built without at least an initial catalog — the schema needs to know what keys exist even if the values are expected to change.
 
 ## What We Need to Decide / Research
 
@@ -27,4 +27,4 @@ PDR-004 established entitlements as per-org data rather than a hardcoded tier en
 
 ## Dependencies
 
-None, but blocks `008-billing-entitlements`.
+None, but blocks `009-billing-entitlements`.

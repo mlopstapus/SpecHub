@@ -11,7 +11,7 @@ Introduce `Organization` as an explicit tenant-root aggregate above `Team`, per 
 
 ## Requirements
 
-- [X] `identity_access.organizations` table: `id`, `name`, `slug` (unique), `plan_id` (pointer into `billing.plans`, nullable until epic 008 exists), `stripe_customer_id` (nullable), `created_at`, `updated_at`
+- [X] `identity_access.organizations` table: `id`, `name`, `slug` (unique), `plan_id` (pointer into `billing.plans`, nullable until epic 009 exists), `stripe_customer_id` (nullable), `created_at`, `updated_at`
 - [X] `Organization` is the root of every `organization_id` foreign key across all seven schemas (this feature defines the table; later features/epics add the FK as their own tables are created)
 - [X] Self-hosted bootstrap: on first run with zero organizations, creates exactly one `Organization` + root `Team` + admin `User` in one transaction (replaces today's `register_admin` behavior, which conflates org creation with team creation) — **mechanism done, real rows pending**: `bootstrapOrganization` implements the transactional mechanism with a composable `provisionTeamAndAdmin` seam (tested with a stub); real `Team`/`User` rows land with `002-team-hierarchy.md`/`003-user-accounts-and-registration.md`, built immediately next in this same epic — see `specs/005-org-tenant-model/`
 - [X] Application-layer guard: self-hosted mode refuses to create a second `Organization` (matches "Free = self-hosted only, one org per install" from the architecture)

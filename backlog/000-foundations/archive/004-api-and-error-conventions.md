@@ -28,4 +28,4 @@ Distribution is the only bounded context that talks to the outside world, over t
 
 ## Dependencies
 
-None, but should land before `007-distribution` epic starts.
+None, but should land before `008-distribution` epic starts.

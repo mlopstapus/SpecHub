@@ -7,7 +7,7 @@ deliverable: context/design-system.md
 
 # Design System
 
-`007-distribution/003-web-ui-shell-and-core-pages.md` deliberately carries the existing shadcn/Tailwind primitives forward unchanged — it's a functional-parity rebuild, not a visual one. Before `009-ui-redesign` can start applying a real visual/UX pass across every page, the project needs a written, permanent answer for what that visual system actually is: palette, type scale, spacing/tokens, and which shadcn component variants are in vs. customized. Without this doc, each `009-ui-redesign` feature would be re-deciding brand basics page by page, producing an inconsistent result.
+`008-distribution/003-web-ui-shell-and-core-pages.md` deliberately carries the existing shadcn/Tailwind primitives forward unchanged — it's a functional-parity rebuild, not a visual one. Before `010-ui-polish-and-accessibility` can start applying a real visual/UX pass across every page, the project needs a written, permanent answer for what that visual system actually is: palette, type scale, spacing/tokens, and which shadcn component variants are in vs. customized. Without this doc, each `010-ui-polish-and-accessibility` feature would be re-deciding brand basics page by page, producing an inconsistent result.
 
 ## What We Need to Decide / Research
 
@@ -17,7 +17,7 @@ deliverable: context/design-system.md
 - Which shadcn components get restyled vs. used as-is; any new component variants needed (e.g. a denser table variant for prompt/policy list views)
 - Iconography — icon set in use, sizing conventions
 - Motion/transition conventions (if any) for state changes, loading, page transitions
-- How design tokens are expressed in code (Tailwind config theme extension vs. CSS variables) so `009-ui-redesign/001-design-tokens-and-theming.md` has a concrete implementation target
+- How design tokens are expressed in code (Tailwind config theme extension vs. CSS variables) so `004-app-shell-and-landing/001-design-tokens-and-theming.md` has a concrete implementation target
 
 ## Options / Considerations
 
@@ -27,7 +27,7 @@ deliverable: context/design-system.md
 
 ## Deliverable
 
-When complete, write findings to `context/design-system.md`. That document becomes the permanent reference — every `009-ui-redesign` feature file links back to it for the specific token values/rules it must apply.
+When complete, write findings to `context/design-system.md`. That document becomes the permanent reference — `004-app-shell-and-landing/001-design-tokens-and-theming.md` and every downstream epic's own UI feature link back to it for the specific token values/rules they must apply.
 
 ## Dependencies
 

@@ -7,7 +7,7 @@ deliverable: context/third-party-services.md
 
 # Third-Party Service Selection
 
-Most Build vs Buy decisions were already made in `context/architecture.md` (Stripe for payments, Sentry for error tracking, RDS for managed Postgres). The one gap is transactional email — needed for invitations (`002-identity-access`) and receipts/billing notifications (`008-billing-entitlements`) — plus confirming exact Sentry setup.
+Most Build vs Buy decisions were already made in `context/architecture.md` (Stripe for payments, Sentry for error tracking, RDS for managed Postgres). The one gap is transactional email — needed for invitations (`002-identity-access`) and receipts/billing notifications (`009-billing-entitlements`) — plus confirming exact Sentry setup.
 
 ## What We Need to Decide / Research
 
@@ -25,4 +25,4 @@ Most Build vs Buy decisions were already made in `context/architecture.md` (Stri
 
 ## Dependencies
 
-None, but blocks the invitation feature in `002-identity-access` and the billing notification features in `008-billing-entitlements`.
+None, but blocks the invitation feature in `002-identity-access` and the billing notification features in `009-billing-entitlements`.

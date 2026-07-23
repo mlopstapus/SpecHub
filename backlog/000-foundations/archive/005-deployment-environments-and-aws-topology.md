@@ -30,4 +30,4 @@ PDR-009 chose AWS (ECS/Fargate, RDS, ALB) for the managed SaaS but left account/
 
 ## Dependencies
 
-None, but blocks the AWS-facing portions of `007-distribution` and `008-billing-entitlements` (Stripe webhook endpoint needs a real deployed URL to register against).
+None, but blocks the AWS-facing portions of `008-distribution` and `009-billing-entitlements` (Stripe webhook endpoint needs a real deployed URL to register against).
