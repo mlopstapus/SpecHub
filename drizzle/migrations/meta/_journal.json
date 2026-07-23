@@ -29,6 +29,13 @@
       "when": 1784810909504,
       "tag": "0003_identity_access_users",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784819980419,
+      "tag": "0004_audit_audit_events",
+      "breakpoints": true
     }
   ]
 }

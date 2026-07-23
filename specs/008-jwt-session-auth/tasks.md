@@ -21,8 +21,8 @@ description: "Task list for feature implementation"
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `jose` as a dependency (`pnpm add jose`) — research.md §1
-- [ ] T002 [P] Add `JWT_SECRET` and `JWT_EXPIRY_HOURS` to `.env.example`, placeholder-style (`JWT_SECRET=REPLACE_ME_JWT_SECRET`, `JWT_EXPIRY_HOURS=24`), matching `DATABASE_URL`'s existing `REPLACE_ME` convention
+- [X] T001 Add `jose` as a dependency (`pnpm add jose`) — research.md §1
+- [X] T002 [P] Add `JWT_SECRET` and `JWT_EXPIRY_HOURS` to `.env.example`, placeholder-style (`JWT_SECRET=REPLACE_ME_JWT_SECRET`, `JWT_EXPIRY_HOURS=24`), matching `DATABASE_URL`'s existing `REPLACE_ME` convention
 
 ---
 
@@ -30,19 +30,19 @@ description: "Task list for feature implementation"
 
 **Purpose**: The fail-closed `JWT_SECRET` validator, the pulled-forward `audit.audit_events` table + `record()` write path, and JWT sign/verify — every user story needs at least one of these (all four write audit events; US1/US2/US4 need JWT sign/verify; US4 needs the secret validator specifically).
 
-- [ ] T003 [P] Write failing tests for `getJwtSecret` in `src/shared/config/index.test.ts`: throws when missing; throws when equal to the documented placeholder; returns the real value otherwise — mirrors `src/shared/db/client.test.ts`'s `getConnectionString` tests exactly (research.md §2)
-- [ ] T004 [P] Implement `getJwtSecret(env?)` in `src/shared/config/index.ts` (depends on T003) — makes T003 pass
-- [ ] T005 [P] Add `AuditEvent` domain type and the redaction key list (`password_hash`, `key_hash`, raw-token-shaped fields) in `src/bcs/audit-compliance/domain/audit-event.ts` (data-model.md)
-- [ ] T006 [P] Add the `audit_events` table to `src/bcs/audit-compliance/infrastructure/schema.ts`: `id`, `organization_id` (nullable, FK → `identity_access.organizations.id`), `actor_user_id` (nullable), `actor_api_key_id` (nullable), `action`, `resource_type`, `resource_id` (nullable), `before`/`after` (jsonb, nullable), `created_at`; index on `(organization_id, created_at)` (data-model.md)
-- [ ] T007 Generate and review the migration: `MIGRATION_DATABASE_URL=... pnpm db:generate`, rename to `drizzle/migrations/000N_audit_audit_events.sql` and update `_journal.json`'s `tag`; confirm the nullable `organization_id` FK and the composite index are present (depends on T006)
-- [ ] T008 [P] Write failing tests for `audit-events-repo.insert` in `src/bcs/audit-compliance/infrastructure/audit-events-repo.test.ts` (Testcontainers, `startTestDb()`): inserts one row with all fields set; inserts one row with `organizationId`/`resourceId` both `null` (unknown-email case) (depends on T007)
-- [ ] T009 Implement `audit-events-repo.ts` (`insert(tx, row)`) in `src/bcs/audit-compliance/infrastructure/audit-events-repo.ts` (depends on T008) — makes T008 pass
-- [ ] T010 [P] Write failing tests for `record()` in `src/bcs/audit-compliance/application/record.test.ts` (Testcontainers): inserts exactly one row matching the given event; a `password_hash`/`key_hash`/raw-token field nested anywhere inside `before`/`after` is stripped before storage, verified by reading the row back (depends on T005, T007)
-- [ ] T011 Implement `record(tx, event)` in `src/bcs/audit-compliance/application/record.ts`: applies redaction, calls `audit-events-repo.insert` (depends on T009, T010) — makes T010 pass
-- [ ] T012 Export `record` and the `AuditEvent`/`NewAuditEvent` types from `src/bcs/audit-compliance/index.ts` (depends on T011)
-- [ ] T013 [P] Write failing tests for JWT sign/verify in `src/bcs/identity-access/infrastructure/jwt.test.ts`: `signSessionJwt` produces a token `verifySessionJwt` accepts, returning `{ sub, role }`; an expired token is rejected; a tampered/wrong-signature token is rejected; both functions throw (via `getJwtSecret`) when `JWT_SECRET` is missing or placeholder, before attempting to sign/verify anything (depends on T004)
-- [ ] T014 Implement `signSessionJwt(claims)` / `verifySessionJwt(token)` in `src/bcs/identity-access/infrastructure/jwt.ts` using `jose`'s `SignJWT`/`jwtVerify`, HS256, reading `getJwtSecret()` and `JWT_EXPIRY_HOURS` (default 24) (depends on T001, T013) — makes T013 pass
-- [ ] T015 [P] Add `SessionClaims` and `SessionCookieDescriptor` types in `src/bcs/identity-access/domain/session.ts`, plus the session-cookie name constant (data-model.md)
+- [X] T003 [P] Write failing tests for `getJwtSecret` in `src/shared/config/index.test.ts`: throws when missing; throws when equal to the documented placeholder; returns the real value otherwise — mirrors `src/shared/db/client.test.ts`'s `getConnectionString` tests exactly (research.md §2)
+- [X] T004 [P] Implement `getJwtSecret(env?)` in `src/shared/config/index.ts` (depends on T003) — makes T003 pass
+- [X] T005 [P] Add `AuditEvent` domain type and the redaction key list (`password_hash`, `key_hash`, raw-token-shaped fields) in `src/bcs/audit-compliance/domain/audit-event.ts` (data-model.md)
+- [X] T006 [P] Add the `audit_events` table to `src/bcs/audit-compliance/infrastructure/schema.ts`: `id`, `organization_id` (nullable, FK → `identity_access.organizations.id`), `actor_user_id` (nullable), `actor_api_key_id` (nullable), `action`, `resource_type`, `resource_id` (nullable), `before`/`after` (jsonb, nullable), `created_at`; index on `(organization_id, created_at)` (data-model.md)
+- [X] T007 Generate and review the migration: `MIGRATION_DATABASE_URL=... pnpm db:generate`, rename to `drizzle/migrations/000N_audit_audit_events.sql` and update `_journal.json`'s `tag`; confirm the nullable `organization_id` FK and the composite index are present (depends on T006)
+- [X] T008 [P] Write failing tests for `audit-events-repo.insert` in `src/bcs/audit-compliance/infrastructure/audit-events-repo.test.ts` (Testcontainers, `startTestDb()`): inserts one row with all fields set; inserts one row with `organizationId`/`resourceId` both `null` (unknown-email case) (depends on T007)
+- [X] T009 Implement `audit-events-repo.ts` (`insert(tx, row)`) in `src/bcs/audit-compliance/infrastructure/audit-events-repo.ts` (depends on T008) — makes T008 pass
+- [X] T010 [P] Write failing tests for `record()` in `src/bcs/audit-compliance/application/record.test.ts` (Testcontainers): inserts exactly one row matching the given event; a `password_hash`/`key_hash`/raw-token field nested anywhere inside `before`/`after` is stripped before storage, verified by reading the row back (depends on T005, T007)
+- [X] T011 Implement `record(tx, event)` in `src/bcs/audit-compliance/application/record.ts`: applies redaction, calls `audit-events-repo.insert` (depends on T009, T010) — makes T010 pass
+- [X] T012 Export `record` and the `AuditEvent`/`NewAuditEvent` types from `src/bcs/audit-compliance/index.ts` (depends on T011)
+- [X] T013 [P] Write failing tests for JWT sign/verify in `src/bcs/identity-access/infrastructure/jwt.test.ts`: `signSessionJwt` produces a token `verifySessionJwt` accepts, returning `{ sub, role }`; an expired token is rejected; a tampered/wrong-signature token is rejected; both functions throw (via `getJwtSecret`) when `JWT_SECRET` is missing or placeholder, before attempting to sign/verify anything (depends on T004)
+- [X] T014 Implement `signSessionJwt(claims)` / `verifySessionJwt(token)` in `src/bcs/identity-access/infrastructure/jwt.ts` using `jose`'s `SignJWT`/`jwtVerify`, HS256, reading `getJwtSecret()` and `JWT_EXPIRY_HOURS` (default 24) (depends on T001, T013) — makes T013 pass
+- [X] T015 [P] Add `SessionClaims` and `SessionCookieDescriptor` types in `src/bcs/identity-access/domain/session.ts`, plus the session-cookie name constant (data-model.md)
 
 **Checkpoint**: `JWT_SECRET` validator, audit write path, and JWT sign/verify are all in place and tested. Every user story below can now proceed.
 
@@ -56,12 +56,12 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Write failing tests for `login` in `src/bcs/identity-access/application/login.test.ts` (Testcontainers): correct credentials → non-null `{ user, cookie }`, `cookie.httpOnly === true`, `cookie.secure`/`cookie.sameSite` match the descriptor's typed values (FR-004); wrong password → `null`; unknown email → `null`, response shape identical to wrong-password case; deactivated user with correct password → `null`; a successful login writes one `audit_events` row (`action: "user.login"`, `actorUserId` set); a failed login against a real account writes one row (`action: "user.login_failed"`, `actorUserId` set); a failed login against an unknown email writes one row (`action: "user.login_failed"`, `actorUserId`/`organizationId` both `null`); the submitted password never appears in any written row; if `record()` is made to throw (e.g. by stubbing it), `login()` throws too — for both the success path and a would-be-failure path — rather than returning a cookie or `null` (FR-013, mirrors T022's equivalent logout case) (depends on Foundational: T009, T011, T014, T015)
+- [X] T016 [P] [US1] Write failing tests for `login` in `src/bcs/identity-access/application/login.test.ts` (Testcontainers): correct credentials → non-null `{ user, cookie }`, `cookie.httpOnly === true`, `cookie.secure`/`cookie.sameSite` match the descriptor's typed values (FR-004); wrong password → `null`; unknown email → `null`, response shape identical to wrong-password case; deactivated user with correct password → `null`; a successful login writes one `audit_events` row (`action: "user.login"`, `actorUserId` set); a failed login against a real account writes one row (`action: "user.login_failed"`, `actorUserId` set); a failed login against an unknown email writes one row (`action: "user.login_failed"`, `actorUserId`/`organizationId` both `null`); the submitted password never appears in any written row; if `record()` is made to throw (e.g. by stubbing it), `login()` throws too — for both the success path and a would-be-failure path — rather than returning a cookie or `null` (FR-013, mirrors T022's equivalent logout case) (depends on Foundational: T009, T011, T014, T015)
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement `login(db, email, password)` in `src/bcs/identity-access/application/login.ts`: lowercase-normalized email lookup (matching `007-user-accounts-registration`'s stored-lowercase convention), `bcryptjs.compare` against `password_hash`, reject inactive users; on any outcome, open `db.transaction()` and call `record()` before returning (research.md §7) so an audit-write failure throws rather than reporting success; sign the JWT and build the `SessionCookieDescriptor` (`secure: NODE_ENV === "production"`) only on the success path (depends on T016) — makes T016 pass
-- [ ] T018 [US1] Export `login` from `src/bcs/identity-access/index.ts` (depends on T017)
+- [X] T017 [US1] Implement `login(db, email, password)` in `src/bcs/identity-access/application/login.ts`: lowercase-normalized email lookup (matching `007-user-accounts-registration`'s stored-lowercase convention), `bcryptjs.compare` against `password_hash`, reject inactive users; on any outcome, open `db.transaction()` and call `record()` before returning (research.md §7) so an audit-write failure throws rather than reporting success; sign the JWT and build the `SessionCookieDescriptor` (`secure: NODE_ENV === "production"`) only on the success path (depends on T016) — makes T016 pass
+- [X] T018 [US1] Export `login` from `src/bcs/identity-access/index.ts` (depends on T017)
 
 **Checkpoint**: US1 independently functional — login works end-to-end with audit coverage.
 
@@ -75,12 +75,12 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Write failing tests for `authenticateSession` in `src/bcs/identity-access/application/authenticate-session.test.ts` (Testcontainers): a cookie header built from a freshly-signed valid token resolves to the correct `UserSummary`, sourced from the user's *current* row (not the JWT's own claims) — verify by changing the user's `role` after signing and confirming the resolved `UserSummary` reflects the new role; an expired token → `null`; a tampered/wrong-signature token → `null`; `cookieHeader` of `null`/`undefined`/`""` → `null`; a `Cookie` header present but without this feature's session-cookie name → `null` (depends on Foundational: T014, T015; uses `getUser`, already implemented)
+- [X] T019 [P] [US2] Write failing tests for `authenticateSession` in `src/bcs/identity-access/application/authenticate-session.test.ts` (Testcontainers): a cookie header built from a freshly-signed valid token resolves to the correct `UserSummary`, sourced from the user's *current* row (not the JWT's own claims) — verify by changing the user's `role` after signing and confirming the resolved `UserSummary` reflects the new role; an expired token → `null`; a tampered/wrong-signature token → `null`; `cookieHeader` of `null`/`undefined`/`""` → `null`; a `Cookie` header present but without this feature's session-cookie name → `null` (depends on Foundational: T014, T015; uses `getUser`, already implemented)
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement `authenticateSession(db, cookieHeader)` in `src/bcs/identity-access/application/authenticate-session.ts`: parse the named cookie out of the raw header, `verifySessionJwt`, on success call `getUser(db, claims.sub)`; catch any verification failure and resolve `null` rather than throwing (depends on T019) — makes T019 pass
-- [ ] T021 [US2] Export `authenticateSession` from `src/bcs/identity-access/index.ts` (depends on T020)
+- [X] T020 [US2] Implement `authenticateSession(db, cookieHeader)` in `src/bcs/identity-access/application/authenticate-session.ts`: parse the named cookie out of the raw header, `verifySessionJwt`, on success call `getUser(db, claims.sub)`; catch any verification failure and resolve `null` rather than throwing (depends on T019) — makes T019 pass
+- [X] T021 [US2] Export `authenticateSession` from `src/bcs/identity-access/index.ts` (depends on T020)
 
 **Checkpoint**: US2 independently functional — session resolution is correct and never throws for an expected negative case.
 
@@ -94,12 +94,12 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Write failing tests for `logout` in `src/bcs/identity-access/application/logout.test.ts` (Testcontainers): returns `{ cookie }` with `cookie.value === ""` and `cookie.maxAge === 0`; writes exactly one `audit_events` row (`action: "user.logout"`, `actorUserId` set); calling it twice in a row for the same user succeeds both times (idempotent — no server-side session state to check); if `record()` is made to throw (e.g. by stubbing it), `logout` throws too and returns no cookie (depends on Foundational: T009, T011, T015)
+- [X] T022 [P] [US3] Write failing tests for `logout` in `src/bcs/identity-access/application/logout.test.ts` (Testcontainers): returns `{ cookie }` with `cookie.value === ""` and `cookie.maxAge === 0`; writes exactly one `audit_events` row (`action: "user.logout"`, `actorUserId` set); calling it twice in a row for the same user succeeds both times (idempotent — no server-side session state to check); if `record()` is made to throw (e.g. by stubbing it), `logout` throws too and returns no cookie (depends on Foundational: T009, T011, T015)
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Implement `logout(db, userId)` in `src/bcs/identity-access/application/logout.ts`: `db.transaction()` wrapping a `record()` call (`action: "user.logout"`), then returns the clearing `SessionCookieDescriptor` (depends on T022) — makes T022 pass
-- [ ] T024 [US3] Export `logout` from `src/bcs/identity-access/index.ts` (depends on T023)
+- [X] T023 [US3] Implement `logout(db, userId)` in `src/bcs/identity-access/application/logout.ts`: `db.transaction()` wrapping a `record()` call (`action: "user.logout"`), then returns the clearing `SessionCookieDescriptor` (depends on T022) — makes T022 pass
+- [X] T024 [US3] Export `logout` from `src/bcs/identity-access/index.ts` (depends on T023)
 
 **Checkpoint**: US3 independently functional.
 
@@ -113,11 +113,11 @@ description: "Task list for feature implementation"
 
 ### Tests for User Story 4
 
-- [ ] T025 [P] [US4] Write failing tests in `src/bcs/identity-access/application/login.test.ts` (extend the file from T016): with `JWT_SECRET` env-stubbed to missing, `login()` with correct credentials throws (not `null`, not a resolved cookie); same with `JWT_SECRET` stubbed to the documented placeholder; with a real secret restored, the same call succeeds (depends on T017, T004)
+- [X] T025 [P] [US4] Write failing tests in `src/bcs/identity-access/application/login.test.ts` (extend the file from T016): with `JWT_SECRET` env-stubbed to missing, `login()` with correct credentials throws (not `null`, not a resolved cookie); same with `JWT_SECRET` stubbed to the documented placeholder; with a real secret restored, the same call succeeds (depends on T017, T004)
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] No new production code expected — T013/T014 (Foundational) and T017 (`login`) already call `getJwtSecret()`/`signSessionJwt` unconditionally on the success path. Run T025; if it reveals a gap (e.g. `login` catching and swallowing the `getJwtSecret` throw), fix `login.ts` so the error propagates uncaught (depends on T025)
+- [X] T026 [US4] No new production code expected — T013/T014 (Foundational) and T017 (`login`) already call `getJwtSecret()`/`signSessionJwt` unconditionally on the success path. Run T025; if it reveals a gap (e.g. `login` catching and swallowing the `getJwtSecret` throw), fix `login.ts` so the error propagates uncaught (depends on T025)
 
 **Checkpoint**: All four user stories independently functional and tested; fail-closed secret behavior verified at both the unit (Foundational) and feature (US1 login path) level.
 

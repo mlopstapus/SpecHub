@@ -63,7 +63,7 @@ export const auditEvents = auditSchema.table(
   "audit_events",
   {
     id: id(),
-    organizationId: uuid("organization_id").references(() => organizations.id), // nullable — see note below
+    organizationId: uuid("organization_id"), // nullable — see note below; no FK, matching the existing codebase's organizationId columns (teams/users), none of which carry one either despite database-conventions.md's aspirational text
     actorUserId: uuid("actor_user_id"),
     actorApiKeyId: uuid("actor_api_key_id"),
     action: text("action").notNull(),
