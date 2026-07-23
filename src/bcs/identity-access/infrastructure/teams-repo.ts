@@ -1,0 +1,81 @@
+import { and, eq, isNull } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { teams } from "./schema";
+
+type Tx = PostgresJsDatabase<Record<string, never>>;
+
+export interface InsertTeamParams {
+  organizationId: string;
+  name: string;
+  slug: string;
+  description?: string;
+  ownerId?: string;
+  parentTeamId?: string;
+}
+
+export interface UpdateTeamFields {
+  name?: string;
+  description?: string;
+  ownerId?: string;
+}
+
+export async function findById(tx: Tx, id: string) {
+  const [row] = await tx.select().from(teams).where(eq(teams.id, id));
+  return row;
+}
+
+/** `null` parentTeamId lists an organization's root-level teams. */
+export async function findByParent(
+  tx: Tx,
+  organizationId: string,
+  parentTeamId: string | null,
+) {
+  return tx
+    .select()
+    .from(teams)
+    .where(
+      and(
+        eq(teams.organizationId, organizationId),
+        parentTeamId === null
+          ? isNull(teams.parentTeamId)
+          : eq(teams.parentTeamId, parentTeamId),
+      ),
+    );
+}
+
+export async function insert(
+  tx: Tx,
+  params: InsertTeamParams,
+): Promise<{ id: string }> {
+  const [row] = await tx
+    .insert(teams)
+    .values({
+      organizationId: params.organizationId,
+      name: params.name,
+      slug: params.slug,
+      description: params.description,
+      ownerId: params.ownerId,
+      parentTeamId: params.parentTeamId,
+    })
+    .returning({ id: teams.id });
+  if (!row) {
+    throw new Error("Team insert returned no row.");
+  }
+  return row;
+}
+
+export async function update(
+  tx: Tx,
+  id: string,
+  fields: UpdateTeamFields,
+): Promise<void> {
+  await tx.update(teams).set(fields).where(eq(teams.id, id));
+}
+
+export async function updateParent(
+  tx: Tx,
+  id: string,
+  parentTeamId: string | null,
+): Promise<void> {
+  await tx.update(teams).set({ parentTeamId }).where(eq(teams.id, id));
+}

@@ -11,19 +11,19 @@ Port the recursive team hierarchy (`teams.parent_team_id`, `sub_teams`, `get_tea
 
 ## Requirements
 
-- [ ] `identity_access.teams` table: `id`, `organization_id`, `name`, `slug`, `description`, `owner_id` (nullable, FK to `users`), `parent_team_id` (nullable, self-FK), timestamps
-- [ ] Invariant enforced: `parent_team_id`, if set, must belong to the same `organization_id` as the child — reject cross-org reparenting
-- [ ] Invariant enforced: no cycles in the team tree (reject a reparent that would create one)
-- [ ] `getTeamChain(teamId)` returns ordered `TeamChainEntry[]`: self-first, root-last — matches current Python `get_team_chain` behavior exactly (characterization test against it)
-- [ ] CRUD operations: create team, update team, reparent team, list sub-teams
-- [ ] Insert-between: create a new team and splice it into the hierarchy between an existing team and its current parent (the existing team is reparented under the new one) — matches current `insert_team_between`/`POST /teams/insert-between/{child_team_id}`
+- [X] `identity_access.teams` table: `id`, `organization_id`, `name`, `slug`, `description`, `owner_id` (nullable, FK to `users`), `parent_team_id` (nullable, self-FK), timestamps
+- [X] Invariant enforced: `parent_team_id`, if set, must belong to the same `organization_id` as the child — reject cross-org reparenting
+- [X] Invariant enforced: no cycles in the team tree (reject a reparent that would create one)
+- [X] `getTeamChain(teamId)` returns ordered `TeamChainEntry[]`: self-first, root-last — matches current Python `get_team_chain` behavior exactly (characterization test against it)
+- [X] CRUD operations: create team, update team, reparent team, list sub-teams
+- [X] Insert-between: create a new team and splice it into the hierarchy between an existing team and its current parent (the existing team is reparented under the new one) — matches current `insert_team_between`/`POST /teams/insert-between/{child_team_id}`
 
 ## Acceptance Criteria
 
-- [ ] `getTeamChain` output matches the current Python implementation's output for an equivalent multi-level hierarchy fixture, verified by a characterization test
-- [ ] Attempting to set `parent_team_id` to a team in a different organization is rejected
-- [ ] Attempting to create a cycle (A's parent is B, B's parent is A) is rejected
-- [ ] `TeamReparented` event fires on successful reparent (consumed by Audit per `bcs/governance/CONTRACT.md`'s note that Governance itself doesn't need to react, but Audit does)
+- [X] `getTeamChain` output matches the current Python implementation's output for an equivalent multi-level hierarchy fixture, verified by a characterization test
+- [X] Attempting to set `parent_team_id` to a team in a different organization is rejected
+- [X] Attempting to create a cycle (A's parent is B, B's parent is A) is rejected
+- [ ] `TeamReparented` event fires on successful reparent (consumed by Audit per `bcs/governance/CONTRACT.md`'s note that Governance itself doesn't need to react, but Audit does) — **blocked on `backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md`**, not yet built; per PDR-007 there is no event bus in this system, so this is really "team reparents get an audit-log row once the audit write path exists" (already tracked in that backlog item's retrofit requirement, which explicitly lists team creation/reparenting) — leaving unchecked per this repo's partial-completion convention rather than force-completing
 
 ## Open Questions
 

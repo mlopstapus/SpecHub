@@ -1,0 +1,60 @@
+import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { createOrganization } from "./create-organization";
+import { createTeam } from "./create-team";
+import { updateTeam } from "./update-team";
+import { teams } from "../infrastructure/schema";
+
+describe("updateTeam", () => {
+  let testDb: TestDb;
+
+  beforeAll(async () => {
+    testDb = await startTestDb();
+  }, 120_000);
+
+  beforeEach(() => {
+    vi.stubEnv("STRIPE_ENABLED", "true");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  afterAll(async () => {
+    await testDb.teardown();
+  });
+
+  it("updates name, description, and owner without touching hierarchy position", async () => {
+    const org = await testDb.appDb.transaction((tx) =>
+      createOrganization(tx, { name: "org-update", slug: `org-update-${randomUUID()}` }),
+    );
+    const parent = await testDb.appDb.transaction((tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Parent", slug: "parent" }),
+    );
+    const child = await testDb.appDb.transaction((tx) =>
+      createTeam(tx, {
+        organizationId: org.id,
+        name: "Child",
+        slug: "child",
+        parentTeamId: parent.id,
+      }),
+    );
+    const newOwnerId = randomUUID();
+
+    await testDb.appDb.transaction((tx) =>
+      updateTeam(tx, child.id, {
+        name: "Renamed Child",
+        description: "new description",
+        ownerId: newOwnerId,
+      }),
+    );
+
+    const [row] = await testDb.appDb.select().from(teams).where(eq(teams.id, child.id));
+    expect(row?.name).toBe("Renamed Child");
+    expect(row?.description).toBe("new description");
+    expect(row?.ownerId).toBe(newOwnerId);
+    expect(row?.parentTeamId).toBe(parent.id);
+  });
+});
