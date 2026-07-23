@@ -5,15 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from src.spechub_server.mcp.server import mcp
-from src.spechub_server.mcp.tools import (
+from src.skillcanon_server.mcp.server import mcp
+from src.skillcanon_server.mcp.tools import (
     sh_list,
     sh_run,
     sh_search,
     sh_workflow_list,
     sh_workflow_run,
 )
-from src.spechub_server.models import Prompt, PromptVersion, Team, User, Workflow
+from src.skillcanon_server.models import Prompt, PromptVersion, Team, User, Workflow
 
 
 def _test_session_factory(db_session):
@@ -32,7 +32,7 @@ def _mock_ctx():
 @pytest.mark.asyncio
 async def test_sh_list_empty(db_session: AsyncSession, monkeypatch):
     """sh-list returns a message when no prompts exist."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
@@ -43,7 +43,7 @@ async def test_sh_list_empty(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_list_with_prompts(db_session: AsyncSession, monkeypatch):
     """sh-list returns prompt names."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="my-prompt", description="A test prompt")
     db_session.add(prompt)
@@ -65,7 +65,7 @@ async def test_sh_list_with_prompts(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_search_match(db_session: AsyncSession, monkeypatch):
     """sh-search finds prompts by name."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="search-target", description="Find me")
     db_session.add(prompt)
@@ -88,7 +88,7 @@ async def test_sh_search_match(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_search_no_match(db_session: AsyncSession, monkeypatch):
     """sh-search returns a message when nothing matches."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
@@ -99,7 +99,7 @@ async def test_sh_search_no_match(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_search_by_tag(db_session: AsyncSession, monkeypatch):
     """sh-search finds prompts by tag."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="tag-match", description="Has a special tag")
     db_session.add(prompt)
@@ -122,7 +122,7 @@ async def test_sh_search_by_tag(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_search_by_description(db_session: AsyncSession, monkeypatch):
     """sh-search finds prompts by description."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="desc-match", description="A very distinctive description")
     db_session.add(prompt)
@@ -149,7 +149,7 @@ def test_sh_run_tool_registered():
 @pytest.mark.asyncio
 async def test_sh_run_invocation(db_session: AsyncSession, monkeypatch):
     """sh-run expands a prompt by name and returns formatted output."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="invoke-me", description="Test invocation")
     db_session.add(prompt)
@@ -175,7 +175,7 @@ async def test_sh_run_invocation(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_sh_run_plain_string_input(db_session: AsyncSession, monkeypatch):
     """sh-run handles plain string input (not JSON)."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     prompt = Prompt(name="plain-input", description="Plain string test")
     db_session.add(prompt)
@@ -220,7 +220,7 @@ async def _create_test_user(db_session: AsyncSession) -> User:
 @pytest.mark.asyncio
 async def test_workflow_list_empty(db_session: AsyncSession, monkeypatch):
     """sh-workflow-list returns a message when no workflows exist."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
@@ -231,7 +231,7 @@ async def test_workflow_list_empty(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_workflow_list_with_workflows(db_session: AsyncSession, monkeypatch):
     """sh-workflow-list returns workflow names."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     user = await _create_test_user(db_session)
     wf = Workflow(
@@ -253,7 +253,7 @@ async def test_workflow_list_with_workflows(db_session: AsyncSession, monkeypatc
 @pytest.mark.asyncio
 async def test_workflow_run_not_found(db_session: AsyncSession, monkeypatch):
     """sh-workflow-run returns error for unknown workflow."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     monkeypatch.setattr(tools_module, "async_session", _test_session_factory(db_session))
 
@@ -264,7 +264,7 @@ async def test_workflow_run_not_found(db_session: AsyncSession, monkeypatch):
 @pytest.mark.asyncio
 async def test_workflow_run_success(db_session: AsyncSession, monkeypatch):
     """sh-workflow-run executes a workflow and returns step results."""
-    from src.spechub_server.mcp import tools as tools_module
+    from src.skillcanon_server.mcp import tools as tools_module
 
     user = await _create_test_user(db_session)
 

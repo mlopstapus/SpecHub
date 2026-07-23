@@ -6,7 +6,7 @@ import { createRoleClient } from "./client";
  * Matches the app role provisioned by drizzle/migrations/0000_create_schemas.sql.
  * Only ever reachable on a fresh, throwaway Testcontainers instance.
  */
-const APP_ROLE = "spechub_app";
+const APP_ROLE = "skillcanon_app";
 const APP_ROLE_PASSWORD = "changeme_in_production";
 
 export interface TestDb {

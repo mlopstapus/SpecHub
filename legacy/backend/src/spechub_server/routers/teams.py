@@ -3,16 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user, require_admin
-from src.spechub_server.database import get_db
-from src.spechub_server.models import Team, User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user, require_admin
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import Team, User
+from src.skillcanon_server.schemas import (
     TeamCreate,
     TeamListResponse,
     TeamResponse,
     TeamUpdate,
 )
-from src.spechub_server.services import team_service
+from src.skillcanon_server.services import team_service
 
 router = APIRouter(prefix="/api/v1/teams", tags=["teams"])
 

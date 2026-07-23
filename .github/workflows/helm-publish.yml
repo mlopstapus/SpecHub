@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "charts/spechub/**"
+      - "charts/skillcanon/**"
   workflow_dispatch:
 
 permissions:
@@ -24,10 +24,10 @@ jobs:
           version: v3.14.0
 
       - name: Lint chart
-        run: helm lint charts/spechub/
+        run: helm lint charts/skillcanon/
 
       - name: Package chart
-        run: helm package charts/spechub/ --destination .helm-pkg/
+        run: helm package charts/skillcanon/ --destination .helm-pkg/
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin

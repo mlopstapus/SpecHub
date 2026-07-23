@@ -10,7 +10,7 @@
 After `src/bcs/identity-access/infrastructure/schema.ts` is updated with the `teams` table:
 
 ```sh
-MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/spechub" pnpm db:generate
+MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/skillcanon" pnpm db:generate
 ```
 
 Confirm `drizzle/migrations/0002_identity_access_teams.sql` creates `teams` with a composite unique constraint on `(organization_id, slug)` and a self-referential FK on `parent_team_id`. Rename the file and update `drizzle/migrations/meta/_journal.json`'s `tag` to `<timestamp>_identity_access_teams` before committing, per `context/database-conventions.md`.

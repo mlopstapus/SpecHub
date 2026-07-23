@@ -3,14 +3,14 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import Objective, User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.models import Objective, User
+from src.skillcanon_server.schemas import (
     EffectiveObjectivesResponse,
     ObjectiveCreate,
     ObjectiveResponse,
     ObjectiveUpdate,
 )
-from src.spechub_server.services.team_service import get_team_chain
+from src.skillcanon_server.services.team_service import get_team_chain
 
 
 async def create_objective(db: AsyncSession, data: ObjectiveCreate) -> ObjectiveResponse:

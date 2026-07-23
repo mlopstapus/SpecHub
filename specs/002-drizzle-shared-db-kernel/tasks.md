@@ -68,7 +68,7 @@ Single Next.js project per `plan.md`'s Structure Decision — all new code under
 
 ### Implementation for User Story 1
 
-- [X] T012 [US1] Generate `drizzle/migrations/0000_create_schemas.sql` via `drizzle-kit generate` from the `pgSchema()` exports in `schemas.ts`, then hand-append the idempotent `spechub_app` role-creation `DO` block, `GRANT USAGE`, and `ALTER DEFAULT PRIVILEGES` statements (or reference pre-provisioned roles — see task note on environment-specific role provisioning) (depends on T004, T006, T009-T011 failing correctly first)
+- [X] T012 [US1] Generate `drizzle/migrations/0000_create_schemas.sql` via `drizzle-kit generate` from the `pgSchema()` exports in `schemas.ts`, then hand-append the idempotent `skillcanon_app` role-creation `DO` block, `GRANT USAGE`, and `ALTER DEFAULT PRIVILEGES` statements (or reference pre-provisioned roles — see task note on environment-specific role provisioning) (depends on T004, T006, T009-T011 failing correctly first)
 - [X] T013 [US1] Wire `pnpm db:migrate` end-to-end against a real local Postgres (`database/` docker image or equivalent) and confirm exit code 0 per quickstart.md Scenario 1
 
 **Checkpoint**: User Story 1 fully functional and testable independently — `pnpm test src/shared/db/schemas.test.ts` and `pnpm db:migrate` both pass.

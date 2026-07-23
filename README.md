@@ -1,10 +1,10 @@
-# SpecHub
+# SkillCanon
 
 An open-source, self-hosted prompt registry with **hierarchical governance**, distributed via [MCP (Model Context Protocol)](https://modelcontextprotocol.io/).
 
-Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SpecHub never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
+Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SkillCanon never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
 
-> **In progress:** SpecHub is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented today in the preserved `legacy/backend/` and `legacy/frontend/`, but `docker compose up -d` now builds and runs the new unified scaffold (`app`) plus Postgres (`database`) instead — the new scaffold has no business logic yet, so run the legacy backend/frontend manually (see Quickstart below) during the transition.
+> **In progress:** SkillCanon is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented today in the preserved `legacy/backend/` and `legacy/frontend/`, but `docker compose up -d` now builds and runs the new unified scaffold (`app`) plus Postgres (`database`) instead — the new scaffold has no business logic yet, so run the legacy backend/frontend manually (see Quickstart below) during the transition.
 
 ## Key Features
 
@@ -22,7 +22,7 @@ Define prompts once, distribute them to every developer's AI tool (Claude, Winds
 ## Quickstart (docker-compose)
 
 ```bash
-git clone <repo> && cd spechub
+git clone <repo> && cd skillcanon
 
 # Start Postgres
 docker compose up -d database
@@ -36,7 +36,7 @@ uv pip install -e ".[dev]"
 alembic upgrade head
 
 # Start the server
-uvicorn src.spechub_server.main:app --reload --port 8000
+uvicorn src.skillcanon_server.main:app --reload --port 8000
 ```
 
 - **REST API:** http://localhost:8000/api/v1/prompts
@@ -51,22 +51,22 @@ The chart is published to GHCR as an OCI artifact — no git clone needed:
 
 ```bash
 # Install the full stack (backend + frontend + database)
-helm install sh oci://ghcr.io/mlopstapus/charts/spechub --version 0.1.1
+helm install sh oci://ghcr.io/mlopstapus/charts/skillcanon --version 0.1.1
 
 # Or from a local clone
-helm install sh ./charts/spechub
+helm install sh ./charts/skillcanon
 ```
 
 Override defaults as needed:
 
 ```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/spechub --version 0.1.1 \
+helm install sh oci://ghcr.io/mlopstapus/charts/skillcanon --version 0.1.1 \
   --set postgresql.password=<strong-password> \
   --set backend.authToken=<your-auth-token> \
   --set frontend.route.enabled=true
 ```
 
-See [`charts/spechub/values.yaml`](charts/spechub/values.yaml) for all configuration options.
+See [`charts/skillcanon/values.yaml`](charts/skillcanon/values.yaml) for all configuration options.
 
 For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/deploy-openshift.md).
 
@@ -80,11 +80,11 @@ For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/dep
 
 ## Connect Your AI Tool
 
-SpecHub uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.
+SkillCanon uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.
 
 ### Step 1: Get Your API Key
 
-If an admin has already set up the SpecHub instance, ask them for your user account. Then generate an API key:
+If an admin has already set up the SkillCanon instance, ask them for your user account. Then generate an API key:
 
 ```bash
 # Via the admin dashboard at http://localhost:3000/settings/api-keys
@@ -106,7 +106,7 @@ Open MCP settings (⌘+Shift+P → "MCP: Configure MCP Servers") and add:
 ```json
 {
   "mcpServers": {
-    "spechub": {
+    "skillcanon": {
       "serverUrl": "http://localhost:8000/mcp/",
       "headers": {
         "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
@@ -123,7 +123,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "spechub": {
+    "skillcanon": {
       "transport": "sse",
       "url": "http://localhost:8000/mcp/",
       "headers": {
@@ -141,7 +141,7 @@ Add to your MCP configuration:
 ```json
 {
   "mcpServers": {
-    "spechub": {
+    "skillcanon": {
       "url": "http://localhost:8000/mcp/",
       "headers": {
         "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
@@ -179,7 +179,7 @@ Once connected, you get these tools automatically:
 | `sh-review` | Perform a thorough code review |
 | `sh-document` | Generate documentation |
 | `sh-commit` | Commit changes to the repository |
-| `sh-ralph` | Iteratively improve SpecHub prompts based on session takeaways |
+| `sh-ralph` | Iteratively improve SkillCanon prompts based on session takeaways |
 | `sh-list` | List all available prompts |
 | `sh-search` | Search prompts by name or tag |
 | `sh-context` | Show effective policies and objectives for the current user |
@@ -188,7 +188,7 @@ All prompt tools accept an optional `project` parameter (UUID) to layer project-
 
 ## Governance Model
 
-SpecHub uses a recursive team hierarchy for governance:
+SkillCanon uses a recursive team hierarchy for governance:
 
 ```
 Org (root team)
@@ -280,12 +280,12 @@ Returns `{ "inherited": [...], "local": [...] }`.
 
 1. Admin creates teams, users, policies, and objectives via REST API or the admin dashboard
 2. Admin creates prompts via the admin dashboard or REST API
-3. SpecHub dynamically registers each prompt as an `sh-{name}` MCP tool
-4. Developers connect their AI tool to SpecHub's MCP endpoint
+3. SkillCanon dynamically registers each prompt as an `sh-{name}` MCP tool
+4. Developers connect their AI tool to SkillCanon's MCP endpoint
 5. Developer invokes `sh-plan build a feature store`
-6. SpecHub resolves the user's effective policies and objectives from the team chain
-7. SpecHub applies policy enforcement (prepend/append/inject) to the templates
-8. SpecHub expands Jinja2 templates → returns `system_message` + `user_message` + `applied_policies` + `objectives`
+6. SkillCanon resolves the user's effective policies and objectives from the team chain
+7. SkillCanon applies policy enforcement (prepend/append/inject) to the templates
+8. SkillCanon expands Jinja2 templates → returns `system_message` + `user_message` + `applied_policies` + `objectives`
 9. The IDE's own LLM uses the returned prompt to generate the response
 
 ## Prompt Composition

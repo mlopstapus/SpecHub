@@ -102,7 +102,7 @@ export default function SettingsPage() {
     ? JSON.stringify(
         {
           mcpServers: {
-            spechub: {
+            skillcanon: {
               serverUrl: `${window.location.origin}/mcp/`,
               headers: {
                 Authorization: `Bearer ${rawKey}`,

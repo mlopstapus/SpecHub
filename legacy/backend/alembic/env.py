@@ -10,7 +10,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from src.spechub_server.models import Base
+from src.skillcanon_server.models import Base
 
 config = context.config
 if config.config_file_name is not None:

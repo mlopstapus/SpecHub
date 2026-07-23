@@ -28,5 +28,5 @@ This feature has no runtime data model — no database tables, no domain entitie
 ## Entity: Docker Image Artifact
 
 - **Represents**: The built container image, shared between the self-hosted distribution path (Docker Compose / Helm) and the AWS SaaS deployment path (per FR-006/PDR-006).
-- **Attributes**: two lifecycle states — *built* (produced by every `docker-build` PR-time run, never persisted beyond the runner) and *published* (pushed to `ghcr.io/mlopstapus/spechub` only by `docker-publish`, merge-time only, tagged at minimum with the merge commit SHA).
+- **Attributes**: two lifecycle states — *built* (produced by every `docker-build` PR-time run, never persisted beyond the runner) and *published* (pushed to `ghcr.io/mlopstapus/skillcanon` only by `docker-publish`, merge-time only, tagged at minimum with the merge commit SHA).
 - **Relationships**: Built from the new root `Dockerfile` (research.md Decision 4); consumed downstream by Docker Compose (local self-host) and the Helm chart's `values.yaml` image reference (not modified by this feature — wiring the Helm chart's `image:` field to the new published tag, and the AWS ECS task definition, is deployment-epic scope, not this feature's).

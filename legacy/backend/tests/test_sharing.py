@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import Prompt, PromptVersion, Team, User, Workflow
+from src.skillcanon_server.models import Prompt, PromptVersion, Team, User, Workflow
 
 
 @pytest_asyncio.fixture
@@ -100,7 +100,7 @@ async def owned_workflow(db_session: AsyncSession, owner: User) -> Workflow:
 
 @pytest.mark.asyncio
 async def test_share_prompt(db_session: AsyncSession, owned_prompt: Prompt, other_user: User):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     result = await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
     assert result is not None
@@ -112,7 +112,7 @@ async def test_share_prompt(db_session: AsyncSession, owned_prompt: Prompt, othe
 async def test_share_prompt_idempotent(
     db_session: AsyncSession, owned_prompt: Prompt, other_user: User
 ):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     r1 = await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
     r2 = await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
@@ -123,7 +123,7 @@ async def test_share_prompt_idempotent(
 
 @pytest.mark.asyncio
 async def test_share_prompt_not_found(db_session: AsyncSession, other_user: User):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     result = await prompt_service.share_prompt(db_session, "nonexistent", other_user.id)
     assert result is None
@@ -133,7 +133,7 @@ async def test_share_prompt_not_found(db_session: AsyncSession, other_user: User
 async def test_list_prompt_shares(
     db_session: AsyncSession, owned_prompt: Prompt, other_user: User, third_user: User
 ):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
     await prompt_service.share_prompt(db_session, owned_prompt.name, third_user.id)
@@ -148,7 +148,7 @@ async def test_list_prompt_shares(
 
 @pytest.mark.asyncio
 async def test_list_prompt_shares_not_found(db_session: AsyncSession):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     result = await prompt_service.list_prompt_shares(db_session, "nonexistent")
     assert result is None
@@ -156,7 +156,7 @@ async def test_list_prompt_shares_not_found(db_session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_unshare_prompt(db_session: AsyncSession, owned_prompt: Prompt, other_user: User):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     await prompt_service.share_prompt(db_session, owned_prompt.name, other_user.id)
     success = await prompt_service.unshare_prompt(db_session, owned_prompt.name, other_user.id)
@@ -169,7 +169,7 @@ async def test_unshare_prompt(db_session: AsyncSession, owned_prompt: Prompt, ot
 
 @pytest.mark.asyncio
 async def test_unshare_prompt_not_found(db_session: AsyncSession, owned_prompt: Prompt):
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     success = await prompt_service.unshare_prompt(db_session, owned_prompt.name, uuid.uuid4())
     assert success is False
@@ -180,7 +180,7 @@ async def test_list_prompts_user_scoped(
     db_session: AsyncSession, owned_prompt: Prompt, owner: User, other_user: User
 ):
     """Only owned + shared prompts should appear when user_id is provided."""
-    from src.spechub_server.services import prompt_service
+    from src.skillcanon_server.services import prompt_service
 
     # other_user sees nothing initially
     result = await prompt_service.list_prompts(db_session, user_id=other_user.id)
@@ -206,7 +206,7 @@ async def test_list_prompts_user_scoped(
 
 @pytest.mark.asyncio
 async def test_share_workflow(db_session: AsyncSession, owned_workflow: Workflow, other_user: User):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     result = await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)
     assert result is not None
@@ -218,7 +218,7 @@ async def test_share_workflow(db_session: AsyncSession, owned_workflow: Workflow
 async def test_share_workflow_idempotent(
     db_session: AsyncSession, owned_workflow: Workflow, other_user: User
 ):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     r1 = await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)
     r2 = await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)
@@ -229,7 +229,7 @@ async def test_share_workflow_idempotent(
 
 @pytest.mark.asyncio
 async def test_share_workflow_not_found(db_session: AsyncSession, other_user: User):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     result = await workflow_service.share_workflow(db_session, uuid.uuid4(), other_user.id)
     assert result is None
@@ -239,7 +239,7 @@ async def test_share_workflow_not_found(db_session: AsyncSession, other_user: Us
 async def test_list_workflow_shares(
     db_session: AsyncSession, owned_workflow: Workflow, other_user: User, third_user: User
 ):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)
     await workflow_service.share_workflow(db_session, owned_workflow.id, third_user.id)
@@ -251,7 +251,7 @@ async def test_list_workflow_shares(
 
 @pytest.mark.asyncio
 async def test_list_workflow_shares_not_found(db_session: AsyncSession):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     result = await workflow_service.list_workflow_shares(db_session, uuid.uuid4())
     assert result is None
@@ -261,7 +261,7 @@ async def test_list_workflow_shares_not_found(db_session: AsyncSession):
 async def test_unshare_workflow(
     db_session: AsyncSession, owned_workflow: Workflow, other_user: User
 ):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     await workflow_service.share_workflow(db_session, owned_workflow.id, other_user.id)
     success = await workflow_service.unshare_workflow(db_session, owned_workflow.id, other_user.id)
@@ -274,7 +274,7 @@ async def test_unshare_workflow(
 
 @pytest.mark.asyncio
 async def test_unshare_workflow_not_found(db_session: AsyncSession, owned_workflow: Workflow):
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     success = await workflow_service.unshare_workflow(db_session, owned_workflow.id, uuid.uuid4())
     assert success is False
@@ -285,7 +285,7 @@ async def test_list_workflows_user_scoped(
     db_session: AsyncSession, owned_workflow: Workflow, owner: User, other_user: User
 ):
     """Only owned + shared workflows should appear when user_id is provided."""
-    from src.spechub_server.services import workflow_service
+    from src.skillcanon_server.services import workflow_service
 
     # other_user sees nothing initially
     result = await workflow_service.list_workflows(db_session, user_id=other_user.id)

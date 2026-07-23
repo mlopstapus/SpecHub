@@ -117,7 +117,7 @@ export default function AcceptInvitePage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">
-            Join <span className="text-primary">SpecHub</span>
+            Join <span className="text-primary">SkillCanon</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             You&apos;ve been invited as{" "}

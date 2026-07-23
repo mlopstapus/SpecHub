@@ -13,7 +13,7 @@ The architecture session confirmed JWT-in-httpOnly-cookie for the web UI (carryi
 
 - JWT claims and expiry: current backend uses `sub`/`role`/`exp` with a configurable `jwt_expiry_hours` — confirm this carries forward, decide whether `organization_id` and `team_id` should also be claims (avoids a DB lookup per request) or if the JWT stays minimal and every request re-fetches the user record.
 - Refresh strategy: does an expired JWT require a full re-login, or is there a refresh token / sliding expiry? Current system has no refresh flow at all — decide whether to add one now or explicitly defer.
-- Cookie flags: `httpOnly`, `secure` (true outside local dev per tenet C2), `sameSite` setting, domain scoping (matters once there's a `*.spechub.example` multi-tenant subdomain pattern for SaaS, if that's the eventual URL structure).
+- Cookie flags: `httpOnly`, `secure` (true outside local dev per tenet C2), `sameSite` setting, domain scoping (matters once there's a `*.skillcanon.example` multi-tenant subdomain pattern for SaaS, if that's the eventual URL structure).
 - CSRF approach: cookie-based auth needs CSRF protection that bearer-token auth didn't need — decide on double-submit cookie, `sameSite=strict`, or a CSRF token pattern, per tenet C2's "no functional insecure default" bar.
 - API key scoping model: current `scopes` JSON column on `ApiKey` — confirm what scope granularity is needed (read-only vs. read-write, per-resource-type scopes) before the API key feature is built.
 - Startup-time secret validation (tenet C2: "startup fails loudly if `jwt_secret` is still at its placeholder value") — confirm this check carries forward into the TS app's boot sequence.

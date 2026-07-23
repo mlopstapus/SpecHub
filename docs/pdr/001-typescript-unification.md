@@ -5,7 +5,7 @@
 
 ## Context
 
-SpecHub is currently split across a Python/FastAPI backend (SQLAlchemy, Alembic, no type checker configured) and a Next.js/TypeScript frontend. Backend and MCP server run as a separate process from the frontend. CLAUDE.md already flags the backend as "slated for a future rewrite in TypeScript." The project is pre-launch with no production data, and is maintained solo, with a stated goal of end-to-end type safety and a single language to own.
+SkillCanon is currently split across a Python/FastAPI backend (SQLAlchemy, Alembic, no type checker configured) and a Next.js/TypeScript frontend. Backend and MCP server run as a separate process from the frontend. CLAUDE.md already flags the backend as "slated for a future rewrite in TypeScript." The project is pre-launch with no production data, and is maintained solo, with a stated goal of end-to-end type safety and a single language to own.
 
 ## Options Considered
 

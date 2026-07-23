@@ -1,18 +1,18 @@
-# SpecHub Architecture
+# SkillCanon Architecture
 
-**SpecHub — An Open-Source, Self-Hosted Prompt Registry with Hierarchical Governance, Distributed via MCP**
+**SkillCanon — An Open-Source, Self-Hosted Prompt Registry with Hierarchical Governance, Distributed via MCP**
 
 ---
 
 ## Overview
 
-SpecHub is an infrastructure layer for managing, versioning, and distributing LLM prompts across any AI-powered IDE or tool. It solves the fragmentation problem where prompts are siloed inside individual tools (Windsurf, Claude Code, Copilot) with no portability, versioning, or observability.
+SkillCanon is an infrastructure layer for managing, versioning, and distributing LLM prompts across any AI-powered IDE or tool. It solves the fragmentation problem where prompts are siloed inside individual tools (Windsurf, Claude Code, Copilot) with no portability, versioning, or observability.
 
-The primary distribution mechanism is **MCP (Model Context Protocol)** — SpecHub exposes an MCP server that Claude, Windsurf, GitHub Copilot, and any MCP-compatible client can connect to natively. Developers don't need a separate CLI or plugin; their existing AI tools connect directly to the company's SpecHub instance over the corporate network.
+The primary distribution mechanism is **MCP (Model Context Protocol)** — SkillCanon exposes an MCP server that Claude, Windsurf, GitHub Copilot, and any MCP-compatible client can connect to natively. Developers don't need a separate CLI or plugin; their existing AI tools connect directly to the company's SkillCanon instance over the corporate network.
 
-SpecHub does **not** call LLMs — it serves expanded prompts to the IDE, and the IDE's own LLM does the work.
+SkillCanon does **not** call LLMs — it serves expanded prompts to the IDE, and the IDE's own LLM does the work.
 
-SpecHub includes a **hierarchical governance model** based on recursive teams, enabling organizations to define cascading policies and objectives that are automatically enforced during prompt expansion.
+SkillCanon includes a **hierarchical governance model** based on recursive teams, enabling organizations to define cascading policies and objectives that are automatically enforced during prompt expansion.
 
 ---
 
@@ -47,7 +47,7 @@ SpecHub includes a **hierarchical governance model** based on recursive teams, e
                           |
                           v
               +-----------+------------+
-              |     SpecHub Server         |
+              |     SkillCanon Server         |
               |  +------------------+  |
               |  | MCP Server       |  |
               |  +------------------+  |
@@ -77,7 +77,7 @@ SpecHub includes a **hierarchical governance model** based on recursive teams, e
 
 ### Hierarchical Governance
 
-SpecHub organizes entities in a recursive team hierarchy:
+SkillCanon organizes entities in a recursive team hierarchy:
 
 ```
 Team (root)
@@ -127,19 +127,19 @@ A versioned template with:
 
 ### Execution Model
 
-SpecHub is a **prompt source**, not an LLM proxy. It never calls an LLM.
+SkillCanon is a **prompt source**, not an LLM proxy. It never calls an LLM.
 
 1. Developer invokes `sh-plan "build a feature store"` in their AI tool
-2. AI tool calls the `sh-plan` MCP tool on the SpecHub server
-3. SpecHub looks up the `plan` prompt, resolves the user's effective policies and objectives
-4. SpecHub applies policy enforcement (prepend/append/inject) to the templates
-5. SpecHub expands Jinja2 templates with input variables + policy/objective context
-6. SpecHub returns the expanded `system_message` + `user_message` + applied policies + objectives
+2. AI tool calls the `sh-plan` MCP tool on the SkillCanon server
+3. SkillCanon looks up the `plan` prompt, resolves the user's effective policies and objectives
+4. SkillCanon applies policy enforcement (prepend/append/inject) to the templates
+5. SkillCanon expands Jinja2 templates with input variables + policy/objective context
+6. SkillCanon returns the expanded `system_message` + `user_message` + applied policies + objectives
 7. The AI tool's own LLM uses the returned prompt to generate the response
 
 ### MCP Integration
 
-SpecHub exposes an MCP server over Streamable HTTP transport. Every prompt in the registry is automatically exposed as an MCP tool with an `sh-` prefix.
+SkillCanon exposes an MCP server over Streamable HTTP transport. Every prompt in the registry is automatically exposed as an MCP tool with an `sh-` prefix.
 
 **Dynamically registered tools:**
 
@@ -154,7 +154,7 @@ SpecHub exposes an MCP server over Streamable HTTP transport. Every prompt in th
 - **`sh-` prefix** — explicit routing; no ambiguity with local skills
 - **Dynamic registration** — new prompt → new MCP tool automatically
 - **Optional `project` parameter** — each tool accepts an optional project UUID to layer project context
-- **SpecHub returns prompts, not LLM responses**
+- **SkillCanon returns prompts, not LLM responses**
 - **Bearer token auth** via user-scoped API keys
 
 ---
@@ -283,13 +283,13 @@ SpecHub exposes an MCP server over Streamable HTTP transport. Every prompt in th
 ## Project Structure
 
 ```
-spechub/
+skillcanon/
 ├── backend/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   ├── alembic.ini
 │   ├── alembic/               # Database migrations
-│   ├── src/spechub_server/
+│   ├── src/skillcanon_server/
 │   │   ├── main.py            # FastAPI app + MCP server entrypoint
 │   │   ├── config.py          # Settings (pydantic-settings)
 │   │   ├── database.py        # SQLAlchemy engine + session
@@ -330,7 +330,7 @@ spechub/
 │   ├── Dockerfile
 │   └── init/                  # SQL init scripts (run on first start)
 │       └── 001_schema.sql
-├── charts/spechub/                # Helm chart for Kubernetes
+├── charts/skillcanon/                # Helm chart for Kubernetes
 ├── docker-compose.yaml
 └── README.md
 ```

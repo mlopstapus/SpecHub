@@ -18,7 +18,7 @@
 
 ### User Story 1 - Merge is blocked on broken code (Priority: P1)
 
-As the maintainer of SpecHub, when I open a pull request against `main`, I want the repository to automatically check that the change builds, passes lint, passes type checking, and passes the test suite, so that broken code cannot land on `main` and I don't have to remember to run these checks myself before merging.
+As the maintainer of SkillCanon, when I open a pull request against `main`, I want the repository to automatically check that the change builds, passes lint, passes type checking, and passes the test suite, so that broken code cannot land on `main` and I don't have to remember to run these checks myself before merging.
 
 **Why this priority**: This is the core value of the feature — an automated, non-bypassable correctness gate. Per project tenet P1, tests (and now lint/build) are the only correctness signal available until a richer type/domain-invariant checker exists, so making that signal actually gate merges (rather than being advisory) is the entire point of this backlog item.
 

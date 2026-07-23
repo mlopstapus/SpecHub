@@ -4,17 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user
-from src.spechub_server.database import get_db
-from src.spechub_server.models import Policy, Team, User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import Policy, Team, User
+from src.skillcanon_server.schemas import (
     EffectivePoliciesResponse,
     PolicyCreate,
     PolicyResponse,
     PolicyUpdate,
 )
-from src.spechub_server.services import policy_service
-from src.spechub_server.services.team_service import get_team_chain
+from src.skillcanon_server.services import policy_service
+from src.skillcanon_server.services.team_service import get_team_chain
 
 router = APIRouter(prefix="/api/v1/policies", tags=["policies"])
 

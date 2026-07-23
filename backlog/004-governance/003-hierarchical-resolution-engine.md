@@ -7,7 +7,7 @@ dependencies: ["001-policy-model-and-crud.md", "002-objective-model-and-crud.md"
 
 # Hierarchical Resolution Engine
 
-Port `resolve_effective` and `resolve_all_policies` (and the equivalent objective resolution) from the current Python `policy_service.py`/`objective_service.py` — the two-layer inherited/local resolution walk that is SpecHub's actual differentiator. This is the single highest-risk piece of the entire refactor: correctness here is silent when wrong.
+Port `resolve_effective` and `resolve_all_policies` (and the equivalent objective resolution) from the current Python `policy_service.py`/`objective_service.py` — the two-layer inherited/local resolution walk that is SkillCanon's actual differentiator. This is the single highest-risk piece of the entire refactor: correctness here is silent when wrong.
 
 ## Requirements
 

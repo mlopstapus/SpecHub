@@ -1,7 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
-from src.spechub_server.config import settings
+from src.skillcanon_server.config import settings
 
 _allowed = [h.strip() for h in settings.allowed_hosts.split(",") if h.strip()]
 if _allowed:
@@ -15,9 +15,9 @@ else:
     )
 
 mcp = FastMCP(
-    "SpecHub",
+    "SkillCanon",
     instructions=(
-        "SpecHub is a prompt registry. Use sh-list to see available prompts, "
+        "SkillCanon is a prompt registry. Use sh-list to see available prompts, "
         "sh-search to find prompts by tag or name, and sh-run to expand "
         "a specific prompt with your input (e.g. sh-run name='commit' input='...'). "
         "Use sh-workflow-list to see available workflows and sh-workflow-run to "

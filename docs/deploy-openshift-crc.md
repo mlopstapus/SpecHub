@@ -1,11 +1,11 @@
-# Deploying SpecHub to OpenShift CRC
+# Deploying SkillCanon to OpenShift CRC
 
-Step-by-step guide to deploy the SpecHub on a local OpenShift cluster using [CRC (CodeReady Containers)](https://developers.redhat.com/products/openshift-local/overview).
+Step-by-step guide to deploy the SkillCanon on a local OpenShift cluster using [CRC (CodeReady Containers)](https://developers.redhat.com/products/openshift-local/overview).
 
 ## Prerequisites
 
 - **CRC installed and running** — verify with `crc status`
-- **CRC memory: 14GB+** — CRC defaults to ~11GB which is not enough for OpenShift + PostgreSQL + SpecHub. Increase before starting:
+- **CRC memory: 14GB+** — CRC defaults to ~11GB which is not enough for OpenShift + PostgreSQL + SkillCanon. Increase before starting:
   ```bash
   crc config set memory 14336   # 14GB
   crc start
@@ -24,13 +24,13 @@ oc login -u kubeadmin https://api.crc.testing:6443
 # Verify
 oc whoami
 
-# Create a project for SpecHub
-oc new-project spechub
+# Create a project for SkillCanon
+oc new-project skillcanon
 ```
 
-## Step 2: Build and Push the SpecHub Image
+## Step 2: Build and Push the SkillCanon Image
 
-CRC has an internal image registry. You need to push the SpecHub image there.
+CRC has an internal image registry. You need to push the SkillCanon image there.
 
 ### Configure Docker Desktop for CRC's Registry
 
@@ -66,15 +66,15 @@ docker login $REGISTRY -u kubeadmin -p $(oc whoami -t)
 # Build the image
 # --provenance=false and --sbom=false are required — without them, Docker BuildKit
 # produces a manifest list with attestations that the OpenShift registry rejects (500 error)
-docker build --provenance=false --sbom=false -t $REGISTRY/spechub/spechub:0.1.0 backend/
+docker build --provenance=false --sbom=false -t $REGISTRY/skillcanon/skillcanon:0.1.0 backend/
 
 # Push
-docker push $REGISTRY/spechub/spechub:0.1.0
+docker push $REGISTRY/skillcanon/skillcanon:0.1.0
 ```
 
 Verify the image landed in the registry:
 ```bash
-oc get imagestream -n spechub
+oc get imagestream -n skillcanon
 ```
 
 ## Step 3: Deploy PostgreSQL
@@ -85,9 +85,9 @@ image is already cached in CRC.
 
 ```bash
 oc new-app postgresql-persistent \
-  --param POSTGRESQL_USER=spechub \
-  --param POSTGRESQL_PASSWORD=spechub \
-  --param POSTGRESQL_DATABASE=spechub \
+  --param POSTGRESQL_USER=skillcanon \
+  --param POSTGRESQL_PASSWORD=skillcanon \
+  --param POSTGRESQL_DATABASE=skillcanon \
   --param VOLUME_CAPACITY=1Gi
 ```
 
@@ -101,9 +101,9 @@ oc get pods -w
 > `sh-postgresql` like the Bitnami chart). This affects the Helm install in the
 > next step.
 
-## Step 4: Install the SpecHub Helm Chart
+## Step 4: Install the SkillCanon Helm Chart
 
-The SpecHub image is referenced differently inside vs outside the cluster:
+The SkillCanon image is referenced differently inside vs outside the cluster:
 
 | Context | Registry URL |
 |---------|-------------|
@@ -114,8 +114,8 @@ Install the chart using the **internal** registry path, and override the Postgre
 host to match the OpenShift template service name:
 
 ```bash
-helm install spechub ./charts/spechub \
-  --set image.repository=image-registry.openshift-image-registry.svc:5000/spechub/spechub \
+helm install skillcanon ./charts/skillcanon \
+  --set image.repository=image-registry.openshift-image-registry.svc:5000/skillcanon/skillcanon \
   --set image.tag=0.1.0 \
   --set postgresql.host=postgresql
 ```
@@ -123,28 +123,28 @@ helm install spechub ./charts/spechub \
 ## Step 5: Verify the Deployment
 
 ```bash
-# Check pods — you should see spechub and postgresql running
+# Check pods — you should see skillcanon and postgresql running
 oc get pods
 
 # Check the migration job (runs automatically via Helm post-install hook)
 oc get jobs
 
-# Check SpecHub logs
-oc logs deploy/spechub
+# Check SkillCanon logs
+oc logs deploy/skillcanon
 ```
 
-## Step 6: Expose SpecHub via an OpenShift Route
+## Step 6: Expose SkillCanon via an OpenShift Route
 
 ```bash
-oc expose svc/spechub
-oc get route spechub
+oc expose svc/skillcanon
+oc get route skillcanon
 ```
 
-This creates a route like `http://sh-spechub.apps-crc.testing`.
+This creates a route like `http://sh-skillcanon.apps-crc.testing`.
 
 Test it:
 ```bash
-ROUTE=$(oc get route spechub -o jsonpath='{.spec.host}')
+ROUTE=$(oc get route skillcanon -o jsonpath='{.spec.host}')
 curl http://$ROUTE/health
 # Expected: {"status":"ok"}
 ```
@@ -162,7 +162,7 @@ curl http://$ROUTE/api/v1/prompts | python3 -m json.tool
 Get the route URL:
 
 ```bash
-oc get route spechub -o jsonpath='{.spec.host}'
+oc get route skillcanon -o jsonpath='{.spec.host}'
 ```
 
 Update your IDE's MCP config (e.g. `~/.codeium/windsurf/mcp_config.json`):
@@ -170,8 +170,8 @@ Update your IDE's MCP config (e.g. `~/.codeium/windsurf/mcp_config.json`):
 ```json
 {
   "mcpServers": {
-    "spechub": {
-      "serverUrl": "http://sh-spechub.apps-crc.testing/mcp"
+    "skillcanon": {
+      "serverUrl": "http://sh-skillcanon.apps-crc.testing/mcp"
     }
   }
 }
@@ -182,8 +182,8 @@ Restart your IDE to pick up the new MCP config.
 ## Cleanup
 
 ```bash
-# Remove SpecHub
-helm uninstall spechub
+# Remove SkillCanon
+helm uninstall skillcanon
 
 # Remove PostgreSQL (deployed via OpenShift template)
 oc delete all -l app=postgresql
@@ -191,7 +191,7 @@ oc delete pvc postgresql
 oc delete secret postgresql
 
 # Delete the project
-oc delete project spechub
+oc delete project skillcanon
 ```
 
 ## Troubleshooting
@@ -203,7 +203,7 @@ oc delete project spechub
 | **`x509: certificate signed by unknown authority` on `docker push`** | Add the registry to Docker Desktop's insecure registries (see Step 2). |
 | **500 error on `docker push` (layers push but manifest fails)** | Rebuild with `--provenance=false --sbom=false` to produce a simple manifest instead of a manifest list. |
 | **ImagePullBackOff for external images (Docker Hub)** | CRC's VM can't reach external registries due to TLS issues. Use OpenShift built-in templates or push images to the internal registry manually. |
-| **ImagePullBackOff for SpecHub image** | Verify image was pushed: `oc get imagestream -n spechub`. Ensure the Helm install uses the **internal** registry URL (`image-registry.openshift-image-registry.svc:5000`). |
-| **CrashLoopBackOff on SpecHub pod** | Check logs: `oc logs deploy/spechub`. Usually a DB connection issue — verify PostgreSQL is running and `postgresql.host` matches the service name. |
-| **Migration job stuck** | Check: `oc logs job/sh-migrate`. DB might not be ready yet. Delete the job and re-run: `oc delete job sh-migrate && helm upgrade spechub ./charts/spechub ...` |
+| **ImagePullBackOff for SkillCanon image** | Verify image was pushed: `oc get imagestream -n skillcanon`. Ensure the Helm install uses the **internal** registry URL (`image-registry.openshift-image-registry.svc:5000`). |
+| **CrashLoopBackOff on SkillCanon pod** | Check logs: `oc logs deploy/skillcanon`. Usually a DB connection issue — verify PostgreSQL is running and `postgresql.host` matches the service name. |
+| **Migration job stuck** | Check: `oc logs job/sh-migrate`. DB might not be ready yet. Delete the job and re-run: `oc delete job sh-migrate && helm upgrade skillcanon ./charts/skillcanon ...` |
 | **Route not resolving** | CRC routes use `*.apps-crc.testing`. Verify DNS: `ping apps-crc.testing`. |

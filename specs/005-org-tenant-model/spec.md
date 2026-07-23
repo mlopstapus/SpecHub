@@ -19,7 +19,7 @@
 
 ### User Story 1 - First-run bootstrap creates the tenant root (Priority: P1)
 
-An operator stands up a brand-new self-hosted SpecHub instance with an empty database and completes initial registration. That single action must produce exactly one Organization, one root Team, and one admin User, all created together — there is no separate "create your organization" step to forget or get wrong.
+An operator stands up a brand-new self-hosted SkillCanon instance with an empty database and completes initial registration. That single action must produce exactly one Organization, one root Team, and one admin User, all created together — there is no separate "create your organization" step to forget or get wrong.
 
 **Why this priority**: This is the foundational data shape every other bounded context depends on. Without a correct, atomic bootstrap, no org-scoped data anywhere in the system has a valid tenant root to point to.
 

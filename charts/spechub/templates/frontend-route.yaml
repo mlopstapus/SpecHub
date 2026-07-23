@@ -2,17 +2,17 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ include "spechub.frontend.fullname" . }}
+  name: {{ include "skillcanon.frontend.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.frontend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.frontend.selectorLabels" . | nindent 4 }}
 spec:
   {{- if .Values.frontend.route.host }}
   host: {{ .Values.frontend.route.host | quote }}
   {{- end }}
   to:
     kind: Service
-    name: {{ include "spechub.frontend.fullname" . }}
+    name: {{ include "skillcanon.frontend.fullname" . }}
     weight: 100
   port:
     targetPort: http

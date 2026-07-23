@@ -7,7 +7,7 @@ fullnameOverride: ""
 backend:
   replicaCount: 1
   image:
-    repository: ghcr.io/mlopstapus/spechub-backend
+    repository: ghcr.io/mlopstapus/skillcanon-backend
     pullPolicy: Always
     tag: ""  # defaults to Chart.appVersion
   service:
@@ -31,7 +31,7 @@ backend:
 frontend:
   replicaCount: 1
   image:
-    repository: ghcr.io/mlopstapus/spechub-frontend
+    repository: ghcr.io/mlopstapus/skillcanon-frontend
     pullPolicy: Always
     tag: ""  # defaults to Chart.appVersion
   service:
@@ -52,7 +52,7 @@ frontend:
 database:
   enabled: true
   image:
-    repository: ghcr.io/mlopstapus/spechub-database
+    repository: ghcr.io/mlopstapus/skillcanon-database
     pullPolicy: Always
     tag: ""  # defaults to Chart.appVersion
   storage:
@@ -72,9 +72,9 @@ database:
 postgresql:
   host: ""  # auto-computed when database.enabled
   port: 5432
-  database: spechub
-  username: spechub
-  password: spechub
+  database: skillcanon
+  username: skillcanon
+  password: skillcanon
 
 # ── Ingress (k8s, non-OpenShift) ─────────────────────────────────────────
 ingress:
@@ -82,7 +82,7 @@ ingress:
   className: ""
   annotations: {}
   hosts:
-    - host: spechub.local
+    - host: skillcanon.local
       paths:
         - path: /
           pathType: Prefix

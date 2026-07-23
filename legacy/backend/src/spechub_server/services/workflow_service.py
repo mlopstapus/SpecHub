@@ -4,8 +4,8 @@ from collections import defaultdict
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import User, Workflow, WorkflowShare
-from src.spechub_server.schemas import (
+from src.skillcanon_server.models import User, Workflow, WorkflowShare
+from src.skillcanon_server.schemas import (
     ExpandRequest,
     ShareResponse,
     WorkflowCreate,
@@ -15,7 +15,7 @@ from src.spechub_server.schemas import (
     WorkflowStepResult,
     WorkflowUpdate,
 )
-from src.spechub_server.services import prompt_service
+from src.skillcanon_server.services import prompt_service
 
 
 async def create_workflow(db: AsyncSession, data: WorkflowCreate) -> WorkflowResponse:

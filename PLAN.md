@@ -29,7 +29,7 @@ without having to manually construct it.
   ```json
   {
     "mcpServers": {
-      "spechub": {
+      "skillcanon": {
         "serverUrl": "<backend_origin>/mcp/",
         "headers": {
           "Authorization": "Bearer <raw_key>"

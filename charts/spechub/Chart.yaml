@@ -1,6 +1,6 @@
 apiVersion: v2
-name: spechub
-description: SpecHub — an open-source, self-hosted prompt registry distributed via MCP
+name: skillcanon
+description: SkillCanon — an open-source, self-hosted prompt registry distributed via MCP
 type: application
 version: 0.1.1
 appVersion: "0.1.1"
@@ -9,8 +9,8 @@ keywords:
   - mcp
   - llm
   - ai
-home: https://github.com/mlopstapus/SpecHub
+home: https://github.com/mlopstapus/SkillCanon
 sources:
-  - https://github.com/mlopstapus/SpecHub
+  - https://github.com/mlopstapus/SkillCanon
 maintainers:
   - name: mlopstapus

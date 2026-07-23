@@ -63,7 +63,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">
-            Sign in to <span className="text-primary">SpecHub</span>
+            Sign in to <span className="text-primary">SkillCanon</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             Enter your credentials to continue.

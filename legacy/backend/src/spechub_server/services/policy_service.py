@@ -3,14 +3,14 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import Policy, User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.models import Policy, User
+from src.skillcanon_server.schemas import (
     EffectivePoliciesResponse,
     PolicyCreate,
     PolicyResponse,
     PolicyUpdate,
 )
-from src.spechub_server.services.team_service import get_team_chain
+from src.skillcanon_server.services.team_service import get_team_chain
 
 
 async def create_policy(db: AsyncSession, data: PolicyCreate) -> PolicyResponse:

@@ -9,7 +9,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.spechub_server.models import Base, User
+from src.skillcanon_server.models import Base, User
 
 # A mock admin user for tests that hit auth-protected endpoints
 _mock_admin = User(
@@ -62,9 +62,9 @@ async def client(db_engine) -> AsyncGenerator[AsyncClient, None]:
     def override_require_admin():
         return _mock_admin
 
-    from src.spechub_server.auth import get_current_user, require_admin
-    from src.spechub_server.database import get_db
-    from src.spechub_server.main import app
+    from src.skillcanon_server.auth import get_current_user, require_admin
+    from src.skillcanon_server.database import get_db
+    from src.skillcanon_server.main import app
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
@@ -92,9 +92,9 @@ def make_user_client_factory(db_engine):
         def override_get_current_user():
             return user
 
-        from src.spechub_server.auth import get_current_user
-        from src.spechub_server.database import get_db
-        from src.spechub_server.main import app
+        from src.skillcanon_server.auth import get_current_user
+        from src.skillcanon_server.database import get_db
+        from src.skillcanon_server.main import app
 
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[get_current_user] = override_get_current_user
@@ -120,7 +120,7 @@ async def user_client_factory(db_engine):
 
     yield _wrapper
 
-    from src.spechub_server.main import app
+    from src.skillcanon_server.main import app
     for ac in clients:
         await ac.aclose()
     app.dependency_overrides.clear()

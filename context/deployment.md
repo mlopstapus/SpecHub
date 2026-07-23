@@ -27,7 +27,7 @@ One VPC per environment (both in the same account), public/private subnet split 
 
 **Terraform, run through Terraform Cloud (TFC)** — not AWS CDK. TFC owns remote state, run history, and plan/apply approval as a hosted workflow, which is the deciding factor over CDK's same-language (TypeScript) appeal: a solo maintainer benefits more from not self-managing state storage/locking (an S3+DynamoDB backend) and having a hosted apply gate than from infra code sharing a language with the app. HCL being a second language alongside TypeScript is the accepted tradeoff.
 
-- **Workspaces:** one TFC workspace per environment (`spechub-staging`, `spechub-production`), matching the single-account/environment-tagged topology above.
+- **Workspaces:** one TFC workspace per environment (`skillcanon-staging`, `skillcanon-production`), matching the single-account/environment-tagged topology above.
 - **State:** managed entirely by TFC (remote backend) — no local `terraform.tfstate`, no manual state backend to provision.
 - **Apply gate:** `main` merges trigger a TFC plan automatically; apply requires manual confirmation in TFC for `production` (auto-apply is acceptable for `staging`) — this is the IaC-level equivalent of the manual staging→production promotion gate in the CI/CD pipeline below.
 - **Secrets:** AWS credentials for TFC's runs are configured as TFC workspace variables (dynamic provider credentials via OIDC where possible, avoiding long-lived IAM user keys).

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://spechub:spechub@localhost:5432/spechub"
+    database_url: str = "postgresql+asyncpg://skillcanon:skillcanon@localhost:5432/skillcanon"
 
     @model_validator(mode="after")
     def _normalize_database_url(self) -> "Settings":

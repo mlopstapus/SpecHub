@@ -5,7 +5,7 @@
 
 ## Context
 
-SpecHub is open source with a paid managed tier layered on top. There are two common ways to structure this: an "open core" split (paid code lives in a private package/repo, imported by the OSS core, so OSS installs never contain paid source) or a single repository where paid features are gated at runtime by an entitlement/plan check.
+SkillCanon is open source with a paid managed tier layered on top. There are two common ways to structure this: an "open core" split (paid code lives in a private package/repo, imported by the OSS core, so OSS installs never contain paid source) or a single repository where paid features are gated at runtime by an entitlement/plan check.
 
 ## Options Considered
 

@@ -19,7 +19,7 @@
 
 ### User Story 1 - One-command local environment (Priority: P1)
 
-As a developer working on SpecHub, I want `docker compose up -d` to boot the new unified app connected to Postgres, so I can develop against and test the app locally without hand-wiring separate backend/frontend services together.
+As a developer working on SkillCanon, I want `docker compose up -d` to boot the new unified app connected to Postgres, so I can develop against and test the app locally without hand-wiring separate backend/frontend services together.
 
 **Why this priority**: This is the core value of the feature — an always-runnable local environment that tracks the unified app rather than the legacy split layout. Without it, `docker compose up -d` (the command CLAUDE.md documents) silently drifts out of sync with the actual codebase as the refactor progresses.
 
@@ -99,4 +99,4 @@ As a developer, I want to run database migrations against the Postgres instance 
 - The self-host billing-bypass behavior (the existing "Free-tier entitlements hardcoded locally, billing disabled" pattern) is out of scope for this feature's `.env.example` work, since the billing-entitlements bounded context has no implemented logic yet — it will be documented by whichever future epic wires that context up.
 - The Helm chart (Kubernetes deployment) is explicitly out of scope for this feature and is deferred to a later distribution-focused backlog item, per this backlog item's own technical notes.
 - The app's local port and the database's local port keep their currently exposed values so existing developer tooling (e.g., a local SQL client connecting to Postgres) keeps working unchanged.
-- `docker-compose.yaml` is also the self-hosted deployment mechanism (CLAUDE.md labels it "Rebuild (self-hosted stack)"), not local-dev-only. It previously hardcoded a known Postgres credential; this feature made that credential overridable (`${POSTGRES_PASSWORD:-spechub}`-style interpolation, see research.md Decision 4's note) so a self-host operator can set a real one without editing the compose file, while keeping the zero-config default for local dev. A fully enforced posture (failing to boot on a still-default credential) remains a distinct, future security-hardening item.
+- `docker-compose.yaml` is also the self-hosted deployment mechanism (CLAUDE.md labels it "Rebuild (self-hosted stack)"), not local-dev-only. It previously hardcoded a known Postgres credential; this feature made that credential overridable (`${POSTGRES_PASSWORD:-skillcanon}`-style interpolation, see research.md Decision 4's note) so a self-host operator can set a real one without editing the compose file, while keeping the zero-config default for local dev. A fully enforced posture (failing to boot on a still-default credential) remains a distinct, future security-hardening item.

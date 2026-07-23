@@ -3,8 +3,8 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.models import User
+from src.skillcanon_server.schemas import (
     UserCreate,
     UserListResponse,
     UserResponse,

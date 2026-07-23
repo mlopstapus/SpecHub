@@ -38,7 +38,7 @@ Expected: boots successfully with no `.env` file at all — compose supplies its
 ```bash
 cp .env.example .env
 # fill in DATABASE_URL / MIGRATION_DATABASE_URL with the compose-exposed values:
-# postgresql://spechub:spechub@localhost:5432/spechub
+# postgresql://skillcanon:skillcanon@localhost:5432/skillcanon
 pnpm dev   # outside Docker — should start with no missing-env error
 ```
 
@@ -46,13 +46,13 @@ pnpm dev   # outside Docker — should start with no missing-env error
 
 ```bash
 docker compose up -d
-MIGRATION_DATABASE_URL=postgresql://spechub:spechub@localhost:5432/spechub pnpm db:migrate
+MIGRATION_DATABASE_URL=postgresql://skillcanon:skillcanon@localhost:5432/skillcanon pnpm db:migrate
 ```
 
 Expected: migrations apply successfully, creating the seven bounded-context Postgres schemas (`src/shared/db/schemas.ts`) with no legacy tables present (no `001_schema.sql` ran — research.md Decision 2). Confirm with:
 
 ```bash
-docker compose exec database psql -U spechub -d spechub -c "\dn"
+docker compose exec database psql -U skillcanon -d skillcanon -c "\dn"
 # expect: identity_access, governance, prompt_registry, workflow, billing, audit, distribution
 # (no legacy tables like "teams"/"users" from the old schema)
 ```

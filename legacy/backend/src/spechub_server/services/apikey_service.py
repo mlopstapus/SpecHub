@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import ApiKey
+from src.skillcanon_server.models import ApiKey
 
 
 def _generate_raw_key() -> str:

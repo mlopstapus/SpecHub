@@ -10,7 +10,7 @@
 After `src/bcs/identity-access/infrastructure/schema.ts` is updated (new `users` table, `teams.owner_id` FK):
 
 ```sh
-MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/spechub" pnpm db:generate
+MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/skillcanon" pnpm db:generate
 ```
 
 (`MIGRATION_DATABASE_URL` must look real even with no live DB reachable — `drizzle.config.ts` evaluates it eagerly; per `CLAUDE.md`.) Rename the generated file and its `_journal.json` tag from drizzle-kit's random adjective-noun tag to `000N_identity_access_users` (matching the sequential-number convention `0001_identity_access_organizations`/`0002_identity_access_teams` already established — `context/database-conventions.md`'s literal "`<timestamp>_...`" wording isn't what this repo's prior migrations actually do), and review its DDL before committing — it should include both the new `users` table and the `ALTER TABLE teams ADD CONSTRAINT ... FOREIGN KEY (owner_id) REFERENCES users(id)` statement.

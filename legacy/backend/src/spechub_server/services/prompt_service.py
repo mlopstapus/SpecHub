@@ -7,8 +7,8 @@ from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.spechub_server.models import Prompt, PromptShare, PromptVersion, User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.models import Prompt, PromptShare, PromptVersion, User
+from src.skillcanon_server.schemas import (
     ExpandRequest,
     ExpandResponse,
     NewVersionCreate,
@@ -295,7 +295,7 @@ async def expand_prompt(
     template_vars = dict(data.input)
 
     if effective_user_id:
-        from src.spechub_server.services import objective_service, policy_service
+        from src.skillcanon_server.services import objective_service, policy_service
 
         all_policies = await policy_service.resolve_all_policies(
             db, effective_user_id, data.project_id

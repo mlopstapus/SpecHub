@@ -17,11 +17,11 @@ Cons: requires every IDE to be configured as an MCP client; doesn't address the 
 ### Skill-based interface, live REST resolution at invocation time (chosen)
 Governed prompts sync down as thin Claude Code Skill stub files (name/description sourced from prompt metadata). Each stub, when invoked, calls the REST expand endpoint (`POST /prompts/expand/{name}`, already planned in `backlog/007-distribution/001-rest-api-core-routes.md`) live — nothing is cached or baked into the stub.
 Pros: invocation reliability improves (skills match deterministically by name/description); zero IDE-side protocol configuration; no new server surface; preserves the read-fresh/fail-closed governance guarantee by construction (every invocation is a live call).
-Cons: introduces a new client-side component (the `spechub` CLI and its roster-sync mechanism, see PDR-011) that doesn't exist in the current Python system; ties day-one distribution specifically to Claude Code's skill mechanism — other IDEs (Copilot, Codex, Windsurf) need their own adapter to get the same treatment.
+Cons: introduces a new client-side component (the `skillcanon` CLI and its roster-sync mechanism, see PDR-011) that doesn't exist in the current Python system; ties day-one distribution specifically to Claude Code's skill mechanism — other IDEs (Copilot, Codex, Windsurf) need their own adapter to get the same treatment.
 
 ### Fully static skill files, periodically re-synced (rejected)
 Bake the fully-expanded prompt text into each stub at sync time; refresh on some periodic cadence.
-Pros: simplest possible stub file; no runtime dependency on SpecHub being reachable at the moment a skill is invoked.
+Pros: simplest possible stub file; no runtime dependency on SkillCanon being reachable at the moment a skill is invoked.
 Cons: directly violates the already-committed read-fresh, fail-closed governance model — a policy change wouldn't take effect until the next sync, and an outage would be invisible (stale content still "succeeds") rather than failing closed. Rejected once weighed against that existing decision, not on its own merits.
 
 ## Decision
@@ -31,5 +31,5 @@ Adopt skill-based distribution via live REST resolution as the primary path for 
 ## Consequences
 
 - **Positive:** IDE-side MCP configuration is no longer a requirement for the primary self-hosted use case; no new server-side surface is required beyond what `001-rest-api-core-routes.md` already plans; the governance freshness guarantee is preserved by construction, since every invocation is a live call, not a cache read.
-- **Negative:** Adds a new client-side deliverable (the `spechub` CLI, see PDR-011) that has to be built and maintained per supported IDE. Claude Code is the only supported IDE at launch — users of other IDEs still need MCP (deprioritized) or direct REST/API usage in the meantime.
+- **Negative:** Adds a new client-side deliverable (the `skillcanon` CLI, see PDR-011) that has to be built and maintained per supported IDE. Claude Code is the only supported IDE at launch — users of other IDEs still need MCP (deprioritized) or direct REST/API usage in the meantime.
 - **Risks:** If the roster-sync mechanism silently fails, a repo's skill list can drift stale without the user noticing. Mitigated in the current design by sync failures being visible in the sync command's own output rather than truly silent, but there's no active staleness alerting yet — flagged as an open question in `005-skill-sync-cli.md`.

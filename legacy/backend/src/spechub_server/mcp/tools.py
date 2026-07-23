@@ -1,5 +1,5 @@
 """
-MCP tool definitions for SpecHub prompts.
+MCP tool definitions for SkillCanon prompts.
 
 All tools are statically registered:
   - `sh-list`    — list available prompts
@@ -14,11 +14,11 @@ import uuid as uuid_mod
 
 from mcp.server.fastmcp import Context
 
-from src.spechub_server.database import async_session
-from src.spechub_server.mcp.server import mcp
-from src.spechub_server.mcp.session import get_current_api_key, session_manager
-from src.spechub_server.schemas import ExpandRequest
-from src.spechub_server.services import (
+from src.skillcanon_server.database import async_session
+from src.skillcanon_server.mcp.server import mcp
+from src.skillcanon_server.mcp.session import get_current_api_key, session_manager
+from src.skillcanon_server.schemas import ExpandRequest
+from src.skillcanon_server.services import (
     apikey_service,
     objective_service,
     policy_service,
@@ -26,7 +26,7 @@ from src.spechub_server.services import (
     workflow_service,
 )
 
-logger = logging.getLogger("spechub.mcp.tools")
+logger = logging.getLogger("skillcanon.mcp.tools")
 
 
 async def _resolve_session_user_id(ctx: Context) -> "uuid_mod.UUID | None":
@@ -117,7 +117,7 @@ async def _maybe_inject_session_context(ctx: Context) -> str | None:
 
 @mcp.tool(name="sh-list")
 async def sh_list(ctx: Context) -> str:
-    """List all available prompts in the SpecHub registry."""
+    """List all available prompts in the SkillCanon registry."""
     context_block = await _maybe_inject_session_context(ctx)
     user_id = await _resolve_session_user_id(ctx)
     async with async_session() as db:

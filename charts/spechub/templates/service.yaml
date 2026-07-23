@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "spechub.backend.fullname" . }}
+  name: {{ include "skillcanon.backend.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.backend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.backend.selectorLabels" . | nindent 4 }}
 spec:
   type: {{ .Values.backend.service.type }}
   ports:
@@ -13,4 +13,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "spechub.backend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.backend.selectorLabels" . | nindent 4 }}

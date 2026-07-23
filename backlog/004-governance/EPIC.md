@@ -2,7 +2,7 @@
 
 **Priority:** 4
 **Status:** not-started
-**Goal:** Port Policy, Objective, and the hierarchical resolution engine — the first of SpecHub's two core-domain contexts — with characterization tests proving the new TS implementation matches the current Python behavior exactly before anything downstream depends on it.
+**Goal:** Port Policy, Objective, and the hierarchical resolution engine — the first of SkillCanon's two core-domain contexts — with characterization tests proving the new TS implementation matches the current Python behavior exactly before anything downstream depends on it.
 
 ## Overview
 

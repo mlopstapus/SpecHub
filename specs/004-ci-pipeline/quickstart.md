@@ -60,7 +60,7 @@ This guide proves the feature works end-to-end once implemented. It does not inc
 ## Scenario 8 — Image publish happens only on merge to `main` (Clarifications, FR-011)
 
 1. Merge any passing PR into `main`.
-2. **Expected**: a separate `docker-publish` job/workflow run triggers on the merge commit, builds the image again, and pushes it to `ghcr.io/mlopstapus/spechub` tagged with the merge commit SHA. Confirm no `docker-publish` run exists for the PR's own (pre-merge) commits — only for the post-merge push to `main`.
+2. **Expected**: a separate `docker-publish` job/workflow run triggers on the merge commit, builds the image again, and pushes it to `ghcr.io/mlopstapus/skillcanon` tagged with the merge commit SHA. Confirm no `docker-publish` run exists for the PR's own (pre-merge) commits — only for the post-merge push to `main`.
 
 ## Scenario 9 — Full pipeline completes within budget (SC-003)
 

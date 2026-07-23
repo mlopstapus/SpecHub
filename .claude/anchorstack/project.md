@@ -5,7 +5,7 @@ provider: github
 base_branch: main
 
 ## Stack
-Unified pnpm-managed Next.js/TypeScript application at the repo root (`src/`) — App Router, seven bounded-context folders under `src/bcs/` plus `src/shared/{db,ui,config,logging}`, per `context/repo-structure.md`. Currently an empty scaffold (no business logic yet). The previous split Python/FastAPI backend and Next.js 14 frontend are preserved at `legacy/backend/` and `legacy/frontend/` (SQLAlchemy async + asyncpg, Alembic, MCP server, uv/ruff/pytest; Radix UI + Tailwind), run manually during the transition — as of `005-docker-compose-dev-environment`, `docker compose up -d` now builds and runs the new unified scaffold (`app` service) instead. Postgres database (`database/`); schema creation is owned by Drizzle migrations (`pnpm db:migrate`), not a pre-baked init script. Docker Compose for local dev; Helm chart (`charts/spechub/`) for Kubernetes deploy, published to GHCR as an OCI artifact.
+Unified pnpm-managed Next.js/TypeScript application at the repo root (`src/`) — App Router, seven bounded-context folders under `src/bcs/` plus `src/shared/{db,ui,config,logging}`, per `context/repo-structure.md`. Currently an empty scaffold (no business logic yet). The previous split Python/FastAPI backend and Next.js 14 frontend are preserved at `legacy/backend/` and `legacy/frontend/` (SQLAlchemy async + asyncpg, Alembic, MCP server, uv/ruff/pytest; Radix UI + Tailwind), run manually during the transition — as of `005-docker-compose-dev-environment`, `docker compose up -d` now builds and runs the new unified scaffold (`app` service) instead. Postgres database (`database/`); schema creation is owned by Drizzle migrations (`pnpm db:migrate`), not a pre-baked init script. Docker Compose for local dev; Helm chart (`charts/skillcanon/`) for Kubernetes deploy, published to GHCR as an OCI artifact.
 
 Note: this is the TypeScript refactor in progress (epic `001-typescript-refactor-foundation`). Re-run as-setup-project once the legacy backend/frontend are fully retired to drop the legacy-specific notes below.
 
@@ -46,7 +46,7 @@ Note: legacy backend tests still run via `cd legacy/backend && uv run pytest tes
 
 ## Rebuild — port conflicts
 This machine runs multiple unrelated Docker Compose projects concurrently (tribe-build, multica,
-supabase stack, seamless-postgres). SpecHub's default ports (5432 database, 3000 app — plus 8000 if
+supabase stack, seamless-postgres). SkillCanon's default ports (5432 database, 3000 app — plus 8000 if
 running the legacy backend manually alongside) can collide with them. Confirmed resolution
-preference: stop the conflicting containers from the other project rather than remap SpecHub's
+preference: stop the conflicting containers from the other project rather than remap SkillCanon's
 ports — ask before stopping anything, since it affects other in-progress work.

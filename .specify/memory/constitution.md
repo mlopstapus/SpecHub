@@ -20,7 +20,7 @@ Follow-up TODOs: none. Principle IDs (P1, D1, D2, M1-M3, S1-S3, C1-C2, G1) map
 1:1 to spec/tenets.md; keep both files in sync on amendment.
 -->
 
-# SpecHub Constitution
+# SkillCanon Constitution
 
 ## Core Principles
 

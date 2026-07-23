@@ -7,7 +7,7 @@ dependencies: ["003-user-accounts-and-registration.md", "backlog/000-foundations
 
 # API Keys
 
-Port scoped bearer API keys from the current Python `apikey_service.py` — the auth mechanism for MCP and REST API access outside the browser session, used by every IDE connecting to a SpecHub instance.
+Port scoped bearer API keys from the current Python `apikey_service.py` — the auth mechanism for MCP and REST API access outside the browser session, used by every IDE connecting to a SkillCanon instance.
 
 ## Requirements
 

@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from jinja2 import UndefinedError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User
+from src.skillcanon_server.schemas import (
     ExpandRequest,
     ExpandResponse,
     NewVersionCreate,
@@ -19,7 +19,7 @@ from src.spechub_server.schemas import (
     ShareRequest,
     ShareResponse,
 )
-from src.spechub_server.services import metrics_service, prompt_service
+from src.skillcanon_server.services import metrics_service, prompt_service
 
 router = APIRouter(prefix="/api/v1", tags=["prompts"])
 

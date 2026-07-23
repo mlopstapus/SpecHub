@@ -4,16 +4,16 @@ services:
     environment:
       # Overridable via a shell env var or a .env file next to this compose
       # file (e.g. POSTGRES_PASSWORD=<strong-password>) for a real self-hosted
-      # deployment; the "spechub" fallback keeps local dev zero-config.
-      POSTGRES_USER: ${POSTGRES_USER:-spechub}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spechub}
-      POSTGRES_DB: ${POSTGRES_DB:-spechub}
+      # deployment; the "skillcanon" fallback keeps local dev zero-config.
+      POSTGRES_USER: ${POSTGRES_USER:-skillcanon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skillcanon}
+      POSTGRES_DB: ${POSTGRES_DB:-skillcanon}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spechub} -d ${POSTGRES_DB:-spechub}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-skillcanon} -d ${POSTGRES_DB:-skillcanon}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,8 +23,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-spechub}:${POSTGRES_PASSWORD:-spechub}@database:5432/${POSTGRES_DB:-spechub}
-      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-spechub}:${POSTGRES_PASSWORD:-spechub}@database:5432/${POSTGRES_DB:-spechub}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-skillcanon}:${POSTGRES_PASSWORD:-skillcanon}@database:5432/${POSTGRES_DB:-skillcanon}
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-skillcanon}:${POSTGRES_PASSWORD:-skillcanon}@database:5432/${POSTGRES_DB:-skillcanon}
     depends_on:
       database:
         condition: service_healthy

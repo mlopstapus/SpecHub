@@ -12,7 +12,7 @@ set -euo pipefail
 
 SERVICES=(backend frontend database)
 HELM_RELEASE="${HELM_RELEASE:-sh}"
-GIT_REPO="${GIT_REPO:-https://github.com/mlopstapus/SpecHub.git}"
+GIT_REPO="${GIT_REPO:-https://github.com/mlopstapus/SkillCanon.git}"
 GIT_REF="${GIT_REF:-main}"
 SKIP_BUILD=false
 
@@ -35,7 +35,7 @@ if [[ ${#targets[@]} -eq 0 ]]; then
   targets=("${SERVICES[@]}")
 fi
 
-echo "━━━ SpecHub OpenShift Rollout ━━━"
+echo "━━━ SkillCanon OpenShift Rollout ━━━"
 echo "Targets:    ${targets[*]}"
 echo "Skip build: ${SKIP_BUILD}"
 echo "Helm release: ${HELM_RELEASE}"
@@ -80,7 +80,7 @@ fi
 
 # ── Helm upgrade to pick up new S2I images ────────────────────────────────
 INT_REG="image-registry.openshift-image-registry.svc:5000"
-CHART_DIR="${CHART_DIR:-$(cd "$(dirname "$0")/../charts/spechub" 2>/dev/null && pwd)}"
+CHART_DIR="${CHART_DIR:-$(cd "$(dirname "$0")/../charts/skillcanon" 2>/dev/null && pwd)}"
 
 if [[ -d "$CHART_DIR" ]] && command -v helm &>/dev/null; then
   HELM_SETS=()
@@ -103,7 +103,7 @@ fi
 
 # ── Cycle deployments ───────────────────────────────────────────────────────
 for svc in "${targets[@]}"; do
-  DEPLOY_NAME="${HELM_RELEASE}-spechub-${svc}"
+  DEPLOY_NAME="${HELM_RELEASE}-skillcanon-${svc}"
 
   if oc get deployment/"$DEPLOY_NAME" &>/dev/null; then
     echo "🔄 Rolling out: ${DEPLOY_NAME}..."
@@ -124,6 +124,6 @@ done
 
 # ── Verify pods ─────────────────────────────────────────────────────────────
 echo "━━━ Pod Status ━━━"
-oc get pods -l app.kubernetes.io/name=spechub -o wide
+oc get pods -l app.kubernetes.io/name=skillcanon -o wide
 echo ""
 echo "✅ Rollout finished."

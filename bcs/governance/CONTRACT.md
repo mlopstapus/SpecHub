@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Owns `Policy` and `Objective` and the hierarchical resolution engine that walks a team chain and merges inherited (immutable) and local (mutable) layers by priority. This is one of SpecHub's two core-domain contexts — the thing that makes prompt expansion governed rather than a plain template render. It exposes resolution as a synchronous read contract; it never reaches into Prompt Registry or Identity's internals, only consumes Identity's `getTeamChain`.
+Owns `Policy` and `Objective` and the hierarchical resolution engine that walks a team chain and merges inherited (immutable) and local (mutable) layers by priority. This is one of SkillCanon's two core-domain contexts — the thing that makes prompt expansion governed rather than a plain template render. It exposes resolution as a synchronous read contract; it never reaches into Prompt Registry or Identity's internals, only consumes Identity's `getTeamChain`.
 
 ## Exposed APIs
 

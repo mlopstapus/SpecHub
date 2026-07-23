@@ -5,9 +5,9 @@ import uuid
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User
-from src.spechub_server.services import apikey_service, auth_service
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User
+from src.skillcanon_server.services import apikey_service, auth_service
 
 
 async def get_current_user(

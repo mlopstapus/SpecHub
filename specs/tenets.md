@@ -2,7 +2,7 @@
 
 *Last updated: 2026-07-20*
 
-These are the governing principles for SpecHub. Each tenet encodes a constraint the project actually faces — not a style preference, but an invariant that must hold. SpecHub is moving toward a multi-tenant deployment model with SOC2 compliance in scope, built test-first (red-green-iterate) and organized around domain-driven design.
+These are the governing principles for SkillCanon. Each tenet encodes a constraint the project actually faces — not a style preference, but an invariant that must hold. SkillCanon is moving toward a multi-tenant deployment model with SOC2 compliance in scope, built test-first (red-green-iterate) and organized around domain-driven design.
 
 ## Process
 

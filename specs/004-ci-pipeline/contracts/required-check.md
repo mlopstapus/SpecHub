@@ -8,7 +8,7 @@ This feature's externally-visible interface is not an API — it's the **name an
 - **Scope**: required on the `main` branch's branch protection rules
 - **Guarantee**: `ci-gate` reports success if and only if `lint`, `typecheck`, `test`, `build`, and `docker-build` (PR-time image build, no push) all succeeded for the PR's current head commit.
 - **Stability promise**: `ci-gate` is the *only* job name branch protection should ever reference. Constituent job names (`lint`, `typecheck`, etc.) MAY be renamed, split, or added to in future work without requiring a branch-protection settings change, as long as `ci-gate`'s `needs:` list is updated to match.
-- **Out of contract**: `docker-publish` (merge-time-only image push) is never part of `ci-gate` and is never a required check — it cannot run before merge, so it cannot gate the PR that produces it. `helm-publish.yml` is an entirely separate, pre-existing workflow with its own trigger (`paths: charts/spechub/**`) and is not part of this contract at all.
+- **Out of contract**: `docker-publish` (merge-time-only image push) is never part of `ci-gate` and is never a required check — it cannot run before merge, so it cannot gate the PR that produces it. `helm-publish.yml` is an entirely separate, pre-existing workflow with its own trigger (`paths: charts/skillcanon/**`) and is not part of this contract at all.
 
 ## Consumers of this contract
 

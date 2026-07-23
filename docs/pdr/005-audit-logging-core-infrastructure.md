@@ -5,7 +5,7 @@
 
 ## Context
 
-Audit logging (who changed what policy/objective/prompt, when) is both a stated Enterprise-tier selling point and something CLAUDE.md already flags as part of SpecHub's SOC2/NIST compliance scope, currently satisfied only by "review access control, audit logging, and encryption manually." Retrofitting an audit trail after other contexts are built means finding every mutation site after the fact and accepting that anything shipped before the retrofit has no history.
+Audit logging (who changed what policy/objective/prompt, when) is both a stated Enterprise-tier selling point and something CLAUDE.md already flags as part of SkillCanon's SOC2/NIST compliance scope, currently satisfied only by "review access control, audit logging, and encryption manually." Retrofitting an audit trail after other contexts are built means finding every mutation site after the fact and accepting that anything shipped before the retrofit has no history.
 
 ## Options Considered
 

@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user, require_admin
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User
-from src.spechub_server.services import auth_service, invitation_service
+from src.skillcanon_server.auth import get_current_user, require_admin
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User
+from src.skillcanon_server.services import auth_service, invitation_service
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

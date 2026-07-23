@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SpecHub",
+  title: "SkillCanon",
   description: "Self-hosted prompt registry distributed via MCP",
 };
 

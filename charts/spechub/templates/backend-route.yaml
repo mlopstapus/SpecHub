@@ -2,10 +2,10 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ include "spechub.backend.fullname" . }}
+  name: {{ include "skillcanon.backend.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.backend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.backend.selectorLabels" . | nindent 4 }}
   annotations:
     router.openshift.io/disable-http2: "true"
 spec:
@@ -14,7 +14,7 @@ spec:
   {{- end }}
   to:
     kind: Service
-    name: {{ include "spechub.backend.fullname" . }}
+    name: {{ include "skillcanon.backend.fullname" . }}
     weight: 100
   port:
     targetPort: http

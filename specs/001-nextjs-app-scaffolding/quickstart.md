@@ -7,7 +7,7 @@
 ## Setup
 
 ```bash
-git clone <repo> && cd SpecHub
+git clone <repo> && cd SkillCanon
 pnpm install
 ```
 

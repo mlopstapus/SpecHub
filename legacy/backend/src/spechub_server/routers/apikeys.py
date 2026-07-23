@@ -3,15 +3,15 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User
+from src.skillcanon_server.schemas import (
     ApiKeyCreate,
     ApiKeyCreatedResponse,
     ApiKeyResponse,
 )
-from src.spechub_server.services import apikey_service
+from src.skillcanon_server.services import apikey_service
 
 router = APIRouter(tags=["api-keys"])
 

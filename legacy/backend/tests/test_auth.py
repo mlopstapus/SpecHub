@@ -5,7 +5,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.spechub_server.models import Base
+from src.skillcanon_server.models import Base
 
 # ---------------------------------------------------------------------------
 # We need a *separate* client that does NOT override auth dependencies,
@@ -34,8 +34,8 @@ async def auth_client(auth_engine) -> AsyncClient:
         async with session_factory() as session:
             yield session
 
-    from src.spechub_server.database import get_db
-    from src.spechub_server.main import app
+    from src.skillcanon_server.database import get_db
+    from src.skillcanon_server.main import app
 
     original_overrides = dict(app.dependency_overrides)
     app.dependency_overrides = {get_db: override_get_db}

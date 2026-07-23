@@ -19,7 +19,7 @@ import {
   type Team_t,
 } from "@/lib/api";
 
-const STORAGE_KEY = "spechub-project-id";
+const STORAGE_KEY = "skillcanon-project-id";
 
 export function useActiveProject() {
   const [projectId, setProjectId] = useState<string | null>(null);

@@ -23,7 +23,7 @@ Carries forward the current shape: `sub` (userId), `role`, `exp`, signed HS256, 
 | `httpOnly` | `true` | No JS access to the token, mitigates XSS token theft |
 | `secure` | `true` outside local dev | Tenet C2 — no functional insecure default |
 | `sameSite` | `lax` | Frontend and API are the same origin (unified Next.js app per `architecture.md`) — `lax` is sufficient CSRF mitigation for same-origin apps *as long as* no state-changing route accepts a plain `GET` (confirmed below) |
-| `domain` | Unset (host-only) at launch | No `*.spechub.example` subdomain-per-tenant pattern exists yet; revisit if that URL structure is adopted for SaaS |
+| `domain` | Unset (host-only) at launch | No `*.skillcanon.example` subdomain-per-tenant pattern exists yet; revisit if that URL structure is adopted for SaaS |
 
 ## CSRF approach
 

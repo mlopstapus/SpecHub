@@ -8,7 +8,7 @@
 
 ## Summary
 
-Replace `docker-compose.yaml`'s current three-service layout (`spechub`/legacy backend, `frontend`, `postgres`/database) with a two-service layout (`app`, `database`): the `app` service builds from the root `Dockerfile` added in `004-ci-pipeline` (the new unified Next.js scaffold) instead of `legacy/backend/Dockerfile`/`legacy/frontend/Dockerfile`, and the `database` service drops the legacy-schema init SQL (`database/init/001_schema.sql` targets the old Python/Alembic schema, not the new Drizzle-based one — resolved in `/speckit-clarify`) while keeping the Dockerfile's OpenShift-compatible container hardening. `docker compose up -d` becomes reachable/DB-connected again with zero manual steps, and the legacy Dockerfiles are deleted.
+Replace `docker-compose.yaml`'s current three-service layout (`skillcanon`/legacy backend, `frontend`, `postgres`/database) with a two-service layout (`app`, `database`): the `app` service builds from the root `Dockerfile` added in `004-ci-pipeline` (the new unified Next.js scaffold) instead of `legacy/backend/Dockerfile`/`legacy/frontend/Dockerfile`, and the `database` service drops the legacy-schema init SQL (`database/init/001_schema.sql` targets the old Python/Alembic schema, not the new Drizzle-based one — resolved in `/speckit-clarify`) while keeping the Dockerfile's OpenShift-compatible container hardening. `docker compose up -d` becomes reachable/DB-connected again with zero manual steps, and the legacy Dockerfiles are deleted.
 
 ## Technical Context
 
@@ -40,7 +40,7 @@ Replace `docker-compose.yaml`'s current three-service layout (`spechub`/legacy b
 | II. Domain-Driven Bounded Contexts `[D1]` | No | N/A — no bounded-context code touched. |
 | III. Domain Invariants in Domain Layer `[D2]` | No | N/A — no business rule introduced. |
 | IV. Multi-Tenant Isolation `[M1-M3]` | No, deliberately deferred | No bounded context has real tenant-scoped tables yet (`src/shared/db/schemas.ts` defines only the seven namespace-level Postgres schemas). Introducing genuine app-role/owner-role privilege separation now, before any RLS-protected table exists to enforce it against, would be speculative infrastructure with nothing to test it against — correctly scoped to whichever future item first adds an RLS-protected table (research.md Decision 3). |
-| V. Secure by Default `[S1-S3]` | Yes | Per `/speckit-analyze` finding C1: `docker-compose.yaml` is also the self-host deployment mechanism (CLAUDE.md: "Rebuild (self-hosted stack)"), not local-dev-only, so the pre-existing hardcoded Postgres credential (`spechub`/`spechub`) was genuinely in tension with Principle VI. Remediated during `as-security-scan`: `POSTGRES_USER`/`PASSWORD`/`DB` now use `${VAR:-default}` interpolation, so a self-host operator can set a real credential via a shell env var or `.env` with zero compose-file edit, while local dev keeps its zero-config default (research.md Decision 4). Not a full fix (nothing forces an operator to override it) — a fail-on-default enforcement mechanism remains a distinct future item. No raw secret is logged. |
+| V. Secure by Default `[S1-S3]` | Yes | Per `/speckit-analyze` finding C1: `docker-compose.yaml` is also the self-host deployment mechanism (CLAUDE.md: "Rebuild (self-hosted stack)"), not local-dev-only, so the pre-existing hardcoded Postgres credential (`skillcanon`/`skillcanon`) was genuinely in tension with Principle VI. Remediated during `as-security-scan`: `POSTGRES_USER`/`PASSWORD`/`DB` now use `${VAR:-default}` interpolation, so a self-host operator can set a real credential via a shell env var or `.env` with zero compose-file edit, while local dev keeps its zero-config default (research.md Decision 4). Not a full fix (nothing forces an operator to override it) — a fail-on-default enforcement mechanism remains a distinct future item. No raw secret is logged. |
 | VI. Auditable & Compliant `[C1-C2]` | No | N/A — a local dev/self-host compose boot is not a mutation or cross-tenant-sensitive read path. |
 | VII. Feature-Gated by Entitlement `[G1]` | No | N/A — a Docker Compose file is deployment tooling, not a product feature/route/tool with a Free-vs-Paid dimension. |
 
@@ -65,7 +65,7 @@ specs/005-docker-compose-dev-environment/
 ### Source Code (repository root)
 
 ```text
-docker-compose.yaml           # MODIFIED — two services (app, database) replacing three (spechub, frontend, postgres)
+docker-compose.yaml           # MODIFIED — two services (app, database) replacing three (skillcanon, frontend, postgres)
 database/
   Dockerfile                  # UNCHANGED — OpenShift-hardening behavior carries forward as-is
   init/

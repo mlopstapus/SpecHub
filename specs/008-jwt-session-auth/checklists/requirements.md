@@ -1,7 +1,7 @@
-# Specification Quality Checklist: Next.js App Scaffolding
+# Specification Quality Checklist: JWT Session Auth
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-07-21
+**Created**: 2026-07-23
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- This is an infrastructure/scaffolding feature — "users" are developers/contributors to SkillCanon, not end users of the product. User stories and requirements are framed accordingly (booting the app, folder structure, quality gates) rather than around product UI, which is consistent with the source backlog item's own scope.
-- One [NEEDS CLARIFICATION] marker was raised during drafting (FR-011: repo-root replacement vs. a transitional coexisting directory) and resolved using the source backlog item's own stated intent ("replacing the current split `backend/`/`frontend/` layout") rather than left open — documented as an explicit decision in both FR-011 and Assumptions rather than a lingering marker.
-- All items pass; no spec updates required before `/speckit-clarify` or `/speckit-plan`.
+- "JWT", "httpOnly cookie", and "session cookie" appear because they are already-decided architectural terms from `context/auth-conventions.md` and the Identity & Access contract (`bcs/identity-access/CONTRACT.md`), not implementation choices made by this spec — the spec otherwise describes behavior/outcomes, not how they're built.
+- The originating backlog item's one open question (refresh-flow timing) is resolved in the Assumptions section by citing the already-decided `context/auth-conventions.md`, so no [NEEDS CLARIFICATION] marker was needed.
+- All items pass on first pass; no iteration required.

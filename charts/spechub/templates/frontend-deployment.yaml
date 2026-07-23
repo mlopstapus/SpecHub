@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "spechub.frontend.fullname" . }}
+  name: {{ include "skillcanon.frontend.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.frontend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.frontend.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
-      {{- include "spechub.frontend.selectorLabels" . | nindent 6 }}
+      {{- include "skillcanon.frontend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "spechub.frontend.selectorLabels" . | nindent 8 }}
+        {{- include "skillcanon.frontend.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -29,7 +29,7 @@ spec:
               protocol: TCP
           env:
             - name: BACKEND_URL
-              value: {{ include "spechub.backend.url" . | quote }}
+              value: {{ include "skillcanon.backend.url" . | quote }}
           livenessProbe:
             httpGet:
               path: /

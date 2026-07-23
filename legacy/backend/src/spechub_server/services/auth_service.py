@@ -8,8 +8,8 @@ from jose import JWTError, jwt
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.config import settings
-from src.spechub_server.models import Team, User
+from src.skillcanon_server.config import settings
+from src.skillcanon_server.models import Team, User
 
 ALGORITHM = "HS256"
 

@@ -36,7 +36,7 @@ export function Navbar() {
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/logo.png"
-                alt="SpecHub"
+                alt="SkillCanon"
                 width={36}
                 height={36}
                 className="rounded-md"

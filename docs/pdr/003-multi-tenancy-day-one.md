@@ -5,7 +5,7 @@
 
 ## Context
 
-SpecHub's business model is Free (self-hosted, one org per install) plus a managed SaaS/Enterprise offering (many orgs, one shared deployment). The current schema conflates "organization" with the root `Team` row (`register_admin` creates a team and makes it the org). Multi-tenant SaaS needs an explicit tenant boundary that scopes every row, with per-org uniqueness (today `users.email` and `users.username` and `prompts.name` are globally unique, which breaks the moment two different customers' orgs both want a user named "admin" or a prompt named "commit").
+SkillCanon's business model is Free (self-hosted, one org per install) plus a managed SaaS/Enterprise offering (many orgs, one shared deployment). The current schema conflates "organization" with the root `Team` row (`register_admin` creates a team and makes it the org). Multi-tenant SaaS needs an explicit tenant boundary that scopes every row, with per-org uniqueness (today `users.email` and `users.username` and `prompts.name` are globally unique, which breaks the moment two different customers' orgs both want a user named "admin" or a prompt named "commit").
 
 ## Options Considered
 

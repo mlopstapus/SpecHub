@@ -7,9 +7,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.config import settings
-from src.spechub_server.models import Invitation, User
-from src.spechub_server.services.auth_service import hash_password
+from src.skillcanon_server.config import settings
+from src.skillcanon_server.models import Invitation, User
+from src.skillcanon_server.services.auth_service import hash_password
 
 
 def _generate_token() -> str:
@@ -90,7 +90,7 @@ async def accept_invitation(
     Accept an invitation: create user, mark invitation as accepted.
     Returns (user, jwt_token) or None if token is invalid/expired.
     """
-    from src.spechub_server.services.auth_service import create_jwt
+    from src.skillcanon_server.services.auth_service import create_jwt
 
     invitation = await get_invitation_by_token(db, token)
     if not invitation:

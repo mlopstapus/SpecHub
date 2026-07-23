@@ -1,7 +1,7 @@
 # Existing Feature Inventory (Current Python/Next.js App)
 
 **Last updated:** 2026-07-21
-**Purpose:** A complete inventory of what the current app actually does — every REST route, MCP tool, and frontend page — pulled directly from the code (`backend/src/spechub_server/routers/*.py`, `mcp/tools.py`, `frontend/src/app/*`), not from memory or the architecture docs. Cross-referenced against `backlog/` to confirm the refactor epics (002–007) have a home for every existing capability before any old code is retired.
+**Purpose:** A complete inventory of what the current app actually does — every REST route, MCP tool, and frontend page — pulled directly from the code (`backend/src/skillcanon_server/routers/*.py`, `mcp/tools.py`, `frontend/src/app/*`), not from memory or the architecture docs. Cross-referenced against `backlog/` to confirm the refactor epics (002–007) have a home for every existing capability before any old code is retired.
 
 Each row maps to the bounded context epic that owns the port, and flags anything the backlog didn't originally account for.
 

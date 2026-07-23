@@ -25,13 +25,13 @@ CREATE SCHEMA "workflow";
 -- own IaC, not by this migration.
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'spechub_app') THEN
-    CREATE ROLE spechub_app LOGIN PASSWORD 'changeme_in_production';
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'skillcanon_app') THEN
+    CREATE ROLE skillcanon_app LOGIN PASSWORD 'changeme_in_production';
   END IF;
 END
 $$;
 --> statement-breakpoint
-GRANT USAGE ON SCHEMA identity_access, governance, prompt_registry, workflow, billing, audit, distribution TO spechub_app;
+GRANT USAGE ON SCHEMA identity_access, governance, prompt_registry, workflow, billing, audit, distribution TO skillcanon_app;
 --> statement-breakpoint
 ALTER DEFAULT PRIVILEGES IN SCHEMA identity_access, governance, prompt_registry, workflow, billing, audit, distribution
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO spechub_app;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO skillcanon_app;

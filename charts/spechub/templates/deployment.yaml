@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "spechub.backend.fullname" . }}
+  name: {{ include "skillcanon.backend.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.backend.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.backend.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.backend.replicaCount }}
   selector:
     matchLabels:
-      {{- include "spechub.backend.selectorLabels" . | nindent 6 }}
+      {{- include "skillcanon.backend.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "spechub.backend.selectorLabels" . | nindent 8 }}
+        {{- include "skillcanon.backend.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -31,12 +31,12 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "spechub.fullname" . }}
+                  name: {{ include "skillcanon.fullname" . }}
                   key: database-url
             - name: AUTH_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "spechub.fullname" . }}
+                  name: {{ include "skillcanon.fullname" . }}
                   key: auth-token
             - name: LOG_LEVEL
               value: {{ .Values.backend.env.logLevel | quote }}

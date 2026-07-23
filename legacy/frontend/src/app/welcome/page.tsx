@@ -40,7 +40,7 @@ export default function WelcomePage() {
           <div className="flex items-center gap-2">
             <Image
               src="/logo.png"
-              alt="SpecHub"
+              alt="SkillCanon"
               width={32}
               height={32}
               className="rounded-md"
@@ -169,7 +169,7 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="border-t border-border/50 py-6">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs text-muted-foreground">
-          <span>SpecHub &mdash; Prompt Control Plane</span>
+          <span>SkillCanon &mdash; Prompt Control Plane</span>
           <span>Open Source</span>
         </div>
       </footer>

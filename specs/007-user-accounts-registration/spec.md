@@ -58,7 +58,7 @@ An admin within an organization creates new user accounts for teammates, updates
 
 ### User Story 3 - First-run registration provisions a real admin, not a stub (Priority: P3)
 
-An operator standing up a brand-new self-hosted SpecHub instance completes the first-run registration form. This single action creates a real Organization, a real root Team, and a real admin User together — replacing the test-only stub that `bootstrapOrganization` (built in the Organization & Tenant Model feature) currently calls in place of real team/user provisioning.
+An operator standing up a brand-new self-hosted SkillCanon instance completes the first-run registration form. This single action creates a real Organization, a real root Team, and a real admin User together — replacing the test-only stub that `bootstrapOrganization` (built in the Organization & Tenant Model feature) currently calls in place of real team/user provisioning.
 
 **Why this priority**: This closes out the bootstrap chain started by the Organization & Tenant Model feature and depended on by Team Hierarchy, but it is only reachable once org-scoped `User` (Story 1) and admin-only creation (Story 2) already exist — it's the capstone, not the entry point.
 

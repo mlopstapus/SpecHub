@@ -3,16 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user, require_admin
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User as UserModel
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user, require_admin
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User as UserModel
+from src.skillcanon_server.schemas import (
     UserCreate,
     UserListResponse,
     UserResponse,
     UserUpdate,
 )
-from src.spechub_server.services import user_service
+from src.skillcanon_server.services import user_service
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 

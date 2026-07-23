@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-logger = logging.getLogger("spechub.mcp.session")
+logger = logging.getLogger("skillcanon.mcp.session")
 
 # ContextVar set by the ASGI middleware, read by tool functions.
 _current_api_key: contextvars.ContextVar[str | None] = contextvars.ContextVar(

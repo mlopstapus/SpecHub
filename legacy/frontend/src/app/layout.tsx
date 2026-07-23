@@ -17,7 +17,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "SpecHub — Prompt Control Plane",
+  title: "SkillCanon — Prompt Control Plane",
   description: "Self-hosted prompt registry distributed via MCP",
   icons: {
     icon: [
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "SpecHub — Prompt Control Plane",
+    title: "SkillCanon — Prompt Control Plane",
     description: "Self-hosted prompt registry distributed via MCP",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SpecHub — Prompt Control Plane",
+    title: "SkillCanon — Prompt Control Plane",
     description: "Self-hosted prompt registry distributed via MCP",
     images: ["/og-image.png"],
   },

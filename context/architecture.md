@@ -1,11 +1,11 @@
-# Architecture: SpecHub
+# Architecture: SkillCanon
 
 **Last updated:** 2026-07-23
 **Status:** Proposed
 
 ## Overview
 
-SpecHub is a prompt registry with hierarchical governance, distributed to AI coding tools as native Skills (Claude Code, day one) backed by live REST calls, with MCP kept as a deprioritized secondary protocol ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)). IDEs connect directly to a SpecHub instance and pull governed, versioned prompt templates — SpecHub never calls an LLM itself. This document covers the target architecture for a full rewrite: unifying the current split Python/FastAPI + Next.js codebase into a single TypeScript application, and building in multi-tenancy, entitlements, and audit logging from day one to support a Free (self-hosted) / Paid (managed SaaS) business model without a later re-architecture.
+SkillCanon is a prompt registry with hierarchical governance, distributed to AI coding tools as native Skills (Claude Code, day one) backed by live REST calls, with MCP kept as a deprioritized secondary protocol ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)). IDEs connect directly to a SkillCanon instance and pull governed, versioned prompt templates — SkillCanon never calls an LLM itself. This document covers the target architecture for a full rewrite: unifying the current split Python/FastAPI + Next.js codebase into a single TypeScript application, and building in multi-tenancy, entitlements, and audit logging from day one to support a Free (self-hosted) / Paid (managed SaaS) business model without a later re-architecture.
 
 ## Architectural Style
 
@@ -53,7 +53,7 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 
 **Migration path:** none needed — pre-launch, no production data. Fresh Drizzle schema and migration history from the first commit; the existing Alembic history is abandoned at cutover.
 
-**Backup and recovery:** self-hosted Free tier is the operator's responsibility (documented recommended `pg_dump`/`pg_basebackup` practice, not managed by SpecHub itself). The managed SaaS uses a managed Postgres provider with point-in-time recovery (buy, not build — see Build vs Buy below); RPO/RTO targets to be set once a provider is chosen (open question).
+**Backup and recovery:** self-hosted Free tier is the operator's responsibility (documented recommended `pg_dump`/`pg_basebackup` practice, not managed by SkillCanon itself). The managed SaaS uses a managed Postgres provider with point-in-time recovery (buy, not build — see Build vs Buy below); RPO/RTO targets to be set once a provider is chosen (open question).
 
 ## Key Decisions
 
@@ -81,7 +81,7 @@ SpecHub is a prompt registry with hierarchical governance, distributed to AI cod
 
 ## Integrations
 
-- **Claude Code** (primary, day one) — the `spechub` CLI links a repo to a SpecHub project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/007-distribution/005-skill-sync-cli.md`.
+- **Claude Code** (primary, day one) — the `skillcanon` CLI links a repo to a SkillCanon project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/007-distribution/005-skill-sync-cli.md`.
 - **MCP clients** (Windsurf, Copilot, any MCP-compatible tool) — deprioritized (see PDR-010); if built, Streamable HTTP, bearer-authenticated via API key, tool surface `sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run` unchanged from today's plan.
 - **Stripe** — subscriptions, checkout, billing portal, webhooks; isolated entirely behind Billing & Entitlements ([PDR-006](../docs/pdr/006-single-repo-plan-gated.md)).
 

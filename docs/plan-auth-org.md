@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Add real authentication to SpecHub so that a person can sign up, create an organization (the root team), and become its admin. From there, the admin can invite others to join the organization and assign them to teams. This replaces the current open-access model where anyone can create teams/users via the API.
+Add real authentication to SkillCanon so that a person can sign up, create an organization (the root team), and become its admin. From there, the admin can invite others to join the organization and assign them to teams. This replaces the current open-access model where anyone can create teams/users via the API.
 
 The approach uses **email + password auth with JWT tokens**, keeping the system self-hosted and dependency-free (no external auth provider required). The existing `User` model gains a `password_hash` and `role` field. A new `Invitation` model handles the invite flow. The frontend gets a login/register page and an invite management UI.
 
@@ -99,7 +99,7 @@ The approach uses **email + password auth with JWT tokens**, keeping the system 
 | Breaking existing tests | Tests use a test client that bypasses auth; add auth override fixture |
 | Password security | bcrypt with proper work factor; never store plaintext |
 | JWT secret management | Auto-generated for dev; must be set via env var in production |
-| Single-org assumption | For now, one org per SpecHub instance; multi-org is a future extension |
+| Single-org assumption | For now, one org per SkillCanon instance; multi-org is a future extension |
 
 ---
 

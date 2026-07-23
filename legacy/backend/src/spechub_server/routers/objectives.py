@@ -3,17 +3,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.auth import get_current_user
-from src.spechub_server.database import get_db
-from src.spechub_server.models import User
-from src.spechub_server.schemas import (
+from src.skillcanon_server.auth import get_current_user
+from src.skillcanon_server.database import get_db
+from src.skillcanon_server.models import User
+from src.skillcanon_server.schemas import (
     EffectiveObjectivesResponse,
     ObjectiveCreate,
     ObjectiveResponse,
     ObjectiveUpdate,
 )
-from src.spechub_server.services import objective_service
-from src.spechub_server.services.team_service import get_team_chain
+from src.skillcanon_server.services import objective_service
+from src.skillcanon_server.services.team_service import get_team_chain
 
 router = APIRouter(prefix="/api/v1/objectives", tags=["objectives"])
 
@@ -46,7 +46,7 @@ async def resolve_team_effective_objectives(
 ) -> EffectiveObjectivesResponse:
     from sqlalchemy import select
 
-    from src.spechub_server.models import Objective
+    from src.skillcanon_server.models import Objective
     chain = await get_team_chain(db, team_id)
     inherited: list[ObjectiveResponse] = []
     local: list[ObjectiveResponse] = []

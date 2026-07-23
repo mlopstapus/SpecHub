@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.spechub_server.models import Prompt, PromptUsage, PromptVersion
+from src.skillcanon_server.models import Prompt, PromptUsage, PromptVersion
 
 
 async def record_usage(

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.spechub_server.mcp.session import SessionManager, SessionState, _current_api_key
+from src.skillcanon_server.mcp.session import SessionManager, SessionState, _current_api_key
 
 
 class TestSessionState:
@@ -62,12 +62,12 @@ class TestSessionManager:
 
 class TestApiKeyContextVar:
     def test_default_is_none(self):
-        from src.spechub_server.mcp.session import get_current_api_key
+        from src.skillcanon_server.mcp.session import get_current_api_key
 
         assert get_current_api_key() is None
 
     def test_set_and_get(self):
-        from src.spechub_server.mcp.session import get_current_api_key
+        from src.skillcanon_server.mcp.session import get_current_api_key
 
         token = _current_api_key.set("sh_test123")
         try:
@@ -76,7 +76,7 @@ class TestApiKeyContextVar:
             _current_api_key.reset(token)
 
     def test_reset(self):
-        from src.spechub_server.mcp.session import get_current_api_key
+        from src.skillcanon_server.mcp.session import get_current_api_key
 
         token = _current_api_key.set("sh_test123")
         _current_api_key.reset(token)
@@ -87,7 +87,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_extracts_sh_key(self):
         """Middleware should set the context var for sh_ prefixed keys."""
-        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.skillcanon_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -107,8 +107,8 @@ class TestApiKeyMiddleware:
 
     @pytest.mark.asyncio
     async def test_ignores_non_sh_key(self):
-        """Middleware should not set context var for non-spechub keys."""
-        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        """Middleware should not set context var for non-skillcanon keys."""
+        from src.skillcanon_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -129,7 +129,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_no_auth_header(self):
         """Middleware should handle missing auth header gracefully."""
-        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.skillcanon_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         captured_key = None
 
@@ -145,7 +145,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_resets_after_request(self):
         """Context var should be reset after the middleware completes."""
-        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.skillcanon_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         async def inner_app(scope, receive, send):
             pass
@@ -162,7 +162,7 @@ class TestApiKeyMiddleware:
     @pytest.mark.asyncio
     async def test_passthrough_non_http(self):
         """Non-HTTP scopes should pass through without setting context var."""
-        from src.spechub_server.mcp.session import ApiKeyMiddleware, get_current_api_key
+        from src.skillcanon_server.mcp.session import ApiKeyMiddleware, get_current_api_key
 
         called = False
 

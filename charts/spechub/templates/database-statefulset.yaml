@@ -2,20 +2,20 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "spechub.database.fullname" . }}
+  name: {{ include "skillcanon.database.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
-    {{- include "spechub.database.selectorLabels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.database.selectorLabels" . | nindent 4 }}
 spec:
-  serviceName: {{ include "spechub.database.fullname" . }}
+  serviceName: {{ include "skillcanon.database.fullname" . }}
   replicas: 1
   selector:
     matchLabels:
-      {{- include "spechub.database.selectorLabels" . | nindent 6 }}
+      {{- include "skillcanon.database.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "spechub.database.selectorLabels" . | nindent 8 }}
+        {{- include "skillcanon.database.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -35,7 +35,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "spechub.fullname" . }}
+                  name: {{ include "skillcanon.fullname" . }}
                   key: postgresql-password
             - name: POSTGRES_DB
               value: {{ .Values.postgresql.database | quote }}

@@ -6,7 +6,7 @@ This feature has no runtime data model — no database tables, no domain entitie
 
 - **Represents**: One of the two services defined in `docker-compose.yaml` after this change — `app` or `database`.
 - **Attributes**: build context (Dockerfile path), exposed port, environment values, health check, `depends_on` relationship.
-- **Lifecycle**: created on `docker compose up -d`; torn down on `docker compose down`. Replaces the three services (`spechub`, `frontend`, `postgres`) that exist today — those service names disappear from the file entirely (FR-001).
+- **Lifecycle**: created on `docker compose up -d`; torn down on `docker compose down`. Replaces the three services (`skillcanon`, `frontend`, `postgres`) that exist today — those service names disappear from the file entirely (FR-001).
 - **Relationships**: `app` depends on `database` reaching a healthy state (Decision 5, research.md) before it is considered started.
 
 ## Entity: Database Init Directory

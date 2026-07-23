@@ -97,7 +97,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">
-            Set up <span className="text-primary">SpecHub</span>
+            Set up <span className="text-primary">SkillCanon</span>
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             Create your organization and admin account.

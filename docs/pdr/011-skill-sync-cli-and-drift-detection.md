@@ -5,7 +5,7 @@
 
 ## Context
 
-For the skill-based distribution model in [PDR-010](010-skill-based-distribution-not-mcp.md) to require zero ongoing thought from the user, a repo needs to (a) be linked to a specific SpecHub project once, and (b) keep its local roster of skill stub files in sync with that project's prompt list automatically, without clobbering any local hand-edit to a stub. This repo already has a working precedent for this exact shape of problem: Spec Kit's own `.specify/integrations/*.manifest.json` tracks a content hash per file, per tool-target (claude/codex/speckit), written by its own CLI on each re-run.
+For the skill-based distribution model in [PDR-010](010-skill-based-distribution-not-mcp.md) to require zero ongoing thought from the user, a repo needs to (a) be linked to a specific SkillCanon project once, and (b) keep its local roster of skill stub files in sync with that project's prompt list automatically, without clobbering any local hand-edit to a stub. This repo already has a working precedent for this exact shape of problem: Spec Kit's own `.specify/integrations/*.manifest.json` tracks a content hash per file, per tool-target (claude/codex/speckit), written by its own CLI on each re-run.
 
 ## Options Considered
 
@@ -14,19 +14,19 @@ User hand-writes a project-key config file; every sync unconditionally overwrite
 Pros: minimal to build.
 Cons: no protection against overwriting a user's local hand-edit to a stub; hand-authoring a config file reintroduces exactly the "user has to think about it" friction the design is meant to remove.
 
-### Dedicated CLI (`spechub init`/`sync`/`run`) + SessionStart hook + content-hash drift detection (chosen)
-`spechub init` handshakes the repo to a project (project key committed, API key credential gitignored), installs a Claude Code `SessionStart` hook, and runs the first sync. Every subsequent session start silently re-syncs. Each stub's last-written content hash is tracked so a local edit is detected and flagged rather than silently overwritten.
+### Dedicated CLI (`skillcanon init`/`sync`/`run`) + SessionStart hook + content-hash drift detection (chosen)
+`skillcanon init` handshakes the repo to a project (project key committed, API key credential gitignored), installs a Claude Code `SessionStart` hook, and runs the first sync. Every subsequent session start silently re-syncs. Each stub's last-written content hash is tracked so a local edit is detected and flagged rather than silently overwritten.
 Pros: genuinely zero-touch after a one-time init; mirrors an already-proven pattern in this repo (`.specify/integrations/*.manifest.json`); protects any local customization of a stub file.
 Cons: introduces a new CLI package to build and maintain; the hook mechanism is Claude-Code-specific and needs a separate adapter per additional IDE later.
 
 ### Background daemon / file watcher (rejected)
-A long-running local process watches for SpecHub-side changes and updates stubs continuously.
+A long-running local process watches for SkillCanon-side changes and updates stubs continuously.
 Pros: could react faster than "next session start."
 Cons: real operational burden (a process to keep alive, monitor, restart) for a benefit — near-real-time roster updates — nobody asked for. Prompt-roster changes are infrequent, org-level events, not something needing sub-second propagation. Rejected as premature infrastructure for the actual access pattern.
 
 ## Decision
 
-Adopt the CLI + SessionStart hook + hash-based drift detection design, per `backlog/007-distribution/005-skill-sync-cli.md`. The project key (non-secret) lives in a committed `.spechub/project.json`; the API key credential is stored gitignored, consistent with this repo's existing env-var-over-hardcoded-secret convention for other credentials (`docker-compose.yaml`'s Postgres credentials).
+Adopt the CLI + SessionStart hook + hash-based drift detection design, per `backlog/007-distribution/005-skill-sync-cli.md`. The project key (non-secret) lives in a committed `.skillcanon/project.json`; the API key credential is stored gitignored, consistent with this repo's existing env-var-over-hardcoded-secret convention for other credentials (`docker-compose.yaml`'s Postgres credentials).
 
 ## Consequences
 

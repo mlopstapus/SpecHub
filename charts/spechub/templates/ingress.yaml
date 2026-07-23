@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "spechub.fullname" . }}
+  name: {{ include "skillcanon.fullname" . }}
   labels:
-    {{- include "spechub.labels" . | nindent 4 }}
+    {{- include "skillcanon.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -33,7 +33,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "spechub.frontend.fullname" $ }}
+                name: {{ include "skillcanon.frontend.fullname" $ }}
                 port:
                   number: {{ $.Values.frontend.service.port }}
           {{- end }}

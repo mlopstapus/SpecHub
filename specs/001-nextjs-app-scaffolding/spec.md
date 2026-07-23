@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "/Users/ben/repos/SpecHub/backlog/001-typescript-refactor-foundation/001-nextjs-app-scaffolding.md"
+**Input**: User description: "/Users/ben/repos/SkillCanon/backlog/001-typescript-refactor-foundation/001-nextjs-app-scaffolding.md"
 
 ## Clarifications
 
@@ -19,7 +19,7 @@
 
 ### User Story 1 - Boot the scaffold locally (Priority: P1)
 
-As the developer building SpecHub, I need a working, empty Next.js/TypeScript project that starts successfully out of the box, so I have a real foundation to build the seven bounded contexts and their features into, instead of scaffolding tooling from scratch during every future epic.
+As the developer building SkillCanon, I need a working, empty Next.js/TypeScript project that starts successfully out of the box, so I have a real foundation to build the seven bounded contexts and their features into, instead of scaffolding tooling from scratch during every future epic.
 
 **Why this priority**: Without an app that actually boots, no other epic — every one of which layers business logic and UI into this scaffold — can start. This is the literal prerequisite for everything downstream.
 
