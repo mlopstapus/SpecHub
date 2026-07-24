@@ -1,348 +1,126 @@
-# SkillCanon Architecture
+# Architecture: SkillCanon
 
-**SkillCanon — An Open-Source, Self-Hosted Prompt Registry with Hierarchical Governance, Distributed via MCP**
-
----
+**Last updated:** 2026-07-23
+**Status:** Proposed
 
 ## Overview
 
-SkillCanon is an infrastructure layer for managing, versioning, and distributing LLM prompts across any AI-powered IDE or tool. It solves the fragmentation problem where prompts are siloed inside individual tools (Windsurf, Claude Code, Copilot) with no portability, versioning, or observability.
+SkillCanon is a prompt registry with hierarchical governance, distributed to AI coding tools as native Skills (Claude Code, day one) backed by live REST calls, with MCP kept as a deprioritized secondary protocol ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)). IDEs connect directly to a SkillCanon instance and pull governed, versioned prompt templates — SkillCanon never calls an LLM itself. This document covers the target architecture for a full rewrite: unifying the current split Python/FastAPI + Next.js codebase into a single TypeScript application, and building in multi-tenancy, entitlements, and audit logging from day one to support a Free (self-hosted) / Paid (managed SaaS) business model without a later re-architecture.
 
-The primary distribution mechanism is **MCP (Model Context Protocol)** — SkillCanon exposes an MCP server that Claude, Windsurf, GitHub Copilot, and any MCP-compatible client can connect to natively. Developers don't need a separate CLI or plugin; their existing AI tools connect directly to the company's SkillCanon instance over the corporate network.
+## Architectural Style
 
-SkillCanon does **not** call LLMs — it serves expanded prompts to the IDE, and the IDE's own LLM does the work.
+**Modular monolith**: a single Next.js/TypeScript application (pnpm-managed), internally organized into seven bounded contexts (`src/bcs/`) that communicate via synchronous in-process function calls, backed by one PostgreSQL database (per-context Postgres schemas for physical ownership clarity). Chosen over microservices or an event-driven architecture because the team is one person, the domain's hardest problems (governance resolution, audit completeness) need strong consistency rather than eventual consistency, and the operational simplicity of one deployable directly serves both the self-hosted OSS use case and a solo-maintained SaaS running on AWS. See [PDR-001](../docs/pdr/001-typescript-unification.md), [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md), and [PDR-009](../docs/pdr/009-aws-hosting-platform.md).
 
-SkillCanon includes a **hierarchical governance model** based on recursive teams, enabling organizations to define cascading policies and objectives that are automatically enforced during prompt expansion.
+## Bounded Contexts
 
----
+| Context | Responsibility | Contract | Ownership |
+|---|---|---|---|
+| Identity & Access | Tenancy (Organization), Team hierarchy, users, auth, API keys, invitations | [Contract](../src/bcs/identity-access/CONTRACT.md) | [Ownership](../src/bcs/identity-access/OWNERSHIP.md) |
+| Governance | Policy/Objective hierarchical resolution — core domain | [Contract](../src/bcs/governance/CONTRACT.md) | [Ownership](../src/bcs/governance/OWNERSHIP.md) |
+| Prompt Registry | Projects, prompts, versions, sharing, template expansion — core domain | [Contract](../src/bcs/prompt-registry/CONTRACT.md) | [Ownership](../src/bcs/prompt-registry/OWNERSHIP.md) |
+| Workflow Orchestration | Multi-step prompt chains | [Contract](../src/bcs/workflow-orchestration/CONTRACT.md) | [Ownership](../src/bcs/workflow-orchestration/OWNERSHIP.md) |
+| Billing & Entitlements | Stripe subscriptions, plan defaults, per-org entitlement flags/limits | [Contract](../src/bcs/billing-entitlements/CONTRACT.md) | [Ownership](../src/bcs/billing-entitlements/OWNERSHIP.md) |
+| Audit & Compliance | Immutable audit log, retention/export | [Contract](../src/bcs/audit-compliance/CONTRACT.md) | [Ownership](../src/bcs/audit-compliance/OWNERSHIP.md) |
+| Distribution | REST API, Skill Sync CLI (Claude Code), UI composition, MCP protocol server (deprioritized) — the external boundary | [Contract](../src/bcs/distribution/CONTRACT.md) | [Ownership](../src/bcs/distribution/OWNERSHIP.md) |
 
-## Tech Stack
+**Context map:**
+- Identity & Access is a shared-identifier source for everyone (`organizationId`/`userId`/`teamId` as opaque IDs) — no context reads its tables directly, only its contract functions.
+- Prompt Registry → Governance and Workflow Orchestration → Prompt Registry are **customer/supplier** relationships, synchronous, read-heavy.
+- Every context → Billing & Entitlements is **customer/supplier**; Billing is the sole **anti-corruption layer** in front of Stripe — no other context imports the Stripe SDK.
+- Every context → Audit & Compliance is **customer/supplier**, write-only, transactional (not eventually consistent — see [PDR-005](../docs/pdr/005-audit-logging-core-infrastructure.md)).
+- Distribution is a **conformist consumer** of all six other contexts — it has no domain rules of its own, only composition and protocol translation. The primary path is REST — both directly and via the Skill Sync CLI's live calls to the expand route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)); MCP is a deprioritized secondary protocol.
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| **MCP Server** | `mcp` Python SDK (Anthropic) | Native integration with Claude, Windsurf, Copilot; Streamable HTTP transport for remote access |
-| **API Server** | Python 3.12+, FastAPI | Async-first, excellent OpenAPI docs, Pydantic validation |
-| **ORM / DB** | SQLAlchemy 2.0 (async) + Alembic | Mature, async support, migration management |
-| **Database** | PostgreSQL 16 | JSONB for schemas, robust, StatefulSet-friendly |
-| **Template Engine** | Jinja2 (sandboxed) | Industry standard, already a FastAPI dependency |
-| **Auth** | Bearer token (API key, user-scoped) | Simple, stateless |
-| **Frontend** | Next.js 14, TailwindCSS, shadcn/ui | Modern React with server components, dark-mode UI |
-| **Testing** | pytest + pytest-asyncio + httpx | Async test support, API integration tests |
-| **Containerization** | Docker (multi-stage) | Minimal image size, reproducible builds |
-| **Packaging** | Helm 3 chart | Self-hosted K8s deployment; one `helm install` to deploy |
-| **CI/CD** | GitHub Actions | Build, test, publish chart + container image |
-| **Linting** | Ruff | Fast, replaces flake8 + black + isort |
+## Data Architecture
 
----
+| Store | Owner BC | Type | Why |
+|---|---|---|---|
+| `identity_access.*` | Identity & Access | Postgres schema | Organization, Team, User, Invitation, ApiKey |
+| `governance.*` | Governance | Postgres schema | Policy, Objective |
+| `prompt_registry.*` | Prompt Registry | Postgres schema | Project, Prompt, PromptVersion, PromptShare |
+| `workflow.*` | Workflow Orchestration | Postgres schema | Workflow, WorkflowRun (new — persists run history) |
+| `billing.*` | Billing & Entitlements | Postgres schema | Plan, Subscription, Entitlement |
+| `audit.*` | Audit & Compliance | Postgres schema | AuditEvent (append-only) |
+| `distribution.*` | Distribution | Postgres schema | PromptUsage (telemetry only) |
+| MCP session cache | Distribution | In-process memory | Ephemeral optimization only, never a source of truth — see [PDR-008](../docs/pdr/008-mcp-session-state-in-memory.md) |
 
-## High-Level Architecture
+**Consistency:** strong consistency throughout — one Postgres database, transactional guarantees used deliberately for audit-write atomicity (see PDR-005) and read-fresh (never cached) governance resolution.
 
-```
-  +-------------+  +-------------+  +-------------+
-  |   Claude    |  |  Windsurf   |  |   Copilot   |
-  |   Code      |  |             |  |             |
-  +------+------+  +------+------+  +------+------+
-         |                |                |
-         +----------- MCP (HTTP) ----------+
-                          |
-                          v
-              +-----------+------------+
-              |     SkillCanon Server         |
-              |  +------------------+  |
-              |  | MCP Server       |  |
-              |  +------------------+  |
-              |  | REST API (FastAPI)| |
-              |  +------------------+  |
-              |  | Policy Engine    |  |  <-- enforces policies on expand
-              |  +------------------+  |
-              +-----------+------------+
-                          |
-                          v
-               +------------------+
-               |   Postgres DB    |
-               | - Teams / Users  |
-               | - Policies       |
-               | - Objectives     |
-               | - Projects       |
-               | - Prompts        |
-               | - Versions       |
-               | - API Keys       |
-               | - Workflows      |
-               +------------------+
-```
+**Read/write pattern:** read-heavy overall; the hot path is prompt/workflow expansion — via the REST expand route directly, via the Skill Sync CLI's live call to that same route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)), or via MCP's `sh-run`/`sh-workflow-run` if that path is ever built — which fans out into a Governance resolution call plus recursive prompt-inclusion lookups per request. No caching layer at launch — flagged as a future optimization if expansion latency becomes a problem, not built preemptively. Every path resolves live, never cached, so a policy change takes effect on the very next call regardless of which transport made it.
 
----
+**Cross-context data flow:** synchronous in-process calls per each BC's CONTRACT.md — see [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md) for why events/a queue were rejected.
 
-## Core Concepts
+**Multi-tenancy:** every table across every schema carries `organization_id`; uniqueness constraints are `(organization_id, x)`, not global — corrected from today's globally-unique `users.email`/`username` and `prompts.name`. See [PDR-003](../docs/pdr/003-multi-tenancy-day-one.md).
 
-### Hierarchical Governance
+**Migration path:** none needed — pre-launch, no production data. Fresh Drizzle schema and migration history from the first commit; the existing Alembic history is abandoned at cutover.
 
-SkillCanon organizes entities in a recursive team hierarchy:
+**Backup and recovery:** self-hosted Free tier is the operator's responsibility (documented recommended `pg_dump`/`pg_basebackup` practice, not managed by SkillCanon itself). The managed SaaS uses a managed Postgres provider with point-in-time recovery (buy, not build — see Build vs Buy below); RPO/RTO targets to be set once a provider is chosen (open question).
 
-```
-Team (root)
-├── Team (child)
-│   ├── Team (grandchild)
-│   │   └── Users
-│   └── Users
-└── Users
-```
+## Key Decisions
 
-- **Teams** are recursive — a team can have a parent team, forming a tree
-- **Users** belong to exactly one team
-- **Policies** and **Objectives** are attached to teams, projects, or users
-- **Projects** are owned by teams, with a designated lead and cross-team members
+- [PDR-001: Unify on TypeScript, single Next.js app](../docs/pdr/001-typescript-unification.md)
+- [PDR-002: Drizzle as the ORM](../docs/pdr/002-drizzle-orm.md)
+- [PDR-003: Organization as an explicit tenant root, from day one](../docs/pdr/003-multi-tenancy-day-one.md)
+- [PDR-004: Entitlements as per-org data, not a hardcoded tier enum](../docs/pdr/004-entitlements-as-data.md)
+- [PDR-005: Audit logging as core infrastructure from day one](../docs/pdr/005-audit-logging-core-infrastructure.md)
+- [PDR-006: Single repo, plan-gated features (not open-core split)](../docs/pdr/006-single-repo-plan-gated.md)
+- [PDR-007: Synchronous in-process calls between contexts, not events/queue](../docs/pdr/007-synchronous-in-process-contexts.md)
+- [PDR-008: MCP session state in-memory per process, pinned by ALB sticky sessions](../docs/pdr/008-mcp-session-state-in-memory.md)
+- [PDR-009: AWS as the managed SaaS hosting platform](../docs/pdr/009-aws-hosting-platform.md)
+- [PDR-010: Skill-based prompt distribution via live REST resolution, not MCP](../docs/pdr/010-skill-based-distribution-not-mcp.md)
+- [PDR-011: Project linking and roster sync via CLI, SessionStart hook, and hash-based drift detection](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)
 
-### Two-Layer Inheritance Model
+## Failure Model
 
-Both policies and objectives follow a two-layer model:
+| Component | Failure mode | Blast radius | Degraded behavior |
+|---|---|---|---|
+| Governance resolver | Query error / bad data | Blocks expansion for that request | **Fails closed** — expansion errors out rather than silently rendering ungoverned output. A missing policy enforcement is a compliance regression, not a UX nuisance. |
+| Billing & Entitlements | Stripe outage | None at request time | `resolveEntitlements()` never calls Stripe live — it reads locally mirrored state, refreshed only by webhook. Stripe being down does not degrade the running app at all. |
+| Audit write | DB error during the same transaction as a mutation | The mutation itself | **Fails closed by construction** — the audit write happens in the same transaction as the mutation it describes, so either both commit or both roll back. No separate audit-specific failure mode exists. |
+| MCP session cache | Process restart | One extra DB round trip for affected sessions | Safe — cache is a pure optimization, re-resolves from the API key on the next call. |
+| Prompt Registry expansion (recursive inclusion) | Deep/cyclic inclusion | That expansion request | Bounded by `MAX_INCLUDE_DEPTH`, carried forward unchanged from the current implementation. |
 
-- **Inherited (immutable)**: All policies/objectives from parent teams in the chain, coalesced into one read-only set. Users cannot modify these.
-- **Local (mutable)**: Policies/objectives from the user's own team, plus personal objectives. Users can add to these.
+## Integrations
 
-When a project is specified, its independent policies/objectives are layered into the local set.
+- **Claude Code** (primary, day one) — the `skillcanon` CLI links a repo to a SkillCanon project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/008-distribution/005-skill-sync-cli.md`.
+- **MCP clients** (Windsurf, Copilot, any MCP-compatible tool) — deprioritized (see PDR-010); if built, Streamable HTTP, bearer-authenticated via API key, tool surface `sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run` unchanged from today's plan.
+- **Stripe** — subscriptions, checkout, billing portal, webhooks; isolated entirely behind Billing & Entitlements ([PDR-006](../docs/pdr/006-single-repo-plan-gated.md)).
 
-### Policy Enforcement Types
+## Non-Functional Properties
 
-Policies are enforced during prompt expansion:
+| Property | Target | Notes |
+|---|---|---|
+| Availability | Self-hosted: operator-managed. SaaS: single-instance acceptable at launch (see [PDR-008](../docs/pdr/008-mcp-session-state-in-memory.md) for the pre-scaling checklist) | No HA target set yet — open question |
+| Performance | Expansion (`sh-run`) is the latency-sensitive path — agents call it interactively | No SLO defined yet — open question |
+| Security | Multi-tenant isolation enforced by mandatory `organization_id` scoping in every query helper, no cross-context raw table access | See [PDR-003](../docs/pdr/003-multi-tenancy-day-one.md) |
+| Compliance | SOC2 + NIST alignment (per CLAUDE.md) | Audit logging now a concrete mechanism, not a manual-review promise — see [PDR-005](../docs/pdr/005-audit-logging-core-infrastructure.md) |
 
-| Type | Behavior |
-|------|----------|
-| `prepend` | Content is prepended to the system message |
-| `append` | Content is appended to the user message |
-| `inject` | Content is injected as a `{{ policies }}` template variable |
-| `validate` | Post-render validation (future) |
+## Build vs Buy
 
-### Prompt
+| Capability | Decision | Why |
+|---|---|---|
+| Auth / identity | Build (bcrypt + JWT/session cookies) | Self-hosted installs shouldn't depend on a third-party auth SaaS for core login; the auth surface is small enough to own |
+| Payments | Buy — Stripe | Seat-based billing, checkout, portal, webhooks — no reason to build this |
+| Email (invitations, receipts) | Buy — pluggable transactional email provider (e.g. Resend/Postmark) | Self-hosted installs configure their own SMTP/provider credentials; not bundled as a hard dependency |
+| Background jobs / queues | Skip for now | No workload yet justifies queue infrastructure; Stripe webhooks and entitlement pruning run as simple route handlers / scheduled jobs, not a queue |
+| Search | Skip for now | Prompt list/search is simple SQL filtering at current scale; revisit only if prompt catalogs grow large |
+| File storage | N/A | Prompts are text in Postgres; no attachment/file feature planned |
+| Error tracking | Buy — Sentry | Cheap, standard, not worth building |
+| Feature flags | Build — this is the Entitlements system ([PDR-004](../docs/pdr/004-entitlements-as-data.md)) | Entitlements already solve this; a separate flagging service would duplicate it |
+| Managed Postgres (SaaS) | Buy — AWS RDS | Point-in-time recovery and backups are exactly the kind of undifferentiated ops work worth buying — see [PDR-009](../docs/pdr/009-aws-hosting-platform.md) |
 
-A versioned template with:
-- **name** — unique identifier, kebab-case (e.g., `feature-prd`)
-- **description** — human-readable purpose
-- **system_template** — Jinja2 template for system message
-- **user_template** — Jinja2 template for user message
-- **input_schema** — JSON Schema defining required variables
-- **version** — semver string (e.g., `1.0.0`)
-- **tags** — list of strings for categorization
-- **user_id** — optional owner (user-scoped)
+## Operational Notes
 
-### Execution Model
+- Two self-hosted deployment targets remain supported: Docker Compose (local) and Helm/K8s (at scale) — see current [README.md](../README.md) commands, to be updated for the new stack once implementation starts.
+- The managed SaaS runs on **AWS**: ECS/Fargate behind an ALB for the app tier, RDS for Postgres — see [PDR-009](../docs/pdr/009-aws-hosting-platform.md). Infra should be defined as code (Terraform or CDK) from the start, not configured manually through the console.
+- MCP session state stays in-memory per task; once the SaaS runs more than one ECS task, the ALB is configured for sticky sessions rather than introducing Redis — see [PDR-008](../docs/pdr/008-mcp-session-state-in-memory.md).
+- Self-hosted installs always run with billing disabled and Free-tier entitlements hardcoded locally — see the note in [`bcs/billing-entitlements/OWNERSHIP.md`](../bcs/billing-entitlements/OWNERSHIP.md).
+- Web UI auth uses a JWT carried in an httpOnly cookie; MCP/API access continues to use separate scoped bearer API keys — see [`bcs/identity-access/CONTRACT.md`](../bcs/identity-access/CONTRACT.md).
 
-SkillCanon is a **prompt source**, not an LLM proxy. It never calls an LLM.
+## Open Questions
 
-1. Developer invokes `sh-plan "build a feature store"` in their AI tool
-2. AI tool calls the `sh-plan` MCP tool on the SkillCanon server
-3. SkillCanon looks up the `plan` prompt, resolves the user's effective policies and objectives
-4. SkillCanon applies policy enforcement (prepend/append/inject) to the templates
-5. SkillCanon expands Jinja2 templates with input variables + policy/objective context
-6. SkillCanon returns the expanded `system_message` + `user_message` + applied policies + objectives
-7. The AI tool's own LLM uses the returned prompt to generate the response
-
-### MCP Integration
-
-SkillCanon exposes an MCP server over Streamable HTTP transport. Every prompt in the registry is automatically exposed as an MCP tool with an `sh-` prefix.
-
-**Dynamically registered tools:**
-
-| MCP Tool | Description |
-|----------|-------------|
-| `sh-{name}` | Any prompt in the registry becomes `sh-{name}` |
-| `sh-list` | List all available prompts |
-| `sh-search` | Search prompts by tag or name |
-| `sh-context` | Show effective policies and objectives for a user |
-
-**Key design decisions:**
-- **`sh-` prefix** — explicit routing; no ambiguity with local skills
-- **Dynamic registration** — new prompt → new MCP tool automatically
-- **Optional `project` parameter** — each tool accepts an optional project UUID to layer project context
-- **SkillCanon returns prompts, not LLM responses**
-- **Bearer token auth** via user-scoped API keys
-
----
-
-## Data Model
-
-### Tables
-
-**`teams`** — Recursive team hierarchy
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `name` | VARCHAR(255) | NOT NULL |
-| `slug` | VARCHAR(255) | UNIQUE, NOT NULL |
-| `description` | TEXT | |
-| `owner_id` | UUID | FK → users.id (nullable) |
-| `parent_team_id` | UUID | FK → teams.id (nullable, self-referential) |
-| `created_at` | TIMESTAMPTZ | |
-| `updated_at` | TIMESTAMPTZ | |
-
-**`users`** — Users belong to one team
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `team_id` | UUID | FK → teams.id, NOT NULL |
-| `username` | VARCHAR(255) | UNIQUE, NOT NULL |
-| `display_name` | VARCHAR(255) | |
-| `email` | VARCHAR(255) | |
-| `is_active` | BOOLEAN | DEFAULT true |
-
-**`policies`** — Attached to teams or projects
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `team_id` | UUID | FK → teams.id (nullable) |
-| `project_id` | UUID | FK → projects.id (nullable) |
-| `name` | VARCHAR(255) | NOT NULL |
-| `enforcement_type` | VARCHAR(50) | prepend / append / inject / validate |
-| `content` | TEXT | NOT NULL |
-| `priority` | INTEGER | DEFAULT 0 |
-| `is_active` | BOOLEAN | DEFAULT true |
-
-**`objectives`** — Attached to teams, projects, or users
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `team_id` | UUID | FK → teams.id (nullable) |
-| `project_id` | UUID | FK → projects.id (nullable) |
-| `user_id` | UUID | FK → users.id (nullable) |
-| `title` | VARCHAR(500) | NOT NULL |
-| `parent_objective_id` | UUID | FK → objectives.id (nullable) |
-| `is_inherited` | BOOLEAN | DEFAULT false |
-| `status` | VARCHAR(50) | DEFAULT 'active' |
-
-**`projects`** — Team-owned with lead and cross-team members
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `team_id` | UUID | FK → teams.id, NOT NULL |
-| `lead_user_id` | UUID | FK → users.id (nullable) |
-| `name` | VARCHAR(255) | NOT NULL |
-| `slug` | VARCHAR(255) | UNIQUE, NOT NULL |
-
-**`project_members`** — Cross-team membership
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `project_id` | UUID | FK → projects.id, NOT NULL |
-| `user_id` | UUID | FK → users.id, NOT NULL |
-| `role` | VARCHAR(100) | DEFAULT 'member' |
-| | | UNIQUE(project_id, user_id) |
-
-**`prompts`** — User-scoped prompt definitions
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `name` | VARCHAR(255) | UNIQUE, NOT NULL |
-| `description` | TEXT | |
-| `user_id` | UUID | FK → users.id (nullable) |
-| `is_deprecated` | BOOLEAN | DEFAULT false |
-| `active_version_id` | UUID | FK → prompt_versions.id (nullable) |
-
-**`prompt_versions`**
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `prompt_id` | UUID | FK → prompts.id, NOT NULL |
-| `version` | VARCHAR(50) | NOT NULL |
-| `system_template` | TEXT | |
-| `user_template` | TEXT | NOT NULL |
-| `input_schema` | JSONB | DEFAULT '{}' |
-| `tags` | JSONB | DEFAULT '[]' |
-| | | UNIQUE(prompt_id, version) |
-
-**`api_keys`** — User-scoped API keys
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `user_id` | UUID | FK → users.id, NOT NULL |
-| `name` | VARCHAR(255) | NOT NULL |
-| `key_hash` | VARCHAR(255) | UNIQUE, NOT NULL |
-| `prefix` | VARCHAR(12) | NOT NULL |
-| `scopes` | JSONB | DEFAULT '["read","expand"]' |
-
-**`workflows`** — User-scoped, optionally project-associated
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | UUID | PK |
-| `user_id` | UUID | FK → users.id, NOT NULL |
-| `project_id` | UUID | FK → projects.id (nullable) |
-| `name` | VARCHAR(255) | NOT NULL |
-| `steps` | JSONB | NOT NULL |
-
----
-
-## Project Structure
-
-```
-skillcanon/
-├── backend/
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   ├── alembic.ini
-│   ├── alembic/               # Database migrations
-│   ├── src/skillcanon_server/
-│   │   ├── main.py            # FastAPI app + MCP server entrypoint
-│   │   ├── config.py          # Settings (pydantic-settings)
-│   │   ├── database.py        # SQLAlchemy engine + session
-│   │   ├── models.py          # All ORM models (Team, User, Policy, etc.)
-│   │   ├── schemas.py         # Pydantic request/response schemas
-│   │   ├── routers/
-│   │   │   ├── teams.py       # Team CRUD
-│   │   │   ├── users.py       # User CRUD
-│   │   │   ├── policies.py    # Policy CRUD + effective resolution
-│   │   │   ├── objectives.py  # Objective CRUD + effective resolution
-│   │   │   ├── projects.py    # Project CRUD + member management
-│   │   │   ├── prompts.py     # Prompt CRUD + expand endpoints
-│   │   │   ├── workflows.py   # Workflow CRUD + run
-│   │   │   ├── apikeys.py     # User-scoped API key management
-│   │   │   └── metrics.py     # Usage analytics
-│   │   ├── mcp/
-│   │   │   ├── server.py      # MCP server setup
-│   │   │   └── tools.py       # Dynamic sh-* tool registration + sh-context
-│   │   └── services/
-│   │       ├── team_service.py    # Team CRUD + chain walking
-│   │       ├── user_service.py    # User CRUD
-│   │       ├── policy_service.py  # Policy CRUD + two-layer resolution
-│   │       ├── objective_service.py # Objective CRUD + two-layer resolution
-│   │       ├── project_service.py # Project CRUD + member management
-│   │       ├── prompt_service.py  # Prompt CRUD + policy-enforced expansion
-│   │       ├── workflow_service.py # Workflow CRUD + execution
-│   │       ├── apikey_service.py  # API key generation + validation
-│   │       └── metrics_service.py # Usage tracking
-│   ├── tests/                 # pytest test suite
-│   └── scripts/               # Entrypoint scripts
-├── frontend/                  # Next.js 14 admin dashboard
-│   ├── Dockerfile
-│   └── src/
-│       ├── app/               # Pages: dashboard, teams, prompts, workflows, settings, metrics
-│       ├── components/        # Navbar, project-switcher, playground, UI primitives
-│       └── lib/api.ts         # Typed API client
-├── database/                  # Custom PostgreSQL image
-│   ├── Dockerfile
-│   └── init/                  # SQL init scripts (run on first start)
-│       └── 001_schema.sql
-├── charts/skillcanon/                # Helm chart for Kubernetes
-├── docker-compose.yaml
-└── README.md
-```
-
----
-
-## Future Extensions
-
-- RBAC (admin/editor/viewer roles per team)
-- Audit logging
-- CLI tool for admin use
-- Git-backed prompt sync (GitOps)
-- OIDC / SSO integration
-- Policy `validate` enforcement type (post-render checks)
-- Objective tracking and completion metrics
+- **AWS account/network topology**: single AWS account vs. separate accounts per environment (dev/staging/prod), VPC layout, and whether RDS is single-AZ or Multi-AZ at launch — not yet decided, worth settling before writing the Terraform/CDK.
+- **Availability and performance targets**: no formal SLO/SLA set yet for the SaaS tier — matters once Enterprise deals start asking for uptime commitments.
+- **Entitlement key catalog**: the initial Free/Paid default values for each entitlement key (`maxTeams`, `auditRetentionDays`, `seatLimit`, etc.) haven't been set — deliberately deferred per the decision not to lock in tier specifics yet (see [PDR-004](../docs/pdr/004-entitlements-as-data.md)).
+- **Existing `docs/architecture.md`** describes the current Python-era system and will be stale once this rewrite lands — recommend replacing it with a pointer to this document once implementation is underway, rather than maintaining two architecture docs in parallel.
+- **Skill Sync CLI beyond Claude Code**: the roster-sync mechanism ([PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)) is designed to be pluggable per IDE but only the Claude Code adapter is being built now — Copilot/Codex parity is unscheduled.
+- **MCP's actual fate**: deprioritized per [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), not cancelled — whether it's ever built depends on whether a real non-skill-capable MCP client or a workflow-orchestration need for `sh-workflow-run` materializes.
