@@ -13,6 +13,13 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: ["legacy/**", "node_modules/**"],
+    exclude: [
+      ".next/**",
+      "build/**",
+      "coverage/**",
+      "dist/**",
+      "legacy/**",
+      "node_modules/**",
+    ],
   },
 });

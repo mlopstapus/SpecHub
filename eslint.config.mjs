@@ -2,7 +2,17 @@ import nextConfig from "eslint-config-next";
 import boundaries from "eslint-plugin-boundaries";
 
 const eslintConfig = [
-  { ignores: ["legacy/**", ".next/**", "node_modules/**"] },
+  {
+    ignores: [
+      "legacy/**",
+      ".next/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "**/*.min.js",
+    ],
+  },
   ...nextConfig,
   {
     plugins: { boundaries },

@@ -37,6 +37,12 @@ export interface UserSummary {
   email: string;
 }
 
+/** Presentation-safe live identity returned only by browser session resolution. */
+export interface AppSessionUser extends UserSummary {
+  displayName: string;
+  teamName: string;
+}
+
 /** Thrown when a `(organization_id, email)` or `(organization_id, username)` uniqueness constraint is violated (FR-002). */
 export class DuplicateUserError extends Error {
   constructor(field: "email" | "username") {
@@ -99,7 +105,9 @@ export class EntitlementRequiredError extends Error {
   code = "ENTITLEMENT_REQUIRED";
 
   constructor(key: string) {
-    super(`This feature requires the "${key}" entitlement, which is not enabled.`);
+    super(
+      `This feature requires the "${key}" entitlement, which is not enabled.`,
+    );
     this.name = "EntitlementRequiredError";
   }
 }

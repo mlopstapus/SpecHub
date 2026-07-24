@@ -5,7 +5,11 @@ export { updateUser } from "./application/update-user";
 export { deactivateUser } from "./application/deactivate-user";
 export { listUsers } from "./application/list-users";
 export { registerFirstRunAdmin } from "./application/register-first-run-admin";
-export type { UserSummary, UserAccountSummary } from "./domain/user";
+export type {
+  AppSessionUser,
+  UserSummary,
+  UserAccountSummary,
+} from "./domain/user";
 export { bootstrapOrganization } from "./application/bootstrap-organization";
 export type { ProvisionTeamAndAdmin } from "./application/bootstrap-organization";
 export type { OrgSummary } from "./domain/organization";

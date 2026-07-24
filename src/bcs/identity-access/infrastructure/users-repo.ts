@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { users } from "./schema";
+import { teams, users } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -50,6 +50,36 @@ export async function insert(
 
 export async function findById(tx: Tx, id: string) {
   const [row] = await tx.select().from(users).where(eq(users.id, id));
+  return row;
+}
+
+/**
+ * Resolves the live, presentation-safe identity needed by the authenticated
+ * app shell in one query. The join includes organization equality explicitly:
+ * `users.team_id` has an FK to teams, but that FK alone does not prove the
+ * referenced team belongs to the same tenant.
+ */
+export async function findAppSessionUserById(tx: Tx, id: string) {
+  const [row] = await tx
+    .select({
+      id: users.id,
+      orgId: users.organizationId,
+      teamId: users.teamId,
+      role: users.role,
+      email: users.email,
+      displayName: users.displayName,
+      teamName: teams.name,
+      isActive: users.isActive,
+    })
+    .from(users)
+    .innerJoin(
+      teams,
+      and(
+        eq(teams.id, users.teamId),
+        eq(teams.organizationId, users.organizationId),
+      ),
+    )
+    .where(eq(users.id, id));
   return row;
 }
 
@@ -119,6 +149,9 @@ export async function listByOrgAndTeam(
     .where(
       teamId === undefined
         ? eq(users.organizationId, organizationId)
-        : and(eq(users.organizationId, organizationId), eq(users.teamId, teamId)),
+        : and(
+            eq(users.organizationId, organizationId),
+            eq(users.teamId, teamId),
+          ),
     );
 }

@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { SESSION_COOKIE_NAME } from "../domain/session";
 import * as jwtModule from "../infrastructure/jwt";
@@ -68,7 +77,40 @@ describe("authenticateSession", () => {
       teamId,
       role: "admin", // reflects the live row, not the JWT's original "member" claim
       email: resolved?.email,
+      displayName: "Jane Doe",
+      teamName: "Root",
     });
+  });
+
+  it("resolves null when a previously authenticated user has been deactivated", async () => {
+    const { userId } = await makeOrgTeamUser(testDb);
+    const token = await signSessionJwt({ sub: userId, role: "member" });
+
+    await updateUserRow(testDb.authDb, userId, { isActive: false });
+
+    await expect(
+      authenticateSession(testDb.authDb, `${SESSION_COOKIE_NAME}=${token}`),
+    ).resolves.toBeNull();
+  });
+
+  it("resolves null when the user's current team belongs to a different organization", async () => {
+    const { userId } = await makeOrgTeamUser(testDb);
+    const { id: otherOrgId } = await insertOrg(testDb.authDb, {
+      name: "Other Org",
+      slug: `other-${randomUUID()}`,
+    });
+    const { id: otherTeamId } = await insertTeam(testDb.authDb, {
+      organizationId: otherOrgId,
+      name: "Other Root",
+      slug: `other-root-${randomUUID()}`,
+    });
+    const token = await signSessionJwt({ sub: userId, role: "member" });
+
+    await updateUserRow(testDb.authDb, userId, { teamId: otherTeamId });
+
+    await expect(
+      authenticateSession(testDb.authDb, `${SESSION_COOKIE_NAME}=${token}`),
+    ).resolves.toBeNull();
   });
 
   it("resolves null for an expired token", async () => {

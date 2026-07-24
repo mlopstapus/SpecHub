@@ -2,7 +2,11 @@
 epic: 009-billing-entitlements
 feature: 004-entitlement-enforcement-integration
 status: open
-dependencies: ["001-plan-and-entitlement-model.md", "backlog/003-audit-compliance/002-audit-query-and-retention.md"]
+dependencies:
+  [
+    "001-plan-and-entitlement-model.md",
+    "backlog/003-audit-compliance/002-audit-query-and-retention.md",
+  ]
 ---
 
 # Entitlement Enforcement Integration
@@ -35,3 +39,19 @@ Go back through every bounded context and wire real `resolveEntitlements()` call
 ## Technical Notes
 
 This feature exists because building Billing & Entitlements last (deliberately, per this epic's own overview) means earlier epics had to stand something in for entitlement checks before the real system existed — this is where that debt gets paid off, not a sign the earlier epics were done wrong.
+
+**Pulled forward by `013-app-shell-navigation` (2026-07-23):** the Billing-owned
+public `resolveEntitlements(orgId)` / `hasEntitlement(orgId, key)` facade is
+introduced early so the authenticated app shell can gate on
+`coreFeaturesEnabled` through the correct bounded-context contract. Its initial
+resolver is backed only by the canonical hardcoded Free defaults. This item
+remains open: it still owns replacing that provisional source with the real
+plan/override-backed SaaS state and sweeping every earlier stand-in listed
+above.
+
+**Implementation status (2026-07-23):** the provisional facade is implemented
+and covered by catalog/gate unit tests. The app shell consumes
+`hasEntitlement(orgId, "coreFeaturesEnabled")`; no Billing storage, plan
+resolution, per-organization override, Stripe integration, or earlier-epic
+sweep was implemented here. Those unchecked requirements and acceptance
+criteria remain the work of this open backlog item.
