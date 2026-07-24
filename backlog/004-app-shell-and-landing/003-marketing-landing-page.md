@@ -7,7 +7,7 @@ dependencies: ["archive/001-design-tokens-and-theming.md"]
 
 # Marketing Landing Page
 
-The public, unauthenticated marketing homepage — distinct from the authenticated app shell in `002-app-shell-and-navigation.md`. Build from `SkillCanon Landing.dc.html` (claude.ai/design project `7babdbf3-c063-46b5-84df-ffa9f588d88a`), pulled via the `claude_design` MCP server the same way `003-audit-compliance/003-audit-log-ui.md` pulled its own mockup.
+The public, unauthenticated marketing homepage — distinct from the authenticated app shell in `archive/002-app-shell-and-navigation.md`. Build from `SkillCanon Landing.dc.html` (claude.ai/design project `7babdbf3-c063-46b5-84df-ffa9f588d88a`), pulled via the `claude_design` MCP server the same way `003-audit-compliance/003-audit-log-ui.md` pulled its own mockup.
 
 ## Requirements
 
@@ -30,4 +30,4 @@ The public, unauthenticated marketing homepage — distinct from the authenticat
 
 ## Technical Notes
 
-Unlike `002-app-shell-and-navigation.md`, this page shares no session/auth-gating concerns — it's the page an unauthenticated visitor sees. Keep its token usage aligned with `archive/001-design-tokens-and-theming.md` even though its palette has a light-mode variant the authenticated app currently doesn't.
+Unlike `archive/002-app-shell-and-navigation.md`, this page shares no session/auth-gating concerns — it's the page an unauthenticated visitor sees. Keep its token usage aligned with `archive/001-design-tokens-and-theming.md` even though its palette has a light-mode variant the authenticated app currently doesn't.

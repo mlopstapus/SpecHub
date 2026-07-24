@@ -8,14 +8,14 @@
 
 **Why this epic exists, and why here (2026-07-23):** `008-distribution/003-web-ui-shell-and-core-pages.md` originally owned building the app shell, but sits after epics 003 (Audit & Compliance), 005 (Governance), 006 (Prompt Registry), and 007 (Workflow Orchestration) — all of which need to compose their own UI into that shell. `003-audit-compliance/003-audit-log-ui.md` was originally planned to work around that by building its own minimal standalone shell first (an explicitly-flagged one-off, not a repeatable pattern) — but this epic is being built before that plan was ever executed in code, so no standalone shell/tokens ever actually got built to throw away. This epic just goes first instead.
 
-**Confidence the shell design is real and stable, not a guess:** the left-nav/shell markup is not invented for this epic — it already appears near-identically in two independently-produced Claude design mockups (`SkillCanon Audit.dc.html` and `SkillCanon Governance.dc.html`, both in claude.ai/design project `7babdbf3-c063-46b5-84df-ffa9f588d88a`), which is strong evidence it's the intended, consistent shell rather than one page's one-off styling. See `002-app-shell-and-navigation.md`'s Open Questions for the one real inconsistency found between those two mockups (nav item naming/composition) that needs resolving before implementation.
+**Confidence the shell design is real and stable, not a guess:** the left-nav/shell markup is not invented for this epic — it already appears near-identically in two independently-produced Claude design mockups (`SkillCanon Audit.dc.html` and `SkillCanon Governance.dc.html`, both in claude.ai/design project `7babdbf3-c063-46b5-84df-ffa9f588d88a`), which is strong evidence it's the intended, consistent shell rather than one page's one-off styling. See `archive/002-app-shell-and-navigation.md`'s Completion Notes for the resolved nav composition decision.
 
 **Session auth middleware**, needed for admin/auth-gated routing, doesn't exist anywhere in this codebase yet — this epic is the first to build it, and every downstream UI feature (starting with `003-audit-compliance/003-audit-log-ui.md`) depends on it directly rather than building its own stand-in.
 
 ## Features
 
 - [x] [001 - Design Tokens & Theming](archive/001-design-tokens-and-theming.md)
-- [ ] [002 - App Shell & Navigation](002-app-shell-and-navigation.md)
+- [x] [002 - App Shell & Navigation](archive/002-app-shell-and-navigation.md)
 - [ ] [003 - Marketing Landing Page](003-marketing-landing-page.md)
 
 *Completed features are moved to `archive/` and checked off here.*
