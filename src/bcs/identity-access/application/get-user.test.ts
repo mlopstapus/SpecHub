@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
 import { insertValidatedUser } from "./insert-validated-user";
@@ -17,17 +18,17 @@ describe("getUser", () => {
     await testDb.teardown();
   });
 
-  it("returns the exact UserSummary shape for an existing user", async () => {
-    const { id: organizationId } = await insertOrg(testDb.appDb, {
-      name: "Acme",
-      slug: `acme-${randomUUID()}`,
+  async function makeUser(name: string) {
+    const { id: organizationId } = await insertOrg(testDb.authDb, {
+      name,
+      slug: `${name}-${randomUUID()}`,
     });
-    const { id: teamId } = await insertTeam(testDb.appDb, {
+    const { id: teamId } = await insertTeam(testDb.authDb, {
       organizationId,
       name: "Root",
       slug: `root-${randomUUID()}`,
     });
-    const { id: userId } = await insertValidatedUser(testDb.appDb, {
+    const { id: userId } = await insertValidatedUser(testDb.authDb, {
       organizationId,
       teamId,
       username: `jdoe-${randomUUID()}`,
@@ -36,8 +37,15 @@ describe("getUser", () => {
       password: "password123",
       role: "admin",
     });
+    return { organizationId, teamId, userId };
+  }
 
-    const summary = await getUser(testDb.appDb, userId);
+  it("returns the exact UserSummary shape for an existing user, scoped to its organization", async () => {
+    const { organizationId, teamId, userId } = await makeUser("get-user-shape");
+
+    const summary = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      getUser(tx, userId, organizationId),
+    );
 
     expect(summary).toEqual({
       id: userId,
@@ -51,7 +59,33 @@ describe("getUser", () => {
     );
   });
 
-  it("throws for a nonexistent id", async () => {
-    await expect(getUser(testDb.appDb, randomUUID())).rejects.toThrow();
+  it("throws for a nonexistent id when scoped to an organization", async () => {
+    const { organizationId } = await makeUser("get-user-missing");
+    await expect(
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        getUser(tx, randomUUID(), organizationId),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("throws for a user id that belongs to a different organization (M1/M3)", async () => {
+    const orgA = await makeUser("get-user-org-a");
+    const orgB = await makeUser("get-user-org-b");
+
+    await expect(
+      withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+        getUser(tx, orgB.userId, orgA.organizationId),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("with no organizationId, falls back to an unscoped lookup — the path authenticateSession relies on", async () => {
+    const { userId } = await makeUser("get-user-unscoped");
+    const summary = await getUser(testDb.authDb, userId);
+    expect(summary.id).toBe(userId);
+  });
+
+  it("with no organizationId, still throws for a nonexistent id", async () => {
+    await expect(getUser(testDb.authDb, randomUUID())).rejects.toThrow();
   });
 });

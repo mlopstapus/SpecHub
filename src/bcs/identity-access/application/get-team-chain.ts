@@ -1,6 +1,6 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { TeamChainEntry } from "../domain/team";
-import { findById } from "../infrastructure/teams-repo";
+import { findById, findByOrgAndId } from "../infrastructure/teams-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -18,18 +18,30 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
  * Unlike the current Python implementation (which returns `[]` for an
  * unknown starting id), this throws — a deliberate, documented improvement
  * (spec.md Edge Cases), not part of the "match exactly" ordering contract.
+ *
+ * `organizationId` is mandatory (011-tenant-isolation-rls, M1): the starting
+ * lookup is scoped via `findByOrgAndId`, so a `teamId` belonging to a
+ * different organization throws the same as a nonexistent one. Subsequent
+ * ancestor-walk steps stay unscoped — safe without re-checking, since
+ * `createTeam`/`reparentTeam` already guarantee a team's parent always
+ * shares its organization.
  */
 export async function getTeamChain(
   db: Tx,
+  organizationId: string,
   teamId: string,
 ): Promise<TeamChainEntry[]> {
   const chain: TeamChainEntry[] = [];
   const seen = new Set<string>();
   let currentId: string | null = teamId;
+  let first = true;
 
   while (currentId && !seen.has(currentId)) {
     seen.add(currentId);
-    const team = await findById(db, currentId);
+    const team: Awaited<ReturnType<typeof findById>> = first
+      ? await findByOrgAndId(db, organizationId, currentId)
+      : await findById(db, currentId);
+    first = false;
     if (!team) {
       break;
     }

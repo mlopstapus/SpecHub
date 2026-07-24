@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import type { UserSummary } from "../domain/user";
 import { NotAuthorizedError } from "../domain/user";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
@@ -10,16 +11,16 @@ import { insert as insertInvitation, markAccepted, markRevoked } from "../infras
 import { listInvitations } from "./list-invitations";
 
 async function makeOrgTeamAdmin(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: adminId } = await insertUser(testDb.appDb, {
+  const { id: adminId } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `admin-${randomUUID()}`,
@@ -43,7 +44,7 @@ async function makeInvitation(
   fixture: { organizationId: string; teamId: string; admin: UserSummary },
   overrides: { expiresAt?: Date } = {},
 ) {
-  const { id } = await insertInvitation(testDb.appDb, {
+  const { id } = await insertInvitation(testDb.authDb, {
     organizationId: fixture.organizationId,
     teamId: fixture.teamId,
     email: `invitee-${randomUUID()}@example.com`,
@@ -72,7 +73,9 @@ describe("listInvitations", () => {
     const idA = await makeInvitation(testDb, orgA);
     const idB = await makeInvitation(testDb, orgB);
 
-    const result = await listInvitations(testDb.appDb, orgA.admin);
+    const result = await withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+      listInvitations(tx, orgA.admin),
+    );
 
     expect(result.map((r) => r.id)).toContain(idA);
     expect(result.map((r) => r.id)).not.toContain(idB);
@@ -82,14 +85,16 @@ describe("listInvitations", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const pendingId = await makeInvitation(testDb, fixture);
     const acceptedId = await makeInvitation(testDb, fixture);
-    await markAccepted(testDb.appDb, acceptedId);
+    await markAccepted(testDb.authDb, acceptedId);
     const expiredId = await makeInvitation(testDb, fixture, {
       expiresAt: new Date(Date.now() - 1000),
     });
     const revokedId = await makeInvitation(testDb, fixture);
-    await markRevoked(testDb.appDb, revokedId);
+    await markRevoked(testDb.authDb, revokedId);
 
-    const result = await listInvitations(testDb.appDb, fixture.admin);
+    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      listInvitations(tx, fixture.admin),
+    );
     const byId = new Map(result.map((r) => [r.id, r.state]));
 
     expect(byId.get(pendingId)).toBe("pending");
@@ -102,7 +107,9 @@ describe("listInvitations", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     await makeInvitation(testDb, fixture);
 
-    const result = await listInvitations(testDb.appDb, fixture.admin);
+    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      listInvitations(tx, fixture.admin),
+    );
 
     expect(result[0]).not.toHaveProperty("token");
   });
@@ -111,8 +118,10 @@ describe("listInvitations", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const nonAdmin: UserSummary = { ...fixture.admin, role: "member" };
 
-    await expect(listInvitations(testDb.appDb, nonAdmin)).rejects.toThrow(
-      NotAuthorizedError,
-    );
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        listInvitations(tx, nonAdmin),
+      ),
+    ).rejects.toThrow(NotAuthorizedError);
   });
 });

@@ -16,7 +16,10 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [X] [004 - JWT Session Auth](archive/004-jwt-session-auth.md)
 - [x] [005 - Invitations](archive/005-invitations.md)
 - [x] [006 - API Keys](archive/006-api-keys.md)
-- [ ] [007 - Tenant Isolation Tests & RLS](007-tenant-isolation-tests-and-rls.md)
+- [X] [007 - Tenant Isolation Tests & RLS](archive/007-tenant-isolation-tests-and-rls.md)
+- [ ] [008 - `authDb` Consumer Handoff](008-authdb-consumer-handoff.md)
+- [ ] [009 - Auth & Onboarding UI](009-auth-and-onboarding-ui.md)
+- [ ] [010 - Account & Team Settings UI](010-account-and-team-settings-ui.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -24,7 +27,10 @@ This is the first bounded-context port and the epic every other epic depends on 
 
 - `backlog/001-typescript-refactor-foundation/EPIC.md` (full epic — needs the scaffold, DB kernel, and CI)
 - `backlog/000-foundations/006-auth-and-session-conventions.md`
+- `backlog/004-app-shell-and-landing/EPIC.md` (features 009/010's UI composes into that epic's shell/tokens)
 
 ## Notes
 
 Feature 007 (tenant isolation tests) should land alongside 001–006, not after — it's what proves M1/M2/M3 actually hold for this BC's own tables, and it's where the reusable cross-tenant test helper other epics will import gets built.
+
+**Added 2026-07-23**: features 009/010 build this epic's real UI directly, same pattern as `003-audit-compliance/003-audit-log-ui.md` — a departure from this codebase's prior precedent of identity-access never building routes/pages (see CLAUDE.md's note on `007-user-accounts-registration`/`008-jwt-session-auth`, now `008-distribution` in the current numbering). Both are currently stubs pending a design mockup (see their own Open Questions).

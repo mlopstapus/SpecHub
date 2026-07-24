@@ -33,4 +33,4 @@ Update `docker-compose.yaml` so local development (and self-hosted Free-tier dep
 
 ## Technical Notes
 
-Per the architecture's "keep both deployment targets" decision, this only covers Docker Compose — the Helm chart update is a separate concern, tracked once `007-distribution` makes the app actually deployable end-to-end (Helm chart update isn't blocking for local dev, so it's deferred rather than included here).
+Per the architecture's "keep both deployment targets" decision, this only covers Docker Compose — the Helm chart update is a separate concern, tracked once `008-distribution` makes the app actually deployable end-to-end (Helm chart update isn't blocking for local dev, so it's deferred rather than included here).

@@ -8,7 +8,7 @@
 
 This is the single-unit "TypeScript refactor" epic requested up front, kept deliberately separate from the bounded-context epics that follow it. It produces no user-facing functionality on its own — when it's done, the app boots, connects to Postgres, passes an empty test suite in CI, and enforces (via lint) that bounded contexts can't reach into each other's internals. Everything in it is infrastructure, not domain logic, which is exactly why it's one unit rather than split by bounded context.
 
-Nothing here is new product behavior — see epic 002 onward for the actual bounded-context ports (the rest of "the refactor") and epic 008 for the first genuinely new feature (Billing & Entitlements).
+Nothing here is new product behavior — see epic 002 onward for the actual bounded-context ports (the rest of "the refactor") and epic 009 for the first genuinely new feature (Billing & Entitlements).
 
 ## Features
 

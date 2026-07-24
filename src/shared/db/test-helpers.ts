@@ -8,14 +8,27 @@ import { createRoleClient } from "./client";
  */
 const APP_ROLE = "skillcanon_app";
 const APP_ROLE_PASSWORD = "changeme_in_production";
+/** Matches the auth role provisioned by drizzle/migrations/0007_identity_access_rls.sql. */
+const AUTH_ROLE = "skillcanon_auth";
+const AUTH_ROLE_PASSWORD = "changeme_in_production";
 
 export interface TestDb {
   /** Drizzle client connected as the migration/owner role — owns all seven schemas, bypasses RLS. */
   ownerDb: ReturnType<typeof createRoleClient>;
   /** Drizzle client connected as the dedicated least-privileged app role — subject to RLS. */
   appDb: ReturnType<typeof createRoleClient>;
+  /**
+   * Drizzle client connected as the credential-resolution/bootstrap role —
+   * unrestricted by organization within `identity_access` only, no access
+   * elsewhere (011-tenant-isolation-rls). Used by tests exercising `login`,
+   * `authenticateSession`, `authenticateApiKey`, `acceptInvitation`,
+   * `createOrganization`/`bootstrapOrganization`, and as the fixture-setup
+   * connection for every other identity-access test.
+   */
+  authDb: ReturnType<typeof createRoleClient>;
   ownerUrl: string;
   appUrl: string;
+  authUrl: string;
   teardown: () => Promise<void>;
 }
 
@@ -37,11 +50,18 @@ export async function startTestDb(): Promise<TestDb> {
   appUrl.password = APP_ROLE_PASSWORD;
   const appDb = createRoleClient(appUrl.toString(), { prepare: false });
 
+  const authUrl = new URL(ownerUrl);
+  authUrl.username = AUTH_ROLE;
+  authUrl.password = AUTH_ROLE_PASSWORD;
+  const authDb = createRoleClient(authUrl.toString(), { prepare: false });
+
   return {
     ownerDb,
     appDb,
+    authDb,
     ownerUrl,
     appUrl: appUrl.toString(),
+    authUrl: authUrl.toString(),
     teardown: async () => {
       await container.stop();
     },

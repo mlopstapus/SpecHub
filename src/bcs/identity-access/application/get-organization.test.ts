@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { createOrganization } from "./create-organization";
 import { getOrganization } from "./get-organization";
 
@@ -16,14 +17,16 @@ describe("getOrganization", () => {
   });
 
   it("returns the OrgSummary shape only — no stripe_customer_id or timestamps", async () => {
-    const { id } = await testDb.appDb.transaction((tx) =>
+    const { id } = await testDb.authDb.transaction((tx) =>
       createOrganization(tx, {
         name: "Acme",
         slug: `acme-${randomUUID()}`,
       }),
     );
 
-    const summary = await getOrganization(testDb.appDb, id);
+    const summary = await withTenantContext(testDb.appDb, id, (tx) =>
+      getOrganization(tx, id),
+    );
 
     expect(summary).toEqual({
       id,
@@ -37,8 +40,9 @@ describe("getOrganization", () => {
   });
 
   it("throws for an unknown organization id", async () => {
+    const unknownId = randomUUID();
     await expect(
-      getOrganization(testDb.appDb, randomUUID()),
+      withTenantContext(testDb.appDb, unknownId, (tx) => getOrganization(tx, unknownId)),
     ).rejects.toThrow();
   });
 });

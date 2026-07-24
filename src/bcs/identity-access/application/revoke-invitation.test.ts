@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import type { UserSummary } from "../domain/user";
 import { NotAuthorizedError } from "../domain/user";
 import { InvitationAlreadyAcceptedError, InvitationNotFoundError, InvitationRevokedError } from "../domain/invitation";
@@ -13,6 +14,9 @@ import { acceptInvitation } from "./accept-invitation";
 import { revokeInvitation } from "./revoke-invitation";
 
 async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
+  // schema (011-tenant-isolation-rls scopes it to identity_access only);
+  // skillcanon_app can already read every schema (0000_create_schemas.sql).
   const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
     sql`select action, resource_id from audit.audit_events where ${whereSql}`,
   );
@@ -20,16 +24,16 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
 }
 
 async function makeOrgTeamAdmin(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: adminId } = await insertUser(testDb.appDb, {
+  const { id: adminId } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `admin-${randomUUID()}`,
@@ -53,7 +57,7 @@ async function makePendingInvitation(
   fixture: { organizationId: string; teamId: string; admin: UserSummary },
 ) {
   const token = randomUUID();
-  const { id } = await insertInvitation(testDb.appDb, {
+  const { id } = await insertInvitation(testDb.authDb, {
     organizationId: fixture.organizationId,
     teamId: fixture.teamId,
     email: `new.hire-${randomUUID()}@example.com`,
@@ -80,10 +84,12 @@ describe("revokeInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id, token } = await makePendingInvitation(testDb, fixture);
 
-    await revokeInvitation(testDb.appDb, fixture.admin, id);
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      revokeInvitation(tx, fixture.admin, id),
+    );
 
     await expect(
-      acceptInvitation(testDb.appDb, token, {
+      acceptInvitation(testDb.authDb, token, {
         username: `newhire-${randomUUID()}`,
         password: "correct horse battery staple",
       }),
@@ -92,20 +98,21 @@ describe("revokeInvitation", () => {
 
   it("allows the target team's owner (non-admin) to revoke", async () => {
     const { organizationId } = await makeOrgTeamAdmin(testDb);
-    const ownerBootstrap = await insertUser(testDb.appDb, {
+    const bootstrapTeam = await insertTeam(testDb.authDb, {
       organizationId,
-      teamId: (await insertTeam(testDb.appDb, {
-        organizationId,
-        name: "Bootstrap",
-        slug: `bootstrap-${randomUUID()}`,
-      })).id,
+      name: "Bootstrap",
+      slug: `bootstrap-${randomUUID()}`,
+    });
+    const ownerBootstrap = await insertUser(testDb.authDb, {
+      organizationId,
+      teamId: bootstrapTeam.id,
       username: `owner-${randomUUID()}`,
       displayName: "Owner",
       email: `owner-${randomUUID()}@example.com`,
       passwordHash: "hash",
       role: "member",
     });
-    const { id: teamId } = await insertTeam(testDb.appDb, {
+    const { id: teamId } = await insertTeam(testDb.authDb, {
       organizationId,
       name: "Owned",
       slug: `owned-${randomUUID()}`,
@@ -125,7 +132,9 @@ describe("revokeInvitation", () => {
     });
 
     await expect(
-      revokeInvitation(testDb.appDb, owner, invitationId),
+      withTenantContext(testDb.appDb, organizationId, (tx) =>
+        revokeInvitation(tx, owner, invitationId),
+      ),
     ).resolves.toBeUndefined();
   });
 
@@ -140,25 +149,31 @@ describe("revokeInvitation", () => {
       email: "member@example.com",
     };
 
-    await expect(revokeInvitation(testDb.appDb, nonOwnerMember, id)).rejects.toThrow(
-      NotAuthorizedError,
-    );
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        revokeInvitation(tx, nonOwnerMember, id),
+      ),
+    ).rejects.toThrow(NotAuthorizedError);
   });
 
   it("rejects revoking an already-accepted invitation and does not alter the resulting account", async () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id, token } = await makePendingInvitation(testDb, fixture);
-    const { user } = await acceptInvitation(testDb.appDb, token, {
+    const { user } = await acceptInvitation(testDb.authDb, token, {
       username: `newhire-${randomUUID()}`,
       password: "correct horse battery staple",
     });
 
-    await expect(revokeInvitation(testDb.appDb, fixture.admin, id)).rejects.toThrow(
-      InvitationAlreadyAcceptedError,
-    );
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        revokeInvitation(tx, fixture.admin, id),
+      ),
+    ).rejects.toThrow(InvitationAlreadyAcceptedError);
 
-    const rows = await testDb.appDb.execute<{ is_active: boolean }>(
-      sql`select is_active from identity_access.users where id = ${user.id}`,
+    const rows = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      tx.execute<{ is_active: boolean }>(
+        sql`select is_active from identity_access.users where id = ${user.id}`,
+      ),
     );
     expect(rows[0]?.is_active).toBe(true);
   });
@@ -167,8 +182,14 @@ describe("revokeInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id } = await makePendingInvitation(testDb, fixture);
 
-    await revokeInvitation(testDb.appDb, fixture.admin, id);
-    await expect(revokeInvitation(testDb.appDb, fixture.admin, id)).resolves.toBeUndefined();
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      revokeInvitation(tx, fixture.admin, id),
+    );
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        revokeInvitation(tx, fixture.admin, id),
+      ),
+    ).resolves.toBeUndefined();
 
     const rows = await queryAuditEvents(
       testDb,
@@ -183,10 +204,14 @@ describe("revokeInvitation", () => {
     const { id: otherInvitationId } = await makePendingInvitation(testDb, other);
 
     await expect(
-      revokeInvitation(testDb.appDb, fixture.admin, randomUUID()),
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        revokeInvitation(tx, fixture.admin, randomUUID()),
+      ),
     ).rejects.toThrow(InvitationNotFoundError);
     await expect(
-      revokeInvitation(testDb.appDb, fixture.admin, otherInvitationId),
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        revokeInvitation(tx, fixture.admin, otherInvitationId),
+      ),
     ).rejects.toThrow(InvitationNotFoundError);
   });
 
@@ -194,7 +219,9 @@ describe("revokeInvitation", () => {
     const fixture = await makeOrgTeamAdmin(testDb);
     const { id } = await makePendingInvitation(testDb, fixture);
 
-    await revokeInvitation(testDb.appDb, fixture.admin, id);
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      revokeInvitation(tx, fixture.admin, id),
+    );
 
     const rows = await queryAuditEvents(
       testDb,

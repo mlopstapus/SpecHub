@@ -24,6 +24,15 @@ export async function findById(tx: Tx, id: string) {
   return row;
 }
 
+/** `undefined` if the id exists but belongs to a different organization — used for cross-org checks (M3). */
+export async function findByOrgAndId(tx: Tx, organizationId: string, id: string) {
+  const [row] = await tx
+    .select()
+    .from(teams)
+    .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
+  return row;
+}
+
 /** `null` parentTeamId lists an organization's root-level teams. */
 export async function findByParent(
   tx: Tx,

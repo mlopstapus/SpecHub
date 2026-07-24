@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
 import { CrossOrgReparentError } from "../domain/team";
@@ -30,7 +31,7 @@ describe("createTeam", () => {
   });
 
   async function makeOrg(name: string) {
-    return testDb.appDb.transaction((tx) =>
+    return testDb.authDb.transaction((tx) =>
       createOrganization(tx, { name, slug: `${name}-${randomUUID()}` }),
     );
   }
@@ -38,7 +39,7 @@ describe("createTeam", () => {
   it("creates a root-level team (no parent)", async () => {
     const org = await makeOrg("org-root-team");
 
-    const result = await testDb.appDb.transaction((tx) =>
+    const result = await withTenantContext(testDb.appDb, org.id, (tx) =>
       createTeam(tx, {
         organizationId: org.id,
         name: "Engineering",
@@ -46,21 +47,20 @@ describe("createTeam", () => {
       }),
     );
 
-    const [row] = await testDb.appDb
-      .select()
-      .from(teams)
-      .where(eq(teams.id, result.id));
+    const [row] = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      tx.select().from(teams).where(eq(teams.id, result.id)),
+    );
     expect(row?.parentTeamId).toBeNull();
     expect(row?.organizationId).toBe(org.id);
   });
 
   it("creates a nested team under a parent in the same organization", async () => {
     const org = await makeOrg("org-nested-team");
-    const parent = await testDb.appDb.transaction((tx) =>
+    const parent = await withTenantContext(testDb.appDb, org.id, (tx) =>
       createTeam(tx, { organizationId: org.id, name: "Engineering", slug: "eng" }),
     );
 
-    const child = await testDb.appDb.transaction((tx) =>
+    const child = await withTenantContext(testDb.appDb, org.id, (tx) =>
       createTeam(tx, {
         organizationId: org.id,
         name: "Platform",
@@ -69,22 +69,21 @@ describe("createTeam", () => {
       }),
     );
 
-    const [row] = await testDb.appDb
-      .select()
-      .from(teams)
-      .where(eq(teams.id, child.id));
+    const [row] = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      tx.select().from(teams).where(eq(teams.id, child.id)),
+    );
     expect(row?.parentTeamId).toBe(parent.id);
   });
 
   it("rejects a parent team from a different organization", async () => {
     const orgA = await makeOrg("org-a-cross");
     const orgB = await makeOrg("org-b-cross");
-    const parentInB = await testDb.appDb.transaction((tx) =>
+    const parentInB = await withTenantContext(testDb.appDb, orgB.id, (tx) =>
       createTeam(tx, { organizationId: orgB.id, name: "B Team", slug: "b-team" }),
     );
 
     await expect(
-      testDb.appDb.transaction((tx) =>
+      withTenantContext(testDb.appDb, orgA.id, (tx) =>
         createTeam(tx, {
           organizationId: orgA.id,
           name: "A Team",

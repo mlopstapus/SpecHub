@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import type { UserSummary } from "../domain/user";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
@@ -8,11 +9,11 @@ import { insertValidatedUser } from "./insert-validated-user";
 import { listUsers } from "./list-users";
 
 async function makeOrgWithTeam(testDb: TestDb, name = "Root") {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name,
     slug: `${name.toLowerCase()}-${randomUUID()}`,
@@ -21,7 +22,7 @@ async function makeOrgWithTeam(testDb: TestDb, name = "Root") {
 }
 
 async function makeUser(testDb: TestDb, organizationId: string, teamId: string) {
-  return insertValidatedUser(testDb.appDb, {
+  return insertValidatedUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `user-${randomUUID()}`,
@@ -57,7 +58,9 @@ describe("listUsers", () => {
       email: "acting@example.com",
     };
 
-    const result = await listUsers(testDb.appDb, acting);
+    const result = await withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+      listUsers(tx, acting),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe(userA.id);
@@ -65,7 +68,7 @@ describe("listUsers", () => {
 
   it("filters correctly by teamId when given", async () => {
     const org = await makeOrgWithTeam(testDb, "TeamOne");
-    const { id: teamTwoId } = await insertTeam(testDb.appDb, {
+    const { id: teamTwoId } = await insertTeam(testDb.authDb, {
       organizationId: org.organizationId,
       name: "TeamTwo",
       slug: `teamtwo-${randomUUID()}`,
@@ -81,7 +84,9 @@ describe("listUsers", () => {
       email: "acting@example.com",
     };
 
-    const result = await listUsers(testDb.appDb, acting, { teamId: org.teamId });
+    const result = await withTenantContext(testDb.appDb, org.organizationId, (tx) =>
+      listUsers(tx, acting, { teamId: org.teamId }),
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.id).toBe(userInTeamOne.id);
@@ -89,7 +94,7 @@ describe("listUsers", () => {
 
   it("returns all org users across teams when no filter is given", async () => {
     const org = await makeOrgWithTeam(testDb, "TeamOne");
-    const { id: teamTwoId } = await insertTeam(testDb.appDb, {
+    const { id: teamTwoId } = await insertTeam(testDb.authDb, {
       organizationId: org.organizationId,
       name: "TeamTwo",
       slug: `teamtwo-${randomUUID()}`,
@@ -105,7 +110,9 @@ describe("listUsers", () => {
       email: "acting@example.com",
     };
 
-    const result = await listUsers(testDb.appDb, acting);
+    const result = await withTenantContext(testDb.appDb, org.organizationId, (tx) =>
+      listUsers(tx, acting),
+    );
 
     expect(result).toHaveLength(2);
   });
@@ -121,7 +128,9 @@ describe("listUsers", () => {
       email: "acting@example.com",
     };
 
-    const result = await listUsers(testDb.appDb, acting);
+    const result = await withTenantContext(testDb.appDb, org.organizationId, (tx) =>
+      listUsers(tx, acting),
+    );
 
     for (const row of result) {
       expect(Object.keys(row)).not.toContain("passwordHash");

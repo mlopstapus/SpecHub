@@ -7,16 +7,16 @@ import { insert as insertUser } from "./users-repo";
 import { insert, markAccepted } from "./invitations-repo";
 
 async function makeFixture(testDb: TestDb) {
-  const { id: organizationId } = await insertOrg(testDb.appDb, {
+  const { id: organizationId } = await insertOrg(testDb.authDb, {
     name: "Acme",
     slug: `acme-${randomUUID()}`,
   });
-  const { id: teamId } = await insertTeam(testDb.appDb, {
+  const { id: teamId } = await insertTeam(testDb.authDb, {
     organizationId,
     name: "Root",
     slug: `root-${randomUUID()}`,
   });
-  const { id: invitedById } = await insertUser(testDb.appDb, {
+  const { id: invitedById } = await insertUser(testDb.authDb, {
     organizationId,
     teamId,
     username: `admin-${randomUUID()}`,
@@ -25,7 +25,7 @@ async function makeFixture(testDb: TestDb) {
     passwordHash: "hash",
     role: "admin",
   });
-  const { id } = await insert(testDb.appDb, {
+  const { id } = await insert(testDb.authDb, {
     organizationId,
     teamId,
     email: `new.hire-${randomUUID()}@example.com`,
@@ -51,7 +51,7 @@ describe("invitations-repo.markAccepted", () => {
   it("marks a pending invitation accepted and returns the updated row", async () => {
     const { invitationId } = await makeFixture(testDb);
 
-    const row = await markAccepted(testDb.appDb, invitationId);
+    const row = await markAccepted(testDb.authDb, invitationId);
 
     expect(row?.acceptedAt).toBeInstanceOf(Date);
   });
@@ -59,8 +59,8 @@ describe("invitations-repo.markAccepted", () => {
   it("returns no row on a second call — the conditional update excludes an already-accepted row", async () => {
     const { invitationId } = await makeFixture(testDb);
 
-    await markAccepted(testDb.appDb, invitationId);
-    const second = await markAccepted(testDb.appDb, invitationId);
+    await markAccepted(testDb.authDb, invitationId);
+    const second = await markAccepted(testDb.authDb, invitationId);
 
     expect(second).toBeUndefined();
   });
