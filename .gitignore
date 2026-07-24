@@ -27,6 +27,8 @@ env/
 
 # Environment files
 .env
+.env*
+!.env.example
 .envrc
 
 # Test / coverage
@@ -58,6 +60,12 @@ coverage.xml
 .vscode/
 .cursorignore
 .cursorindexingignore
+
+# Universal local artifacts
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
 
 # Brainstorming companion
 .superpowers/

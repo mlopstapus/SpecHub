@@ -1,12 +1,14 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { UserSummary } from "../domain/user";
+import type { AppSessionUser } from "../domain/user";
 import { SESSION_COOKIE_NAME } from "../domain/session";
 import { verifySessionJwt } from "../infrastructure/jwt";
-import { getUser } from "./get-user";
+import { findAppSessionUserById } from "../infrastructure/users-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
-function extractSessionToken(cookieHeader: string | null | undefined): string | null {
+function extractSessionToken(
+  cookieHeader: string | null | undefined,
+): string | null {
   if (!cookieHeader) {
     return null;
   }
@@ -23,13 +25,14 @@ function extractSessionToken(cookieHeader: string | null | undefined): string | 
  * Resolves the calling user from a session cookie header (FR-005). Never
  * throws for a missing/invalid/expired session — resolves `null` — since
  * that's the routine "not signed in" outcome, not an infrastructure
- * failure. Re-reads the user's *current* org/team/role via `getUser`, never
- * trusting the JWT's own claims beyond `sub` (context/auth-conventions.md).
+ * failure. Re-reads the user's *current* org/team/role through the
+ * application-session repository view, never trusting the JWT's own claims
+ * beyond `sub` (context/auth-conventions.md).
  */
 export async function authenticateSession(
   db: Db,
   cookieHeader: string | null | undefined,
-): Promise<UserSummary | null> {
+): Promise<AppSessionUser | null> {
   const token = extractSessionToken(cookieHeader);
   if (!token) {
     return null;
@@ -38,9 +41,17 @@ export async function authenticateSession(
   if (!claims) {
     return null;
   }
-  try {
-    return await getUser(db, claims.sub);
-  } catch {
+  const user = await findAppSessionUserById(db, claims.sub);
+  if (!user || !user.isActive) {
     return null;
   }
+  return {
+    id: user.id,
+    orgId: user.orgId,
+    teamId: user.teamId,
+    role: user.role as AppSessionUser["role"],
+    email: user.email,
+    displayName: user.displayName,
+    teamName: user.teamName,
+  };
 }

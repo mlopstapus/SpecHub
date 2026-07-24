@@ -40,7 +40,8 @@ pnpm lint
 Note: legacy lint commands (`cd legacy/backend && ruff check .` / `cd legacy/frontend && npm run lint`) still work against the preserved legacy code if needed.
 
 ## Test
-pnpm test
+unit: pnpm vitest run src/proxy.test.ts 'src/app/(app)/app-shell-access.test.ts' 'src/app/(app)/_components/nav-model.test.ts' 'src/app/(app)/_components/app-navigation.test.tsx' 'src/app/(app)/_components/account-footer.test.tsx' 'src/app/(app)/_components/app-shell.test.tsx' src/bcs/billing-entitlements/application/resolve-entitlements.test.ts src/bcs/billing-entitlements/application/has-entitlement.test.ts src/bcs/identity-access/application/authenticate-session.test.ts
+integration: pnpm test
 
 Note: legacy backend tests still run via `cd legacy/backend && uv run pytest tests/ -v` (use `uv run`, not bare `python -m pytest` — deps live in uv's managed venv). If pytest/pytest-asyncio are missing (`ModuleNotFoundError`), the venv only has base deps — run `uv sync --extra dev` first (bare `uv sync` does not install the `dev` optional-dependency group). Legacy frontend has no test script configured. The new scaffold's `pnpm test` (Vitest) is no longer a trivial smoke test — as of `011-tenant-isolation-rls` it's 45 test files / 237 tests, ~166s, mostly Testcontainers-backed Postgres integration tests. Run it with a >120s timeout or in the background (`run_in_background`), not the default foreground timeout.
 

@@ -1,0 +1,14 @@
+.DS_Store
+.git/
+.idea/
+.vscode/
+*.tmp
+*.swp
+*.tgz
+*.secret.yaml
+secrets/
+.kube/
+kubeconfig*
+*.key
+*.crt
+values.local.yaml

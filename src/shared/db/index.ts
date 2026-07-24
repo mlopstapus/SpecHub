@@ -1,4 +1,4 @@
-export { db } from "./client";
+export { authDb, db } from "./client";
 export { SCHEMAS, type SchemaName } from "./schemas";
 export { id, organizationId, timestamps } from "./columns";
 export { withTenantContext } from "./tenant-context";
