@@ -7,6 +7,17 @@
 
 Owns tenancy (`Organization`), the recursive `Team` governance hierarchy within an organization, `User` accounts, invitations, sessions, and scoped API keys. This is the context every other bounded context depends on for "who is this and what org/team are they in" — but it exposes those facts as opaque IDs and read contracts, not as raw table access.
 
+## Connection Requirements
+
+A consolidated, reviewer-checkable list of every identity-access function that must be called with `shared/db/client.ts`'s `authDb` (the `skillcanon_auth`-connected client) instead of the ordinary tenant-scoped `db`. Each function's row in the Exposed APIs table below carries the same note inline — this section exists so a reviewer doesn't have to reassemble the full list by hand. See `backlog/002-identity-access/008-authdb-consumer-handoff.md` for the tracking item this section satisfies.
+
+- **`login`** — requires `authDb`. The email lookup has no organization context yet (email is only unique per-org), and RLS would otherwise deny it.
+- **`authenticateSession`** — requires `authDb`. Same reason as `login`: resolves the calling user from a cookie with no organization context yet.
+- **`authenticateApiKey`** — requires `authDb`. The raw-key hash lookup has no organization context yet.
+- **`acceptInvitation`** — requires `authDb`. The invitation-token lookup has no organization context yet.
+- **`bootstrapOrganization` / `registerFirstRunAdmin`** — requires `authDb`. No organization exists yet to scope by, and the self-hosted single-org guard needs a true cross-org count. (`createOrganization`, `bootstrapOrganization`'s internal helper, is not exported and is never callable directly — it does not need its own entry here.)
+- **`logout`** — requires `authDb`. This one is easy to miss: `logout` only ever receives a bare `userId`, but it internally calls `getUser` with no organization context to resolve that user before audit-logging the logout. It reads like it needs no DB lookup at all ("already logging out, nothing to check") — which is exactly why this was the one case actually missed once already, during this function's own migration to real RLS. Treat it as its own rule, not an inference from the other five.
+
 ## Exposed APIs
 
 | Endpoint / Method | Description | Consumers |

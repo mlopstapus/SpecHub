@@ -50,4 +50,4 @@ Docker Compose (local) and the Helm chart (K8s) remain the two self-host paths, 
 
 ## Deliverable status
 
-Account/VPC topology, RDS configuration with a stated (deferred) availability posture, IaC tool choice, CI/CD pipeline, and release/rollback process are settled — provisionally, with explicit revisit triggers rather than treated as permanent. This unblocks the AWS-facing portions of the `distribution` epic and `008-billing-entitlements` (the Stripe webhook endpoint needs a real deployed URL to register against).
+Account/VPC topology, RDS configuration with a stated (deferred) availability posture, IaC tool choice, CI/CD pipeline, and release/rollback process are settled — provisionally, with explicit revisit triggers rather than treated as permanent. This unblocks the AWS-facing portions of the `distribution` epic and `009-billing-entitlements` (the Stripe webhook endpoint needs a real deployed URL to register against).

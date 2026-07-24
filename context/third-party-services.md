@@ -20,7 +20,7 @@
 
 ## Deliverable status
 
-Email provider (with self-host SMTP fallback) and Sentry project/environment setup are settled. This unblocks the invitation feature in `002-identity-access` and the billing notification features in `008-billing-entitlements`.
+Email provider (with self-host SMTP fallback) and Sentry project/environment setup are settled. This unblocks the invitation feature in `002-identity-access` and the billing notification features in `009-billing-entitlements`.
 
 ## Implementation status (updated 2026-07-23, `009-invitations`)
 

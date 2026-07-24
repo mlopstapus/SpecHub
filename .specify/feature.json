@@ -1,3 +1,3 @@
 {
-  "feature_directory": "specs/011-tenant-isolation-rls"
+  "feature_directory": "specs/012-authdb-consumer-handoff"
 }
