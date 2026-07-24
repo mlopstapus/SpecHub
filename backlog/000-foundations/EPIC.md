@@ -21,7 +21,7 @@ None of epic 001 (TypeScript Refactor Foundation) should start until items 001, 
 - [x] [007 - Entitlement Catalog](archive/007-entitlement-catalog.md) → `context/entitlements.md`
 - [x] [008 - Third-Party Service Selection](archive/008-third-party-services.md) → `context/third-party-services.md`
 - [x] [009 - Feature Gating & Flags](archive/009-feature-gating-and-flags.md) → `context/feature-gating.md`
-- [ ] [010 - Design System](010-design-system.md) → `context/design-system.md`
+- [x] [010 - Design System](archive/010-design-system.md) → `docs/context/design-system.md`
 
 *Completed items are moved to `archive/` and checked off here.*
 

@@ -2,7 +2,7 @@
 epic: 004-app-shell-and-landing
 feature: 002-app-shell-and-navigation
 status: open
-dependencies: ["001-design-tokens-and-theming.md", "backlog/002-identity-access/archive/004-jwt-session-auth.md"]
+dependencies: ["archive/001-design-tokens-and-theming.md", "backlog/002-identity-access/archive/004-jwt-session-auth.md"]
 ---
 
 # App Shell & Navigation
@@ -29,7 +29,7 @@ The real, finished authenticated app shell — left nav, layout, and auth-gated 
 
 ## Dependencies
 
-- `001-design-tokens-and-theming.md`
+- `archive/001-design-tokens-and-theming.md`
 - `backlog/002-identity-access/archive/004-jwt-session-auth.md` (httpOnly JWT cookie this feature's middleware verifies)
 
 ## Technical Notes

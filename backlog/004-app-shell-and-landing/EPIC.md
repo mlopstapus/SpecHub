@@ -1,7 +1,7 @@
 # Epic 004: App Shell & Landing
 
 **Priority:** 4
-**Status:** not-started (being picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
+**Status:** in-progress (001 done; being picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
 **Goal:** Build and design, for real, the two structural surfaces every later epic's UI depends on — the authenticated app shell (nav/layout every bounded context composes its own pages into) and the public marketing landing page — early enough that every downstream epic, including `003-audit-compliance`'s own remaining UI work, composes its real, finished pages into an already-real shell instead of building a temporary one first.
 
 ## Overview
@@ -14,7 +14,7 @@
 
 ## Features
 
-- [ ] [001 - Design Tokens & Theming](001-design-tokens-and-theming.md)
+- [x] [001 - Design Tokens & Theming](archive/001-design-tokens-and-theming.md)
 - [ ] [002 - App Shell & Navigation](002-app-shell-and-navigation.md)
 - [ ] [003 - Marketing Landing Page](003-marketing-landing-page.md)
 
@@ -23,7 +23,7 @@
 ## Dependencies
 
 - `backlog/002-identity-access/EPIC.md` (session auth for auth-gated routing; org/user identifiers for the account footer)
-- `backlog/000-foundations/010-design-system.md` (deliverable `context/design-system.md` — effectively already answered in practice by the mockups already produced; `001-design-tokens-and-theming.md` formalizes it)
+- `backlog/000-foundations/archive/010-design-system.md` (deliverable `docs/context/design-system.md` — done; `archive/001-design-tokens-and-theming.md` formalized it into the Tailwind/shadcn theme layer)
 
 ## Notes
 

@@ -1,8 +1,8 @@
 ---
 type: foundations
 item: 010-design-system
-status: open
-deliverable: context/design-system.md
+status: done
+deliverable: docs/context/design-system.md
 ---
 
 # Design System
@@ -25,9 +25,17 @@ deliverable: context/design-system.md
 - Keep shadcn's underlying primitive/accessibility behavior untouched; this is a theming pass, not a component-library swap
 - Dark mode: confirm whether it's in scope for this pass or a later one — affects whether tokens need light/dark pairs now
 
+## Resolution (2026-07-23)
+
+Pulled directly from the Claude design MCP (`claude.ai/design` project `7babdbf3-c063-46b5-84df-ffa9f588d88a`) rather than re-derived: `SkillCanon Audit.dc.html`, `SkillCanon Governance.dc.html`, and `SkillCanon Landing.dc.html` already shared one concrete token set (colors, three-family typography, radii, shadows, motion, component conventions), confirmed byte-for-byte against each mockup's own inline `<style>`/`PALETTE`/`ACCENTS` definitions — nothing here was invented. Findings written to `docs/context/design-system.md` (moved from `context/design-system.md` by an unrelated concurrent doc-reorg commit — content unchanged).
+
+- **Dark mode is in scope now, decided as dark-only for the authenticated app**: `SkillCanon Audit.dc.html`/`SkillCanon Governance.dc.html` (the app context) render dark-only with no toggle. `SkillCanon Landing.dc.html` (marketing) has a real light/dark toggle with a distinct light palette (confirmed via its `PALETTE.light` JS object — `--bg:#f5f6f9`, `--surface:#ffffff`, etc.; `--panel`/`--raise`, being app-shell-only concepts, have no light counterpart since marketing never uses them). Both palettes are captured in `docs/context/design-system.md` and implemented as CSS custom properties + a `[data-theme="light"]` override in `src/app/globals.css` (`004-app-shell-and-landing/001-design-tokens-and-theming.md`).
+- Tokens are expressed as CSS custom properties (matching the mockups directly) mapped into Tailwind v4's `@theme inline` block, not a `tailwind.config.ts` theme-extend object — Tailwind v4 is CSS-config-first.
+- shadcn's underlying accessibility/behavior primitives are untouched; only visual tokens changed.
+
 ## Deliverable
 
-When complete, write findings to `context/design-system.md`. That document becomes the permanent reference — `004-app-shell-and-landing/001-design-tokens-and-theming.md` and every downstream epic's own UI feature link back to it for the specific token values/rules they must apply.
+`docs/context/design-system.md` — palette, type scale, spacing/tokens, shadcn variant decisions.
 
 ## Dependencies
 

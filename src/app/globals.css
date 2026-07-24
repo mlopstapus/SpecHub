@@ -1,0 +1,267 @@
+@import "tailwindcss";
+
+/*
+ * SkillCanon design tokens — extracted from the Claude design mockups in
+ * claude.ai/design project 7babdbf3-c063-46b5-84df-ffa9f588d88a
+ * (SkillCanon Audit.dc.html, SkillCanon Governance.dc.html, SkillCanon Landing.dc.html).
+ * See docs/context/design-system.md for the full reference doc.
+ */
+:root {
+  /* neutrals — dark (default; the authenticated app renders dark-only, no toggle) */
+  --bg: #0b0b0c;
+  --bg2: #101011;
+  --panel: #0f0f10;
+  --surface: #161618;
+  --surface2: #1c1c1f;
+  --raise: #232326;
+  --text: #f1f0ee;
+  --dim: #9b9a96;
+  --faint: #67655f;
+  --grid: rgba(255, 255, 255, 0.03);
+
+  /* borders — always translucent white on dark, never solid */
+  --border: rgba(255, 255, 255, 0.07);
+  --border2: rgba(255, 255, 255, 0.12);
+
+  /* accent — teal, the only brand color, constant across themes */
+  --a: #00e0b8;
+  --a2: #54efce;
+  --afg: #03130f;
+  --asoft: rgba(0, 224, 184, 0.12);
+  --aglow: rgba(0, 224, 184, 0.15);
+
+  /* semantic status — audit verbs, transports, diffs (app only) */
+  --green: #3ecf8e;
+  --gsoft: rgba(62, 207, 142, 0.13);
+  --blue: #19b5ff;
+  --bsoft: rgba(25, 181, 255, 0.13);
+  --red: #ff6b6b;
+  --rsoft: rgba(255, 107, 107, 0.13);
+  --violet: #a78bfa;
+  --vsoft: rgba(167, 139, 250, 0.14);
+
+  /* type families */
+  --ds: var(--font-bricolage), system-ui, sans-serif;
+  --bd: var(--font-hanken), system-ui, sans-serif;
+  --mo: var(--font-spline), ui-monospace, monospace;
+
+  /* radii */
+  --radius-chip: 6px;
+  --radius-control: 9px;
+  --radius-tile: 10px;
+  --radius-card: 14px;
+  --radius-cta: 20px;
+  --radius-pill: 999px;
+
+  /* shadows */
+  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --shadow-heavy: 0 30px 80px rgba(0, 0, 0, 0.5);
+  --shadow-drawer: -30px 0 80px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 8px 30px var(--aglow);
+
+  /* motion */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/*
+ * Light theme — the marketing landing page's toggle only (SkillCanon Landing.dc.html).
+ * The authenticated app (audit/governance) has no light variant in either mockup, so
+ * --panel/--raise (app-shell-only surfaces) intentionally have no light override here —
+ * scope this attribute to the marketing subtree, never the (app) route group.
+ */
+[data-theme="light"] {
+  --bg: #f5f6f9;
+  --bg2: #ffffff;
+  --surface: #ffffff;
+  --surface2: #eef1f5;
+  --border: rgba(12, 14, 20, 0.09);
+  --border2: rgba(12, 14, 20, 0.16);
+  --text: #0b0d12;
+  --dim: #545963;
+  --faint: #8a909c;
+  --grid: rgba(12, 14, 20, 0.045);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg2);
+  --color-panel: var(--panel);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface2);
+  --color-raise: var(--raise);
+  --color-text: var(--text);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-grid: var(--grid);
+
+  --color-border: var(--border);
+  --color-border-2: var(--border2);
+
+  --color-a: var(--a);
+  --color-a-2: var(--a2);
+  --color-a-fg: var(--afg);
+  --color-a-soft: var(--asoft);
+  --color-a-glow: var(--aglow);
+
+  --color-green: var(--green);
+  --color-green-soft: var(--gsoft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--bsoft);
+  --color-red: var(--red);
+  --color-red-soft: var(--rsoft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--vsoft);
+
+  --font-display: var(--ds);
+  --font-sans: var(--bd);
+  --font-mono: var(--mo);
+
+  --radius-chip: var(--radius-chip);
+  --radius-control: var(--radius-control);
+  --radius-tile: var(--radius-tile);
+  --radius-card: var(--radius-card);
+  --radius-cta: var(--radius-cta);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-heavy: var(--shadow-heavy);
+  --shadow-drawer: var(--shadow-drawer);
+  --shadow-glow: var(--shadow-glow);
+
+  --ease-sc: var(--ease-standard);
+
+  --animate-fade-up: fadeUp 0.7s var(--ease-standard) both;
+  --animate-tool-in: toolIn 0.4s var(--ease-standard) both;
+  --animate-blink: blink 1s step-end infinite;
+  --animate-floaty: floaty 3.5s ease-in-out infinite;
+  --animate-glowpulse: glowpulse 2s ease-in-out infinite;
+  --animate-dashmove: dashmove 0.6s linear infinite;
+  --animate-spin-sc: spin 0.8s linear infinite;
+  --animate-sheen: sheen 1.2s ease;
+  --animate-ov-in: ovIn 0.18s ease;
+  --animate-dr-in: drIn 0.22s var(--ease-standard);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toolIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes glowpulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes dashmove {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes ovIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes drIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--bd);
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: padding-box;
+}

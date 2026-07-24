@@ -2,7 +2,7 @@
 epic: 003-audit-compliance
 feature: 003-audit-log-ui
 status: open
-dependencies: ["002-audit-query-and-retention.md", "backlog/004-app-shell-and-landing/002-app-shell-and-navigation.md", "backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md"]
+dependencies: ["002-audit-query-and-retention.md", "backlog/004-app-shell-and-landing/002-app-shell-and-navigation.md", "backlog/004-app-shell-and-landing/archive/001-design-tokens-and-theming.md"]
 ---
 
 # Audit Log UI
@@ -25,7 +25,7 @@ The settings page where an org admin views (and, if entitled, exports) their aud
 - [ ] Export button, visible/enabled only when the org's entitlement allows it (disabled with an upgrade-prompt tooltip otherwise, once `009-billing-entitlements` exists — hidden entirely until then)
 - [ ] Admin-only access (matches current role-gating pattern for sensitive settings pages), via the real session-auth middleware built by `004-app-shell-and-landing/002-app-shell-and-navigation.md`
 - [ ] Composes into the real app shell from `004-app-shell-and-landing/002-app-shell-and-navigation.md` — a "Settings" nav section containing at least "API keys" and "Audit log", matching the mockup's structure
-- [ ] Uses the real shared tokens from `004-app-shell-and-landing/001-design-tokens-and-theming.md` (dark theme, `--bg`/`--panel`/`--surface`/accent teal/etc., Bricolage Grotesque + Hanken Grotesk + Spline Sans Mono fonts) — no locally-scoped/ad hoc styling
+- [ ] Uses the real shared tokens from `004-app-shell-and-landing/archive/001-design-tokens-and-theming.md` (dark theme, `--bg`/`--panel`/`--surface`/accent teal/etc., Bricolage Grotesque + Hanken Grotesk + Spline Sans Mono fonts, now live in `src/app/globals.css` + `src/shared/ui/`) — no locally-scoped/ad hoc styling
 
 ## Acceptance Criteria
 
@@ -44,7 +44,7 @@ The settings page where an org admin views (and, if entitled, exports) their aud
 
 - `002-audit-query-and-retention.md`
 - `backlog/004-app-shell-and-landing/002-app-shell-and-navigation.md` (real shell + session-auth middleware this page composes into)
-- `backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md` (real shared tokens this page uses)
+- `backlog/004-app-shell-and-landing/archive/001-design-tokens-and-theming.md` (real shared tokens this page uses)
 
 ## Technical Notes
 
