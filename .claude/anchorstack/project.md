@@ -42,7 +42,7 @@ Note: legacy lint commands (`cd legacy/backend && ruff check .` / `cd legacy/fro
 ## Test
 pnpm test
 
-Note: legacy backend tests still run via `cd legacy/backend && uv run pytest tests/ -v` (use `uv run`, not bare `python -m pytest` — deps live in uv's managed venv). If pytest/pytest-asyncio are missing (`ModuleNotFoundError`), the venv only has base deps — run `uv sync --extra dev` first (bare `uv sync` does not install the `dev` optional-dependency group). Legacy frontend has no test script configured. The new scaffold's `pnpm test` currently only runs a trivial smoke test — real test coverage lands with the epics that add real logic.
+Note: legacy backend tests still run via `cd legacy/backend && uv run pytest tests/ -v` (use `uv run`, not bare `python -m pytest` — deps live in uv's managed venv). If pytest/pytest-asyncio are missing (`ModuleNotFoundError`), the venv only has base deps — run `uv sync --extra dev` first (bare `uv sync` does not install the `dev` optional-dependency group). Legacy frontend has no test script configured. The new scaffold's `pnpm test` (Vitest) is no longer a trivial smoke test — as of `011-tenant-isolation-rls` it's 45 test files / 237 tests, ~166s, mostly Testcontainers-backed Postgres integration tests. Run it with a >120s timeout or in the background (`run_in_background`), not the default foreground timeout.
 
 ## Rebuild — port conflicts
 This machine runs multiple unrelated Docker Compose projects concurrently (tribe-build, multica,

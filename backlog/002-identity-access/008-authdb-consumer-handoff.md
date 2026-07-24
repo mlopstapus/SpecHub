@@ -11,9 +11,9 @@ dependencies: ["007-tenant-isolation-tests-and-rls.md"]
 
 ## Requirements
 
-- [ ] Every `008-distribution` route handler or MCP tool that calls one of the six `authDb`-requiring functions (`login`, `authenticateSession`, `authenticateApiKey`, `acceptInvitation`, `logout`, `createOrganization`/`bootstrapOrganization`/`registerFirstRunAdmin`) uses `shared/db/client.ts`'s `authDb` export for that call, not the ordinary `db`
+- [ ] Every `008-distribution` route handler or MCP tool that calls one of the six `authDb`-requiring functions (`login`, `authenticateSession`, `authenticateApiKey`, `acceptInvitation`, `logout`, `bootstrapOrganization`/`registerFirstRunAdmin` — the only two org-bootstrap functions actually exported for Distribution to call; `createOrganization` is `bootstrapOrganization`'s internal, non-exported helper) uses `shared/db/client.ts`'s `authDb` export for that call, not the ordinary `db`
 - [ ] Every other exposed identity-access function is called only after the request's own `organizationId`/`actingUser.orgId` is known, wrapped in `withTenantContext(db, organizationId, ...)` — never called against a bare, unscoped `db`/`appDb`-equivalent connection
-- [ ] `logout`'s indirect dependency on this (it calls `getUser` with no org context, since it only ever receives a bare `userId`) is specifically covered by a test or code-review checklist item, not just inferred from the function list above
+- [x] `logout`'s indirect dependency on this (it calls `getUser` with no org context, since it only ever receives a bare `userId`) is specifically covered by a test or code-review checklist item, not just inferred from the function list above — see `CONTRACT.md`'s "Connection Requirements" section (specs/012-authdb-consumer-handoff), which gives `logout` its own standalone bullet
 
 ## Acceptance Criteria
 
