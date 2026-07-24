@@ -17,7 +17,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [x] [005 - Invitations](archive/005-invitations.md)
 - [x] [006 - API Keys](archive/006-api-keys.md)
 - [X] [007 - Tenant Isolation Tests & RLS](archive/007-tenant-isolation-tests-and-rls.md)
-- [ ] [008 - `authDb` Consumer Handoff](008-authdb-consumer-handoff.md)
+- [X] [008 - `authDb` Consumer Handoff](008-authdb-consumer-handoff.md)
 - [ ] [009 - Auth & Onboarding UI](009-auth-and-onboarding-ui.md)
 - [ ] [010 - Account & Team Settings UI](010-account-and-team-settings-ui.md)
 
