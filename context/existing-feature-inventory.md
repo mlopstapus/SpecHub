@@ -20,7 +20,7 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 | Get invitation by token, accept invitation | `GET /auth/invitations/token/{token}`, `POST /auth/invitations/{token}/accept` | 005-invitations |
 | API key create/list/revoke | `POST/GET/DELETE /api-keys` | 006-api-keys |
 
-## Governance (→ `backlog/004-governance/`)
+## Governance (→ `backlog/005-governance/`)
 
 | Capability | Current route(s) | Backlog coverage |
 |---|---|---|
@@ -30,7 +30,7 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 | Effective objectives | `GET /objectives/effective` | 003-hierarchical-resolution-engine |
 | Project-scoped objective list/create (nested under `/projects/{id}/objectives`) | `GET/POST /projects/{project_id}/objectives` | Covered by 002-objective-model-and-crud's `project_id` scoping — routing shape (nested under Projects vs. flat) is a `000-foundations/004-api-and-error-conventions` decision, not a missing capability |
 
-## Prompt Registry (→ `backlog/005-prompt-registry/`)
+## Prompt Registry (→ `backlog/006-prompt-registry/`)
 
 | Capability | Current route(s) | Backlog coverage |
 |---|---|---|
@@ -43,15 +43,15 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 | Expand (latest or pinned version) | `POST /expand/{name}`, `POST /expand/{name}/versions/{version}` | 004-expansion-engine |
 | Share/list/revoke share | `POST/GET/DELETE /prompts/{name}/shares` | 003-prompt-sharing |
 
-## Workflow Orchestration (→ `backlog/006-workflow-orchestration/`)
+## Workflow Orchestration (→ `backlog/007-workflow-orchestration/`)
 
 | Capability | Current route(s) | Backlog coverage |
 |---|---|---|
 | Workflow CRUD + list | `POST/GET/PUT/DELETE /workflows`, `/workflows/{id}` | 001-workflow-model-and-crud |
 | Run workflow | `POST /workflows/{id}/run` | 002-workflow-runner |
-| **Share/list/revoke workflow share (`WorkflowShare` model exists, mirrors Prompt sharing)** | `POST/GET/DELETE /workflows/{id}/shares` | ⚠️ **Missing entirely from epic 006 — see fix below** |
+| **Share/list/revoke workflow share (`WorkflowShare` model exists, mirrors Prompt sharing)** | `POST/GET/DELETE /workflows/{id}/shares` | ⚠️ **Missing entirely from epic 007 — see fix below** |
 
-## Distribution (→ `backlog/007-distribution/`)
+## Distribution (→ `backlog/008-distribution/`)
 
 | Capability | Current route(s) / tool(s) | Backlog coverage |
 |---|---|---|
@@ -63,7 +63,7 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 | MCP: list workflows | `sh-workflow-list` | 002-mcp-server-and-tools |
 | MCP: run a workflow | `sh-workflow-run` | 002-mcp-server-and-tools |
 
-## Frontend pages (current `frontend/src/app/*`, all → `007-distribution/003-web-ui-shell-and-core-pages`)
+## Frontend pages (current `frontend/src/app/*`, all → `008-distribution/003-web-ui-shell-and-core-pages`)
 
 `login`, `register`, `welcome`, `invite/[token]`, `projects` (list + `[id]` detail), `prompts` (list + `[name]` detail + `new`), `workflows` (list + `[id]` detail + `new`), `teams`, `settings`, `metrics`. All accounted for under the one UI feature — no gaps found here beyond the general "audit page-by-page at implementation time" note already in that feature file.
 
@@ -72,7 +72,7 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 Three capabilities exist in the current app but were missing (or not fully specified) in the original backlog pass. All three are now corrected directly in the relevant feature files:
 
 1. **Team "insert between"** — added to `002-identity-access/002-team-hierarchy.md`'s requirements.
-2. **Prompt version rollback** (`active_version_id` repoint, not version editing — doesn't conflict with version immutability) — added to `005-prompt-registry/002-prompt-and-version-model.md`'s requirements.
-3. **Workflow sharing** (`WorkflowShare`, mirrors `PromptShare`) — was missing entirely from epic 006; added as a new feature `006-workflow-orchestration/004-workflow-sharing.md`.
+2. **Prompt version rollback** (`active_version_id` repoint, not version editing — doesn't conflict with version immutability) — added to `006-prompt-registry/002-prompt-and-version-model.md`'s requirements.
+3. **Workflow sharing** (`WorkflowShare`, mirrors `PromptShare`) — was missing entirely from epic 007; added as a new feature `007-workflow-orchestration/004-workflow-sharing.md`.
 
 No other gaps were found — every other current route, MCP tool, and frontend page has a clear home in the existing epic/feature breakdown.

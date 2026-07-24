@@ -39,4 +39,4 @@ This document defines *which keys exist and their default values*. It does not d
 
 ## Deliverable status
 
-Key list, Free/Paid defaults, and override-candidate flags are recorded. This unblocks `008-billing-entitlements`'s schema (the entitlement table needs to know the key shape even though the numeric defaults may still move before general availability), and is the key catalog `context/feature-gating.md`'s gate primitive checks against.
+Key list, Free/Paid defaults, and override-candidate flags are recorded. This unblocks `009-billing-entitlements`'s schema (the entitlement table needs to know the key shape even though the numeric defaults may still move before general availability), and is the key catalog `context/feature-gating.md`'s gate primitive checks against.

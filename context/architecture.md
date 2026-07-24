@@ -81,7 +81,7 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 
 ## Integrations
 
-- **Claude Code** (primary, day one) — the `skillcanon` CLI links a repo to a SkillCanon project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/007-distribution/005-skill-sync-cli.md`.
+- **Claude Code** (primary, day one) — the `skillcanon` CLI links a repo to a SkillCanon project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/008-distribution/005-skill-sync-cli.md`.
 - **MCP clients** (Windsurf, Copilot, any MCP-compatible tool) — deprioritized (see PDR-010); if built, Streamable HTTP, bearer-authenticated via API key, tool surface `sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run` unchanged from today's plan.
 - **Stripe** — subscriptions, checkout, billing portal, webhooks; isolated entirely behind Billing & Entitlements ([PDR-006](../docs/pdr/006-single-repo-plan-gated.md)).
 

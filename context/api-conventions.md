@@ -96,4 +96,4 @@ log.error({ orgId, requestId, code: err.code, err }, "policy resolution failed")
 
 ## Deliverable status
 
-Error shape, status codes, versioning, pagination, and rate limiting are settled. This document lands before the `distribution` epic (formerly referenced as `007-distribution`) starts.
+Error shape, status codes, versioning, pagination, and rate limiting are settled. This document lands before the `distribution` epic (formerly referenced as `008-distribution`) starts.
